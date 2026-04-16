@@ -1,0 +1,140 @@
+/**
+ * Pre-render TikZ diagrams to SVG at build time.
+ * 
+ * Scans all markdown posts for ```tikz code blocks, compiles them via
+ * node-tikzjax (a headless TeX->SVG pipeline), and writes a JSON manifest
+ * mapping content hashes to SVG strings.
+ * 
+ * This eliminates the need for the browser to load a 5MB+ WASM TeX engine.
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
+import pkg from 'node-tikzjax';
+const tex2svg = pkg.default;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ROOT = resolve(__dirname, '..');
+
+const POSTS_DIR = resolve(ROOT, 'src/content/posts');
+const OUTPUT_FILE = resolve(ROOT, 'src/generated/tikz-cache.json');
+
+// Extract all ```tikz code blocks from a markdown string
+function extractTikzBlocks(markdown) {
+  const regex = /```tikz\s*\n([\s\S]*?)```/g;
+  const blocks = [];
+  let match;
+  while ((match = regex.exec(markdown)) !== null) {
+    blocks.push(match[1].trim());
+  }
+  return blocks;
+}
+
+// Create a stable hash for a TikZ code string
+function hashContent(content) {
+  return createHash('sha256').update(content).digest('hex').slice(0, 16);
+}
+
+async function main() {
+  console.log('🎨 Pre-rendering TikZ diagrams...\n');
+
+  // Collect all TikZ blocks from all posts
+  const { readdirSync } = await import('fs');
+  const files = readdirSync(POSTS_DIR).filter(f => f.endsWith('.md'));
+
+  const allBlocks = [];
+  for (const file of files) {
+    const content = readFileSync(resolve(POSTS_DIR, file), 'utf-8');
+    const blocks = extractTikzBlocks(content);
+    if (blocks.length > 0) {
+      console.log(`  📄 ${file}: found ${blocks.length} TikZ block(s)`);
+      allBlocks.push(...blocks);
+    }
+  }
+
+  // Also check the inline sample post
+  const postsTs = resolve(ROOT, 'src/data/posts.ts');
+  if (existsSync(postsTs)) {
+    const postsContent = readFileSync(postsTs, 'utf-8');
+    // For escaped template literals, unescape them first
+    const unescaped = postsContent.replace(/\\`\\`\\`tikz/g, '```tikz').replace(/\\`\\`\\`/g, '```')
+      .replace(/\\\\/g, '\\');
+    const inlineBlocks = extractTikzBlocks(unescaped);
+    if (inlineBlocks.length > 0) {
+      console.log(`  📄 posts.ts: found ${inlineBlocks.length} TikZ block(s)`);
+      allBlocks.push(...inlineBlocks);
+    }
+  }
+
+  if (allBlocks.length === 0) {
+    console.log('  No TikZ blocks found. Nothing to do.');
+    return;
+  }
+
+  // Deduplicate by content hash
+  const uniqueBlocks = new Map();
+  for (const block of allBlocks) {
+    const hash = hashContent(block);
+    if (!uniqueBlocks.has(hash)) {
+      uniqueBlocks.set(hash, block);
+    }
+  }
+
+  console.log(`\n  🔧 Compiling ${uniqueBlocks.size} unique diagram(s)...\n`);
+
+  // Check for existing cache to skip already-rendered diagrams
+  let existingCache = {};
+  if (existsSync(OUTPUT_FILE)) {
+    try {
+      existingCache = JSON.parse(readFileSync(OUTPUT_FILE, 'utf-8'));
+    } catch {
+      // Corrupted cache, start fresh
+    }
+  }
+
+  const cache = {};
+  let compiled = 0;
+  let skipped = 0;
+
+  for (const [hash, tikzCode] of uniqueBlocks) {
+    // Skip if already cached
+    if (existingCache[hash]) {
+      cache[hash] = existingCache[hash];
+      skipped++;
+      console.log(`  ⏩ [${hash}] already cached, skipping`);
+      continue;
+    }
+
+    try {
+      // node-tikzjax needs full document structure
+      const fullSource = `\\begin{document}\n${tikzCode}\n\\end{document}`;
+      const svg = await tex2svg(fullSource, {
+        embedFontCss: true,
+      });
+      cache[hash] = svg;
+      compiled++;
+      console.log(`  ✅ [${hash}] compiled successfully`);
+    } catch (err) {
+      console.error(`  ❌ [${hash}] failed: ${err.message}`);
+      cache[hash] = null; // Mark as failed so we don't retry endlessly
+    }
+  }
+
+  // Write the manifest
+  const outDir = dirname(OUTPUT_FILE);
+  if (!existsSync(outDir)) {
+    mkdirSync(outDir, { recursive: true });
+  }
+
+  writeFileSync(OUTPUT_FILE, JSON.stringify(cache, null, 2), 'utf-8');
+
+  console.log(`\n🎉 Done! ${compiled} compiled, ${skipped} cached. Output: ${OUTPUT_FILE}\n`);
+}
+
+main().catch(err => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
