@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, type MouseEvent } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, type MouseEvent } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import PageLoading from './components/PageLoading';
 
@@ -50,6 +50,19 @@ function AppShell() {
   const isHome = location.pathname === '/';
   const isBlog = location.pathname === '/blog' || location.pathname.startsWith('/post/');
   const isPhotography = location.pathname === '/photography';
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animationFrame = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [location.pathname]);
 
   return (
     <div className="app-container">
