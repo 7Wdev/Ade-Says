@@ -1,9 +1,82 @@
-import { memo, useDeferredValue, useMemo, useState } from 'react';
+import { memo, useCallback, useDeferredValue, useMemo, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { allPosts } from '../utils/markdown';
-import { searchPosts } from '../utils/search';
+import { searchPosts, type SearchResult } from '../utils/search';
+import ViewportRender from '../components/ViewportRender';
 
 const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-brown', 'mag-color-pink', 'mag-color-blue', 'mag-color-glass'];
+const BLOG_CARD_VIRTUALIZATION_THRESHOLD = 12;
+const BLOG_INITIAL_CARD_COUNT = 6;
+
+type BlogResultCardProps = Pick<SearchResult, 'originalIndex' | 'post'>;
+
+const getBlogCardColorClass = (post: SearchResult['post'], originalIndex: number) => (
+  post.meta.thumbnail ? 'has-thumbnail' : editorialColors[originalIndex % editorialColors.length]
+);
+
+type BlogResultCardSkeletonProps = {
+  colorClass: string;
+};
+
+const BlogResultCardSkeleton = memo(function BlogResultCardSkeleton({ colorClass }: BlogResultCardSkeletonProps) {
+  return (
+    <div className={`blog-result-card blog-result-card-skeleton ${colorClass}`} aria-hidden="true">
+      <div className="post-card-content">
+        <span className="card-cat blog-skeleton-chip" />
+        <span className="blog-skeleton-line blog-skeleton-title" />
+        <span className="blog-skeleton-line" />
+        <span className="blog-skeleton-line blog-skeleton-short" />
+      </div>
+      <div className="card-footer">
+        <span className="blog-skeleton-line blog-skeleton-date" />
+        <span className="blog-skeleton-circle" />
+      </div>
+    </div>
+  );
+});
+
+const BlogResultCard = memo(function BlogResultCard({ originalIndex, post }: BlogResultCardProps) {
+  const colorClass = getBlogCardColorClass(post, originalIndex);
+
+  return (
+    <Link to={`/post/${post.meta.id}`} className={`blog-result-card ${colorClass}`}>
+      {post.meta.thumbnail && <img src={post.meta.thumbnail} className="card-thumbnail" alt="" loading="lazy" decoding="async" />}
+      <div className="post-card-content">
+        <span className="card-cat">{post.meta.pinned ? 'Pinned' : 'Blog'}</span>
+        <h2>{post.meta.title}</h2>
+        <p>{post.meta.excerpt}</p>
+      </div>
+      <div className="card-footer">
+        <span>{post.meta.date}</span>
+        <span className="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+      </div>
+    </Link>
+  );
+});
+
+type VirtualizedBlogResultCardProps = BlogResultCardProps & {
+  initialRender: boolean;
+};
+
+const VirtualizedBlogResultCard = memo(function VirtualizedBlogResultCard({
+  initialRender,
+  originalIndex,
+  post,
+}: VirtualizedBlogResultCardProps) {
+  const colorClass = getBlogCardColorClass(post, originalIndex);
+
+  return (
+    <ViewportRender
+      className="blog-card-slot"
+      initialRender={initialRender}
+      minHeight={320}
+      placeholder={<BlogResultCardSkeleton colorClass={colorClass} />}
+      rootMargin="1000px 0px"
+    >
+      <BlogResultCard originalIndex={originalIndex} post={post} />
+    </ViewportRender>
+  );
+});
 
 function Blog() {
   const [query, setQuery] = useState('');
@@ -11,6 +84,10 @@ function Blog() {
   const isSearchPending = query !== deferredQuery;
 
   const results = useMemo(() => searchPosts(deferredQuery, allPosts), [deferredQuery]);
+  const shouldVirtualizeCards = results.length > BLOG_CARD_VIRTUALIZATION_THRESHOLD;
+  const handleQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setQuery(event.target.value);
+  }, []);
 
   return (
     <section className="page-shell blog-page">
@@ -35,7 +112,7 @@ function Blog() {
         className="blog-search-input"
         type="search"
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={handleQueryChange}
         placeholder="Search by idea, subject, title, tag..."
       />
 
@@ -54,24 +131,22 @@ function Blog() {
 
       {results.length > 0 ? (
         <div className="blog-results-grid">
-          {results.map(({ post, originalIndex }) => {
-            const colorClass = post.meta.thumbnail ? 'has-thumbnail' : editorialColors[originalIndex % editorialColors.length];
-
-            return (
-              <Link to={`/post/${post.meta.id}`} key={post.meta.id} className={`blog-result-card ${colorClass}`}>
-                {post.meta.thumbnail && <img src={post.meta.thumbnail} className="card-thumbnail" alt="" loading="lazy" decoding="async" />}
-                <div className="post-card-content">
-                  <span className="card-cat">{post.meta.pinned ? 'Pinned' : 'Blog'}</span>
-                  <h2>{post.meta.title}</h2>
-                  <p>{post.meta.excerpt}</p>
-                </div>
-                <div className="card-footer">
-                  <span>{post.meta.date}</span>
-                  <span className="material-symbols-rounded">arrow_forward</span>
-                </div>
-              </Link>
-            );
-          })}
+          {results.map((result, index) => (
+            shouldVirtualizeCards ? (
+              <VirtualizedBlogResultCard
+                key={result.post.meta.id}
+                initialRender={index < BLOG_INITIAL_CARD_COUNT}
+                originalIndex={result.originalIndex}
+                post={result.post}
+              />
+            ) : (
+              <BlogResultCard
+                key={result.post.meta.id}
+                originalIndex={result.originalIndex}
+                post={result.post}
+              />
+            )
+          ))}
         </div>
       ) : (
         <div className="empty-state">

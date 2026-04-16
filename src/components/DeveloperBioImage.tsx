@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import SilkBackground from './SilkBackground';
-import devImage from '../assets/dev.png';
+import devImage from '../assets/dev.webp';
 
 const limeShapeClipPathId = 'limeShapeClipPathDevBio';
 const headPopOutClipPathId = 'headPopOutClipPathDevBio';

@@ -1,10 +1,18 @@
-import { lazy, memo, Suspense, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useMemo, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { allPosts } from '../utils/markdown';
 import PageLoading from '../components/PageLoading';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
+const articleToolbarStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '32px',
+} as const;
+const postBackLinkStyle = { marginBottom: 0 } as const;
+const langSwitcherStyle = { display: 'flex', gap: '8px' } as const;
 
 function PostView() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +24,11 @@ function PostView() {
     const parts = post.content.split('===AR===');
     return [parts[0]?.trim() || '', parts[1]?.trim() || ''];
   }, [post]);
+  const bannerStyle = useMemo<CSSProperties | undefined>(() => (
+    post?.meta.thumbnail ? { backgroundImage: `url(${post.meta.thumbnail})` } : undefined
+  ), [post]);
+  const showEnglish = useCallback(() => setLang('en'), []);
+  const showArabic = useCallback(() => setLang('ar'), []);
 
   if (!post) {
     return (
@@ -31,21 +44,21 @@ function PostView() {
   return (
     <>
       {post.meta.thumbnail && createPortal(
-        <div 
+        <div
           className="post-banner"
-          style={{ backgroundImage: `url(${post.meta.thumbnail})` }}
+          style={bannerStyle}
         />,
         document.body
       )}
       <article className="post-view">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <Link to="/blog" className="back-link post-back-link" style={{ marginBottom: 0 }}>
+        <div style={articleToolbarStyle}>
+        <Link to="/blog" className="back-link post-back-link" style={postBackLinkStyle}>
           <span className="material-symbols-rounded">arrow_back</span>
           Back to Blog
         </Link>
-        <div className="lang-switcher" style={{ display: 'flex', gap: '8px' }}>
-          <m3e-button variant={lang === 'en' ? 'filled' : 'tonal'} onClick={() => setLang('en')}>EN</m3e-button>
-          <m3e-button className="arabic-text" variant={lang === 'ar' ? 'filled' : 'tonal'} onClick={() => setLang('ar')}>عر</m3e-button>
+        <div className="lang-switcher" style={langSwitcherStyle}>
+          <m3e-button variant={lang === 'en' ? 'filled' : 'tonal'} onClick={showEnglish}>EN</m3e-button>
+          <m3e-button className="arabic-text" variant={lang === 'ar' ? 'filled' : 'tonal'} onClick={showArabic}>عر</m3e-button>
         </div>
       </div>
       

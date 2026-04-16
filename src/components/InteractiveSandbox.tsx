@@ -1,20 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface InteractiveSandboxProps {
   code: string;
 }
 
-export default function InteractiveSandbox({ code }: InteractiveSandboxProps) {
+function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    // Use srcdoc for cleaner, more reliable injection
-    // This avoids timing issues with contentDocument.write()
-    const html = `<!DOCTYPE html>
+  const html = useMemo(() => `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
@@ -36,10 +30,15 @@ export default function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   <body>
     ${code}
   </body>
-</html>`;
+</html>`, [code]);
+  const handleLoad = useCallback(() => setLoaded(true), []);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
 
     iframe.srcdoc = html;
-  }, [code]);
+  }, [html]);
 
   return (
     <div className="sandbox-wrapper">
@@ -54,8 +53,10 @@ export default function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         className={`interactive-sandbox ${loaded ? 'sandbox-ready' : ''}`}
         sandbox="allow-scripts"
         title="Interactive code sandbox"
-        onLoad={() => setLoaded(true)}
+        onLoad={handleLoad}
       />
     </div>
   );
 }
+
+export default memo(InteractiveSandbox);

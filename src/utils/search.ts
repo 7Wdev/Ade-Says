@@ -542,7 +542,9 @@ export function searchPosts(query: string, posts: Post[]): SearchResult[] {
   }
 
   // Flatten expanded tokens for scoring, applying penalties
-  const allQueryTokens = expandedTokenSets.flat().map((et) => et.token);
+  const flatExpandedTokens = expandedTokenSets.flat();
+  const allQueryTokens = flatExpandedTokens.map((et) => et.token);
+  const avgPenalty = flatExpandedTokens.reduce((sum, et) => sum + et.penalty, 0) / flatExpandedTokens.length;
 
   // Score candidates
   const results: SearchResult[] = [];
@@ -551,7 +553,6 @@ export function searchPosts(query: string, posts: Post[]): SearchResult[] {
     let score = scoreDoc(doc, allQueryTokens, trimmed, idx);
 
     // Apply average penalty from fuzzy expansion
-    const avgPenalty = expandedTokenSets.flat().reduce((sum, et) => sum + et.penalty, 0) / expandedTokenSets.flat().length;
     if (avgPenalty < 1.0) {
       // Only penalize the BM25 portion, not the title bonuses
       score *= (0.4 + 0.6 * avgPenalty);

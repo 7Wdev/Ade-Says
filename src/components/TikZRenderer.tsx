@@ -6,13 +6,15 @@ interface TikZRendererProps {
   content: string;
 }
 
+const typedTikzCache = tikzCache as Record<string, string>;
+
 function TikZRenderer({ content }: TikZRendererProps) {
   // Hash the content to find it in the cache, exactly as the build script does
   const hash = useMemo(() => {
     return CryptoJS.SHA256(content).toString(CryptoJS.enc.Hex).slice(0, 16);
   }, [content]);
 
-  const svgContent = (tikzCache as Record<string, string>)[hash];
+  const svgContent = typedTikzCache[hash];
 
   if (!svgContent) {
     return (

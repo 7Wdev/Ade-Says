@@ -1,4 +1,4 @@
-import { lazy, Suspense, type MouseEvent } from 'react';
+import { lazy, memo, Suspense, useCallback, type MouseEvent } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import PageLoading from './components/PageLoading';
 
@@ -13,10 +13,10 @@ type NavButtonProps = {
   to: string;
 };
 
-function NavButton({ children, selected = false, to }: NavButtonProps) {
+const NavButton = memo(function NavButton({ children, selected = false, to }: NavButtonProps) {
   const navigate = useNavigate();
 
-  const handleClick = (event: MouseEvent<HTMLElement>) => {
+  const handleClick = useCallback((event: MouseEvent<HTMLElement>) => {
     if (selected) {
       event.preventDefault();
       return;
@@ -29,7 +29,7 @@ function NavButton({ children, selected = false, to }: NavButtonProps) {
     event.preventDefault();
 
     navigate(to);
-  };
+  }, [navigate, selected, to]);
 
   return (
     <m3e-button
@@ -43,7 +43,7 @@ function NavButton({ children, selected = false, to }: NavButtonProps) {
       {children}
     </m3e-button>
   );
-}
+});
 
 function AppShell() {
   const location = useLocation();

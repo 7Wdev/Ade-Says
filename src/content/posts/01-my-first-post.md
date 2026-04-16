@@ -7,7 +7,7 @@ excerpt: Welcome to my personal platform!
 excerptAr: يا هلا فيكم بمنصتي الشخصية!
 pinned: true
 pinnedRank: 1
-tags: intro, personal
+tags: introduction, first
 thumbnail: /2151357799.jpg
 ---
 

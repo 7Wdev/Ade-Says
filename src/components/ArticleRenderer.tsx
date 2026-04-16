@@ -1,87 +1,144 @@
-import { memo } from 'react';
+import { lazy, memo, Suspense, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
-import type { Components } from 'react-markdown';
 
-import TikZRenderer from './TikZRenderer';
-import InteractiveSandbox from './InteractiveSandbox';
+import { markdownComponents } from './articleMarkdownComponents';
+import ViewportRender from './ViewportRender';
 
 interface ArticleRendererProps {
   content: string;
 }
 
-const markdownComponents: Components = {
-  code({ className, children, node, ...props }) {
-    const match = /language-(\w[\w-]*)/.exec(className || '');
-    const language = match ? match[1] : '';
-    const codeString = String(children).replace(/\n$/, '');
+const MathArticleRenderer = lazy(() => import('./MathArticleRenderer'));
+const rehypePlugins = [rehypeRaw];
+const mathDelimiterPattern = /(^|[^\\])(?:\$\$?[\s\S]*?\$\$?|\\(?:\(|\[|begin\{))/;
+const ARTICLE_VIRTUALIZATION_MIN_CHARS = 6500;
+const ARTICLE_CHUNK_TARGET_CHARS = 2600;
+const ARTICLE_INITIAL_CHUNKS = 2;
 
-    // Determine if this is a block-level code element (inside a <pre>)
-    // react-markdown wraps fenced code blocks in <pre><code>
-    const isBlock = node?.position && codeString.includes('\n') || language;
-
-    if (language === 'tikz') {
-      return <TikZRenderer content={codeString} />;
-    }
-
-    if (language === 'html-live') {
-      return <InteractiveSandbox code={codeString} />;
-    }
-
-    // Block code (fenced)
-    if (isBlock && language) {
-      return (
-        <code className={className} {...props}>
-          {children}
-        </code>
-      );
-    }
-
-    // Inline code
-    return (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  pre({ children, node, ...props }) {
-    // react-markdown wraps fenced code blocks in <pre><code>...</code></pre>
-    // We intercept the <pre> to check if its inner <code> is meant to be a custom component.
-    // If it is, we bypass the <pre> tag entirely so we don't render a black code box around our dynamic elements.
-    if (
-      node &&
-      node.children &&
-      node.children.length === 1 &&
-      node.children[0].type === 'element' &&
-      node.children[0].tagName === 'code'
-    ) {
-      const codeNode = node.children[0];
-      if (codeNode.properties && codeNode.properties.className) {
-        const classStr = String(codeNode.properties.className);
-        if (classStr.includes('language-html-live') || classStr.includes('language-tikz')) {
-          return <>{children}</>;
-        }
-      }
-    }
-    return <pre {...props}>{children}</pre>;
-  },
+type MarkdownBlockProps = {
+  content: string;
+  hasMath: boolean;
 };
 
-const remarkPlugins = [remarkMath];
-const rehypePlugins = [rehypeKatex, rehypeRaw];
+function splitMarkdownForViewport(content: string) {
+  if (content.length < ARTICLE_VIRTUALIZATION_MIN_CHARS) {
+    return [content];
+  }
 
-function ArticleRenderer({ content }: ArticleRendererProps) {
+  const chunks: string[] = [];
+  const currentLines: string[] = [];
+  const lines = content.split(/\r?\n/);
+  let currentLength = 0;
+  let inFence = false;
+
+  const pushChunk = () => {
+    const chunk = currentLines.join('\n').trim();
+    if (chunk) {
+      chunks.push(chunk);
+    }
+
+    currentLines.length = 0;
+    currentLength = 0;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const startsFence = /^(```|~~~)/.test(trimmed);
+    const isHeading = !inFence && /^#{1,3}\s+/.test(line);
+    const shouldSplitBefore = isHeading && currentLength >= ARTICLE_CHUNK_TARGET_CHARS / 2;
+
+    if (shouldSplitBefore) {
+      pushChunk();
+    }
+
+    currentLines.push(line);
+    currentLength += line.length + 1;
+
+    if (startsFence) {
+      inFence = !inFence;
+    }
+
+    if (!inFence && trimmed === '' && currentLength >= ARTICLE_CHUNK_TARGET_CHARS) {
+      pushChunk();
+    }
+  }
+
+  pushChunk();
+
+  return chunks.length > 1 ? chunks : [content];
+}
+
+const ArticleBlockSkeleton = memo(function ArticleBlockSkeleton() {
+  return (
+    <div className="article-block-skeleton" aria-hidden="true">
+      <span className="article-skeleton-line article-skeleton-title" />
+      <span className="article-skeleton-line" />
+      <span className="article-skeleton-line" />
+      <span className="article-skeleton-line article-skeleton-short" />
+    </div>
+  );
+});
+
+const PlainMarkdownBlock = memo(function PlainMarkdownBlock({ content }: Pick<MarkdownBlockProps, 'content'>) {
   return (
     <ReactMarkdown
-      remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
       components={markdownComponents}
     >
       {content}
     </ReactMarkdown>
   );
+});
+
+const MarkdownBlock = memo(function MarkdownBlock({ content, hasMath }: MarkdownBlockProps) {
+  if (hasMath) {
+    return (
+      <Suspense fallback={<div className="article-inline-loading" role="status">Loading article</div>}>
+        <MathArticleRenderer content={content} />
+      </Suspense>
+    );
+  }
+
+  return <PlainMarkdownBlock content={content} />;
+});
+
+function ArticleRenderer({ content }: ArticleRendererProps) {
+  const chunks = useMemo(() => splitMarkdownForViewport(content), [content]);
+  const hasMath = mathDelimiterPattern.test(content);
+  const shouldVirtualize = chunks.length > 1;
+
+  if (shouldVirtualize) {
+    return (
+      <div className="virtual-article">
+        {chunks.map((chunk, index) => {
+          const blockHasMath = hasMath && mathDelimiterPattern.test(chunk);
+
+          if (index < ARTICLE_INITIAL_CHUNKS) {
+            return (
+              <div className="lazy-article-block" key={`${index}-${chunk.length}`}>
+                <MarkdownBlock content={chunk} hasMath={blockHasMath} />
+              </div>
+            );
+          }
+
+          return (
+            <ViewportRender
+              className="lazy-article-block"
+              key={`${index}-${chunk.length}`}
+              minHeight={300}
+              placeholder={<ArticleBlockSkeleton />}
+              rootMargin="1200px 0px"
+            >
+              <MarkdownBlock content={chunk} hasMath={blockHasMath} />
+            </ViewportRender>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return <MarkdownBlock content={content} hasMath={hasMath} />;
 }
 
 export default memo(ArticleRenderer);
