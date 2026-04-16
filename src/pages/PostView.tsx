@@ -39,7 +39,7 @@ function PostView() {
       )}
       <article className="post-view">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <Link to="/blog" className="back-link" style={{ marginBottom: 0 }}>
+        <Link to="/blog" className="back-link post-back-link" style={{ marginBottom: 0 }}>
           <span className="material-symbols-rounded">arrow_back</span>
           Back to Blog
         </Link>
