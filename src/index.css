@@ -404,6 +404,10 @@ m3e-button,
 
 .greeting-word[lang="ar"] {
   direction: rtl;
+  font-family: var(--md-sys-typescale-arabic-font) !important;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0;
 }
 
 .greeting-word[lang="he"] {
