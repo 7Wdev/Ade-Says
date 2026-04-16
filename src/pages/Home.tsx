@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense } from 'react';
+import { lazy, memo, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ViewportRender from '../components/ViewportRender';
 import {
@@ -29,6 +29,7 @@ const greetings = [
   { text: '안녕하세요', language: 'Korean' },
   { text: 'Jambo', language: 'Swahili' },
 ];
+const GREETING_INTERVAL_MS = 2000;
 const greetingAriaLabel = greetings.map((greeting) => `${greeting.language}: ${greeting.text}`).join('. ');
 const postIndexById = new Map(allPostSummaries.map((post, index) => [post.meta.id, index]));
 const profileImageFallback = (
@@ -62,47 +63,82 @@ const pinnedArticleCards: PinnedArticleCardModel[] = pinnedPostSummaries.map((po
 
 type BackgroundShapeProps = {
   className: string;
-  src: string;
+  desktopSrc: string;
+  fallbackSrc: string;
+  mobileSrc: string;
 };
 
-const BackgroundShape = memo(function BackgroundShape({ className, src }: BackgroundShapeProps) {
+const BackgroundShape = memo(function BackgroundShape({
+  className,
+  desktopSrc,
+  fallbackSrc,
+  mobileSrc,
+}: BackgroundShapeProps) {
   return (
-    <img
-      src={src}
-      className={`bg-shape ${className}`}
-      alt=""
-      aria-hidden="true"
-      decoding="async"
-    />
+    <picture>
+      <source media="(max-width: 980px)" srcSet={mobileSrc} type="image/webp" />
+      <source srcSet={desktopSrc} type="image/webp" />
+      <img
+        src={fallbackSrc}
+        className={`bg-shape ${className}`}
+        alt=""
+        aria-hidden="true"
+        decoding="async"
+      />
+    </picture>
   );
 });
 
 const BackgroundShapes = memo(function BackgroundShapes() {
   return (
     <>
-      <BackgroundShape src="/shape1.png" className="shape-1" />
-      <BackgroundShape src="/shape3.png" className="shape-3" />
-      <BackgroundShape src="/shape5.png" className="shape-5" />
-      <BackgroundShape src="/shape6.png" className="shape-6" />
+      <BackgroundShape fallbackSrc="/shape1.png" desktopSrc="/shape1.webp" mobileSrc="/shape1-mobile.webp" className="shape-1" />
+      <BackgroundShape fallbackSrc="/shape3.png" desktopSrc="/shape3.webp" mobileSrc="/shape3-mobile.webp" className="shape-3" />
+      <BackgroundShape fallbackSrc="/shape5.png" desktopSrc="/shape5.webp" mobileSrc="/shape5-mobile.webp" className="shape-5" />
+      <BackgroundShape fallbackSrc="/shape6.png" desktopSrc="/shape6.webp" mobileSrc="/shape6-mobile.webp" className="shape-6" />
     </>
   );
 });
 
 const HeroSection = memo(function HeroSection() {
+  const [activeGreetingIndex, setActiveGreetingIndex] = useState(0);
+  const activeGreeting = greetings[activeGreetingIndex];
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveGreetingIndex((currentIndex) => (currentIndex + 1) % greetings.length);
+    }, GREETING_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   return (
     <section className="hero-section home-enter home-enter-0">
       <div className="hero-text">
         <h1 className="hero-title greeting-title" aria-label={greetingAriaLabel}>
           <span className="greeting-stack" aria-hidden="true">
-            {greetings.map((greeting) => (
-              <span
-                className="greeting-word"
-                key={greeting.language}
-                lang={greetingLangByLanguage[greeting.language]}
-              >
-                {greeting.text}
-              </span>
-            ))}
+            <span className="greeting-measurer" aria-hidden="true">
+              {greetings.map((greeting) => (
+                <span
+                  className="greeting-measure-word"
+                  key={greeting.language}
+                  lang={greetingLangByLanguage[greeting.language]}
+                >
+                  {greeting.text}
+                </span>
+              ))}
+            </span>
+            <span
+              className="greeting-word"
+              key={activeGreeting.language}
+              lang={greetingLangByLanguage[activeGreeting.language]}
+            >
+              {activeGreeting.text}
+            </span>
           </span>
         </h1>
         <p className="hero-subtitle">
