@@ -253,110 +253,24 @@ m3e-button,
   --home-enter-delay: 460ms;
 }
 
-/* Fixed 3D Background Shapes */
-.bg-shape {
+/* Lightweight shader background */
+.pixel-blast-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-pixel-background {
   position: fixed;
+  inset: 0;
   z-index: -10;
   pointer-events: none;
-  mix-blend-mode: screen;
-  aspect-ratio: 1 / 1;
-  height: auto;
-  object-fit: contain;
-  /* Smoothly fade out edges to completely hide harsh black image boundaries */
-  -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 1) 40%,
-    rgba(0, 0, 0, 0) 70%
-  );
-  mask-image: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 1) 40%,
-    rgba(0, 0, 0, 0) 70%
-  );
-  /* Pre-calculate composite layers for ultra-smooth GPU performance */
-  will-change: transform;
-}
-
-/* Shape 1: Massive, distant background (Top Right) */
-.shape-1 {
-  top: -30%;
-  right: -25%;
-  width: 95vw;
-  max-width: 1400px;
-  opacity: 0.3;
-  filter: blur(16px) contrast(1.1);
-  animation: floatSlowX 38s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Shape 3: Medium-Large, mid-ground (Bottom Left) */
-.shape-3 {
-  bottom: -20%;
-  left: -15%;
-  width: 65vw;
-  max-width: 1000px;
-  opacity: 0.45;
-  filter: blur(8px) contrast(1.2);
-  animation: floatSlowY 30s infinite alternate cubic-bezier(0.4, 0.8, 0.2, 1);
-}
-
-/* Shape 5: Medium, mid-ground (Center Top) */
-.shape-5 {
-  top: -5%;
-  left: 35%;
-  width: 40vw;
-  max-width: 600px;
-  opacity: 0.6;
-  filter: blur(6px) contrast(1.2);
-  animation: floatSlowX 26s infinite alternate-reverse ease-in-out;
-}
-
-/* Shape 6: Massive, distant background (Bottom Right) */
-.shape-6 {
-  bottom: -35%;
-  right: -20%;
-  width: 85vw;
-  max-width: 1200px;
-  opacity: 0.25;
-  filter: blur(20px) contrast(1.1);
-  animation: floatFastY 40s infinite alternate-reverse
-    cubic-bezier(0.5, 0, 0.5, 1);
-}
-
-/* Hardware accelerated translation keyframes */
-@keyframes floatSlowX {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-  50% {
-    transform: translate3d(40px, -20px, 0) rotate(5deg) scale(1.02);
-  }
-  100% {
-    transform: translate3d(-30px, 10px, 0) rotate(-2deg) scale(0.98);
-  }
-}
-
-@keyframes floatFastY {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-  50% {
-    transform: translate3d(-20px, 60px, 0) rotate(-10deg) scale(0.95);
-  }
-  100% {
-    transform: translate3d(30px, -40px, 0) rotate(8deg) scale(1.05);
-  }
-}
-
-@keyframes floatSlowY {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-  50% {
-    transform: translate3d(10px, -50px, 0) rotate(4deg) scale(1.03);
-  }
-  100% {
-    transform: translate3d(-20px, 30px, 0) rotate(-6deg) scale(0.97);
-  }
+  opacity: 0.72;
+  contain: strict;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(180, 151, 207, 0.18), transparent 34%),
+    radial-gradient(circle at 12% 72%, rgba(52, 168, 83, 0.1), transparent 30%);
 }
 
 /* Glass Panel Utility */
@@ -2191,44 +2105,6 @@ m3e-button,
     white-space: nowrap;
   }
 
-  .bg-shape {
-    max-width: none;
-  }
-
-  .shape-1 {
-    top: -24vh;
-    right: -36vw;
-    width: 118vw;
-    opacity: 0.34;
-    filter: blur(14px) contrast(1.15);
-  }
-
-  .shape-3 {
-    top: 58vh;
-    bottom: auto;
-    left: -26vw;
-    width: 82vw;
-    opacity: 0.42;
-    filter: blur(9px) contrast(1.18);
-  }
-
-  .shape-5 {
-    top: 12vh;
-    left: -22vw;
-    width: 76vw;
-    opacity: 0.36;
-    filter: blur(10px) contrast(1.15);
-  }
-
-  .shape-6 {
-    top: 28vh;
-    right: -38vw;
-    bottom: auto;
-    width: 108vw;
-    opacity: 0.3;
-    filter: blur(18px) contrast(1.12);
-  }
-
   .hero-section {
     padding: 82px 0 76px;
     margin-bottom: 58px;
@@ -2349,38 +2225,6 @@ m3e-button,
 
   .navbar-brand {
     font-size: 28px;
-  }
-
-  .shape-1 {
-    top: -20vh;
-    right: -62vw;
-    width: 168vw;
-    opacity: 0.28;
-    filter: blur(18px) contrast(1.12);
-  }
-
-  .shape-3 {
-    top: 66vh;
-    left: -40vw;
-    width: 122vw;
-    opacity: 0.44;
-    filter: blur(12px) contrast(1.2);
-  }
-
-  .shape-5 {
-    top: 15vh;
-    left: -48vw;
-    width: 116vw;
-    opacity: 0.34;
-    filter: blur(12px) contrast(1.16);
-  }
-
-  .shape-6 {
-    top: 36vh;
-    right: -58vw;
-    width: 150vw;
-    opacity: 0.32;
-    filter: blur(22px) contrast(1.1);
   }
 
   .hero-section {
@@ -2551,30 +2395,6 @@ m3e-button,
     --m3e-button-small-trailing-space: 0.8rem;
   }
 
-  .shape-1 {
-    top: -18vh;
-    right: -72vw;
-    width: 182vw;
-  }
-
-  .shape-3 {
-    top: 70vh;
-    left: -48vw;
-    width: 136vw;
-  }
-
-  .shape-5 {
-    top: 18vh;
-    left: -58vw;
-    width: 128vw;
-  }
-
-  .shape-6 {
-    top: 39vh;
-    right: -68vw;
-    width: 164vw;
-  }
-
   .hero-title {
     font-size: 54px;
   }
@@ -2646,10 +2466,6 @@ m3e-button,
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 1ms !important;
-  }
-
-  .bg-shape {
-    animation: none;
   }
 
   .greeting-word {

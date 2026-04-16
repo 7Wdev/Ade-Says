@@ -8,6 +8,7 @@ import {
 } from '../utils/postSummaries';
 
 const DeveloperBioImage = lazy(() => import('../components/DeveloperBioImage'));
+const PixelBlast = lazy(() => import('../components/PixelBlast'));
 
 const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-brown', 'mag-color-pink', 'mag-color-blue', 'mag-color-glass'];
 const greetingLangByLanguage: Record<string, 'ar' | 'he'> = {
@@ -37,6 +38,7 @@ const profileImageFallback = (
     <m3e-loading-indicator variant="contained" aria-label="Loading portrait" />
   </div>
 );
+const backgroundFallback = <div className="pixel-blast-container home-pixel-background" aria-hidden="true" />;
 
 type PinnedArticleCardModel = {
   colorClass: string;
@@ -61,42 +63,26 @@ const pinnedArticleCards: PinnedArticleCardModel[] = pinnedPostSummaries.map((po
   };
 });
 
-type BackgroundShapeProps = {
-  className: string;
-  desktopSrc: string;
-  fallbackSrc: string;
-  mobileSrc: string;
-};
-
-const BackgroundShape = memo(function BackgroundShape({
-  className,
-  desktopSrc,
-  fallbackSrc,
-  mobileSrc,
-}: BackgroundShapeProps) {
+const HomeBackground = memo(function HomeBackground() {
   return (
-    <picture>
-      <source media="(max-width: 980px)" srcSet={mobileSrc} type="image/webp" />
-      <source srcSet={desktopSrc} type="image/webp" />
-      <img
-        src={fallbackSrc}
-        className={`bg-shape ${className}`}
-        alt=""
-        aria-hidden="true"
-        decoding="async"
+    <Suspense fallback={backgroundFallback}>
+      <PixelBlast
+        className="home-pixel-background"
+        color="#B497CF"
+        edgeFade={0.25}
+        enableRipples
+        patternDensity={1}
+        patternScale={2}
+        pixelSize={4}
+        pixelSizeJitter={0}
+        rippleIntensityScale={1.5}
+        rippleSpeed={0.4}
+        rippleThickness={0.12}
+        speed={0.5}
+        transparent
+        variant="square"
       />
-    </picture>
-  );
-});
-
-const BackgroundShapes = memo(function BackgroundShapes() {
-  return (
-    <>
-      <BackgroundShape fallbackSrc="/shape1.png" desktopSrc="/shape1.webp" mobileSrc="/shape1-mobile.webp" className="shape-1" />
-      <BackgroundShape fallbackSrc="/shape3.png" desktopSrc="/shape3.webp" mobileSrc="/shape3-mobile.webp" className="shape-3" />
-      <BackgroundShape fallbackSrc="/shape5.png" desktopSrc="/shape5.webp" mobileSrc="/shape5-mobile.webp" className="shape-5" />
-      <BackgroundShape fallbackSrc="/shape6.png" desktopSrc="/shape6.webp" mobileSrc="/shape6-mobile.webp" className="shape-6" />
-    </>
+    </Suspense>
   );
 });
 
@@ -272,7 +258,7 @@ const PinnedArticles = memo(function PinnedArticles() {
 function Home() {
   return (
     <div className="home-container">
-      <BackgroundShapes />
+      <HomeBackground />
       <HeroSection />
 
       <div className="editorial-grid">
