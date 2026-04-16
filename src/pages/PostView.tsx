@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
 import { allPosts } from '../utils/markdown';
 import PageLoading from '../components/PageLoading';
+import FloatingAudioPlayer, { type NarrationTrackMap } from '../components/FloatingAudioPlayer';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
 const articleToolbarStyle = {
@@ -18,17 +19,64 @@ function PostView() {
   const { id } = useParams<{ id: string }>();
   const post = useMemo(() => allPosts.find((p) => p.meta.id === id), [id]);
   const [lang, setLang] = useState<'en' | 'ar'>('en');
+  const [pageSelection, setPageSelection] = useState({
+    pageIndex: 0,
+    postId: '',
+  });
+  const [narrationProgress, setNarrationProgress] = useState({
+    key: '',
+    wordIndex: null as number | null,
+  });
+  const selectedPageIndex = post && pageSelection.postId === post.meta.id
+    ? Math.min(pageSelection.pageIndex, post.pages.length - 1)
+    : 0;
+  const activePage = post?.pages[selectedPageIndex];
 
   const [enContent, arContent] = useMemo(() => {
-    if (!post) return ['', ''];
-    const parts = post.content.split('===AR===');
+    if (!activePage) return ['', ''];
+    const parts = activePage.content.split('===AR===');
     return [parts[0]?.trim() || '', parts[1]?.trim() || ''];
-  }, [post]);
+  }, [activePage]);
+  const activeContent = lang === 'en' ? enContent : (arContent || enContent);
+  const narrationTracks = useMemo<NarrationTrackMap>(() => ({
+    en: post?.meta.audioEn
+      ? {
+        content: enContent,
+        label: 'English narration',
+        src: post.meta.audioEn,
+        transcriptSrc: post.meta.transcriptEn,
+      }
+      : undefined,
+    ar: post?.meta.audioAr
+      ? {
+        content: arContent || enContent,
+        label: 'Arabic narration',
+        src: post.meta.audioAr,
+        transcriptSrc: post.meta.transcriptAr,
+      }
+      : undefined,
+  }), [arContent, enContent, post]);
   const bannerStyle = useMemo<CSSProperties | undefined>(() => (
     post?.meta.thumbnail ? { backgroundImage: `url(${post.meta.thumbnail})` } : undefined
   ), [post]);
   const showEnglish = useCallback(() => setLang('en'), []);
   const showArabic = useCallback(() => setLang('ar'), []);
+  const activeNarrationTrack = narrationTracks[lang];
+  const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
+  const activeNarrationWord = narrationProgress.key === narrationKey ? narrationProgress.wordIndex : null;
+  const handleActiveNarrationWord = useCallback((wordIndex: number | null) => {
+    setNarrationProgress({ key: narrationKey, wordIndex });
+  }, [narrationKey]);
+  const handlePageSelect = useCallback((pageIndex: number) => {
+    if (!post) {
+      return;
+    }
+
+    setPageSelection({
+      pageIndex,
+      postId: post.meta.id,
+    });
+  }, [post]);
 
   if (!post) {
     return (
@@ -38,8 +86,6 @@ function PostView() {
       </div>
     );
   }
-
-  const activeContent = lang === 'en' ? enContent : (arContent || enContent);
 
   return (
     <>
@@ -83,10 +129,39 @@ function PostView() {
       
       <div className="article-content" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <Suspense fallback={<PageLoading label="Loading article" />}>
-          <ArticleRenderer content={activeContent} />
+          <ArticleRenderer
+            content={activeContent}
+            narration={{
+              activeWordIndex: activeNarrationWord,
+              enabled: Boolean(activeNarrationTrack?.src),
+            }}
+          />
         </Suspense>
       </div>
+      {post.pages.length > 1 && (
+        <nav className="article-page-nav" aria-label="Article pages">
+          <span className="article-page-nav-label">Pages</span>
+          <div className="article-page-nav-buttons">
+            {post.pages.map((page, index) => (
+              <button
+                className={`article-page-button ${index === selectedPageIndex ? 'is-active' : ''}`}
+                key={page.id}
+                onClick={() => handlePageSelect(index)}
+                type="button"
+              >
+                {lang === 'ar' && page.labelAr ? page.labelAr : page.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
     </article>
+    <FloatingAudioPlayer
+      key={narrationKey}
+      lang={lang}
+      onActiveWordChange={handleActiveNarrationWord}
+      tracks={narrationTracks}
+    />
     </>
   );
 }

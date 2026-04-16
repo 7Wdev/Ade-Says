@@ -2,11 +2,16 @@ import { lazy, memo, Suspense, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
-import { markdownComponents } from './articleMarkdownComponents';
+import { createMarkdownComponents, type NarrationRenderState } from './articleMarkdownComponents';
 import ViewportRender from './ViewportRender';
+import { countNarrationWords } from '../utils/narration';
 
 interface ArticleRendererProps {
   content: string;
+  narration?: {
+    activeWordIndex: number | null;
+    enabled: boolean;
+  };
 }
 
 const MathArticleRenderer = lazy(() => import('./MathArticleRenderer'));
@@ -19,6 +24,8 @@ const ARTICLE_INITIAL_CHUNKS = 2;
 type MarkdownBlockProps = {
   content: string;
   hasMath: boolean;
+  narration?: ArticleRendererProps['narration'];
+  wordOffset: number;
 };
 
 function splitMarkdownForViewport(content: string) {
@@ -80,31 +87,50 @@ const ArticleBlockSkeleton = memo(function ArticleBlockSkeleton() {
   );
 });
 
-const PlainMarkdownBlock = memo(function PlainMarkdownBlock({ content }: Pick<MarkdownBlockProps, 'content'>) {
+const PlainMarkdownBlock = memo(function PlainMarkdownBlock({
+  content,
+  narration,
+  wordOffset,
+}: Pick<MarkdownBlockProps, 'content' | 'narration' | 'wordOffset'>) {
+  const narrationState: NarrationRenderState | undefined = narration?.enabled
+    ? {
+      activeWordIndex: narration.activeWordIndex,
+      enabled: true,
+      wordCursor: { current: wordOffset },
+    }
+    : undefined;
+
   return (
     <ReactMarkdown
       rehypePlugins={rehypePlugins}
-      components={markdownComponents}
+      components={createMarkdownComponents(narrationState)}
     >
       {content}
     </ReactMarkdown>
   );
 });
 
-const MarkdownBlock = memo(function MarkdownBlock({ content, hasMath }: MarkdownBlockProps) {
+const MarkdownBlock = memo(function MarkdownBlock({ content, hasMath, narration, wordOffset }: MarkdownBlockProps) {
   if (hasMath) {
     return (
       <Suspense fallback={<div className="article-inline-loading" role="status">Loading article</div>}>
-        <MathArticleRenderer content={content} />
+        <MathArticleRenderer content={content} narration={narration} wordOffset={wordOffset} />
       </Suspense>
     );
   }
 
-  return <PlainMarkdownBlock content={content} />;
+  return <PlainMarkdownBlock content={content} narration={narration} wordOffset={wordOffset} />;
 });
 
-function ArticleRenderer({ content }: ArticleRendererProps) {
+function ArticleRenderer({ content, narration }: ArticleRendererProps) {
   const chunks = useMemo(() => splitMarkdownForViewport(content), [content]);
+  const wordOffsets = useMemo(() => {
+    const wordCounts = chunks.map((chunk) => countNarrationWords(chunk));
+
+    return wordCounts.map((_, index) => (
+      wordCounts.slice(0, index).reduce((total, wordCount) => total + wordCount, 0)
+    ));
+  }, [chunks]);
   const hasMath = mathDelimiterPattern.test(content);
   const shouldVirtualize = chunks.length > 1;
 
@@ -117,7 +143,12 @@ function ArticleRenderer({ content }: ArticleRendererProps) {
           if (index < ARTICLE_INITIAL_CHUNKS) {
             return (
               <div className="lazy-article-block" key={`${index}-${chunk.length}`}>
-                <MarkdownBlock content={chunk} hasMath={blockHasMath} />
+                <MarkdownBlock
+                  content={chunk}
+                  hasMath={blockHasMath}
+                  narration={narration}
+                  wordOffset={wordOffsets[index]}
+                />
               </div>
             );
           }
@@ -130,7 +161,12 @@ function ArticleRenderer({ content }: ArticleRendererProps) {
               placeholder={<ArticleBlockSkeleton />}
               rootMargin="1200px 0px"
             >
-              <MarkdownBlock content={chunk} hasMath={blockHasMath} />
+              <MarkdownBlock
+                content={chunk}
+                hasMath={blockHasMath}
+                narration={narration}
+                wordOffset={wordOffsets[index]}
+              />
             </ViewportRender>
           );
         })}
@@ -138,7 +174,7 @@ function ArticleRenderer({ content }: ArticleRendererProps) {
     );
   }
 
-  return <MarkdownBlock content={content} hasMath={hasMath} />;
+  return <MarkdownBlock content={content} hasMath={hasMath} narration={narration} wordOffset={0} />;
 }
 
 export default memo(ArticleRenderer);

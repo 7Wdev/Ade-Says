@@ -8,8 +8,8 @@
  * This eliminates the need for the browser to load a 5MB+ WASM TeX engine.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
+import { resolve, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
 import pkg from 'node-tikzjax';
@@ -54,6 +54,10 @@ function parseFrontmatter(rawMarkdown, id) {
       case 'date':
       case 'excerpt':
       case 'excerptAr':
+      case 'audioEn':
+      case 'audioAr':
+      case 'transcriptEn':
+      case 'transcriptAr':
       case 'thumbnail':
         meta[key] = value;
         break;
@@ -78,13 +82,74 @@ function parseFrontmatter(rawMarkdown, id) {
   return meta;
 }
 
-function writePostMetadata(files) {
-  const postMetadata = files
-    .map((file) => {
-      const content = readFileSync(resolve(POSTS_DIR, file), 'utf-8');
-      const id = file.replace(/\.md$/, '');
+function toPosixPath(path) {
+  return path.replace(/\\/g, '/');
+}
 
-      return parseFrontmatter(content, id);
+function readMarkdownFiles(directory, baseDirectory = directory) {
+  const files = [];
+
+  for (const entry of readdirSync(directory)) {
+    const fullPath = resolve(directory, entry);
+    const stat = statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      files.push(...readMarkdownFiles(fullPath, baseDirectory));
+      continue;
+    }
+
+    if (entry.endsWith('.md')) {
+      files.push(toPosixPath(relative(baseDirectory, fullPath)));
+    }
+  }
+
+  return files;
+}
+
+function getArticleFileInfo(file) {
+  const parts = toPosixPath(file).split('/');
+
+  if (parts.length === 1) {
+    return {
+      articleId: file.replace(/\.md$/, ''),
+      filename: file,
+    };
+  }
+
+  return {
+    articleId: parts[0],
+    filename: parts.slice(1).join('/'),
+  };
+}
+
+function getPageOrder(filename) {
+  if (/^(index|main)\.md$/i.test(filename)) {
+    return 0;
+  }
+
+  const numericPrefix = /^(\d+)/.exec(filename)?.[1];
+  return numericPrefix ? Number(numericPrefix) : Number.MAX_SAFE_INTEGER;
+}
+
+function writePostMetadata(files) {
+  const groups = new Map();
+
+  for (const file of files) {
+    const info = getArticleFileInfo(file);
+    const current = groups.get(info.articleId) ?? [];
+
+    current.push({ ...info, file });
+    groups.set(info.articleId, current);
+  }
+
+  const postMetadata = Array.from(groups.entries())
+    .map(([articleId, articleFiles]) => {
+      const [mainFile] = [...articleFiles].sort((a, b) => (
+        getPageOrder(a.filename) - getPageOrder(b.filename) || a.filename.localeCompare(b.filename)
+      ));
+      const content = readFileSync(resolve(POSTS_DIR, mainFile.file), 'utf-8');
+
+      return parseFrontmatter(content, articleId);
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -122,8 +187,7 @@ async function main() {
   console.log('🎨 Pre-rendering TikZ diagrams...\n');
 
   // Collect all TikZ blocks from all posts
-  const { readdirSync } = await import('fs');
-  const files = readdirSync(POSTS_DIR).filter(f => f.endsWith('.md'));
+  const files = readMarkdownFiles(POSTS_DIR);
   writePostMetadata(files);
 
   const allBlocks = [];

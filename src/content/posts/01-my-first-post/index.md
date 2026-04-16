@@ -8,7 +8,10 @@ excerptAr: يا هلا فيكم بمنصتي الشخصية!
 pinned: true
 pinnedRank: 1
 tags: introduction, first
-thumbnail: /2151357799.webp
+thumbnail: ./banner.webp
+audioEn: ./audios/en/full.wav
+audioAr: ./audios/ar/full.wav
+transcriptEn: ./transcripts/en.json
 ---
 
 Welcome to my personal platform! I've decided to create this space to document my journey, share my thoughts on various subjects, and connect with people who share similar interests.

@@ -1,4 +1,4 @@
-import { postMetadata } from '../generated/post-metadata';
+import { allPosts } from './markdown';
 import type { PostMeta } from './markdown';
 
 export type PostSummaryMeta = Omit<PostMeta, 'tags'> & {
@@ -9,7 +9,7 @@ export type PostSummary = {
   readonly meta: PostSummaryMeta;
 };
 
-export const allPostSummaries: PostSummary[] = postMetadata.map((meta) => ({ meta }));
+export const allPostSummaries: PostSummary[] = allPosts.map((post) => ({ meta: post.meta }));
 
 export const pinnedPostSummaries: PostSummary[] = allPostSummaries
   .filter((post) => post.meta.pinned)

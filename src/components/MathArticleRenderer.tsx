@@ -5,21 +5,34 @@ import rehypeRaw from 'rehype-raw';
 import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
 
-import { markdownComponents } from './articleMarkdownComponents';
+import { createMarkdownComponents, type NarrationRenderState } from './articleMarkdownComponents';
 
 interface MathArticleRendererProps {
   content: string;
+  narration?: {
+    activeWordIndex: number | null;
+    enabled: boolean;
+  };
+  wordOffset?: number;
 }
 
 const remarkPlugins = [remarkMath];
 const rehypePlugins = [rehypeKatex, rehypeRaw];
 
-function MathArticleRenderer({ content }: MathArticleRendererProps) {
+function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticleRendererProps) {
+  const narrationState: NarrationRenderState | undefined = narration?.enabled
+    ? {
+      activeWordIndex: narration.activeWordIndex,
+      enabled: true,
+      wordCursor: { current: wordOffset },
+    }
+    : undefined;
+
   return (
     <ReactMarkdown
       remarkPlugins={remarkPlugins}
       rehypePlugins={rehypePlugins}
-      components={markdownComponents}
+      components={createMarkdownComponents(narrationState)}
     >
       {content}
     </ReactMarkdown>
