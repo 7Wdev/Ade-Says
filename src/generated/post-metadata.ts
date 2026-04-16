@@ -14,6 +14,6 @@ export const postMetadata = [
       "introduction",
       "first"
     ],
-    "thumbnail": "/2151357799.jpg"
+    "thumbnail": "/2151357799.webp"
   }
 ] as const;

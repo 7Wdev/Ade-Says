@@ -8,7 +8,7 @@ excerptAr: يا هلا فيكم بمنصتي الشخصية!
 pinned: true
 pinnedRank: 1
 tags: introduction, first
-thumbnail: /2151357799.jpg
+thumbnail: /2151357799.webp
 ---
 
 Welcome to my personal platform! I've decided to create this space to document my journey, share my thoughts on various subjects, and connect with people who share similar interests.

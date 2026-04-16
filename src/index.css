@@ -569,15 +569,10 @@ m3e-button,
   margin-bottom: 32px;
 }
 
-.profile-info {
-  contain: layout style;
-}
-
 .profile-socials {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  contain: layout style;
 }
 
 .photography-sign {
@@ -616,7 +611,6 @@ m3e-button,
   transition:
     transform 0.28s ease,
     box-shadow 0.28s ease;
-  contain: layout style;
 }
 
 .photography-sign::before {
@@ -722,17 +716,7 @@ m3e-button,
   height: 48px;
   border: 2px solid #111;
   border-radius: 8px;
-  background:
-    radial-gradient(
-      circle at 54px 23px,
-      rgba(255, 255, 255, 0.95) 0 4px,
-      transparent 5px
-    ),
-    radial-gradient(circle at 54px 23px, #4285f4 0 14px, transparent 15px),
-    radial-gradient(circle at 54px 23px, #111 0 16px, transparent 17px),
-    linear-gradient(#fff, #fff) 10px 11px / 12px 8px no-repeat,
-    linear-gradient(#111, #111) 8px 9px / 16px 12px no-repeat,
-    #34a853;
+  background: #34a853;
   pointer-events: none;
 }
 
@@ -747,6 +731,33 @@ m3e-button,
   border-bottom: 0;
   border-radius: 8px 8px 0 0;
   background: #fbbc05;
+}
+
+.camera-lens {
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #111;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 36% 34%,
+      rgba(255, 255, 255, 0.95) 0 4px,
+      transparent 5px
+    ),
+    #4285f4;
+}
+
+.camera-flash {
+  position: absolute;
+  left: 10px;
+  top: 11px;
+  width: 12px;
+  height: 8px;
+  border: 2px solid #111;
+  background: #fff;
 }
 
 .photography-sign-kicker {
@@ -2252,8 +2263,6 @@ m3e-button,
     position: relative;
     top: auto;
     order: 2;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 860px;
   }
 
   .profile-image-container {

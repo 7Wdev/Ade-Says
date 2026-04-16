@@ -186,7 +186,10 @@ const ProfileBlock = memo(function ProfileBlock() {
             <span className="photo-sticker-deco deco-green" aria-hidden="true" />
             <span className="photo-sticker-deco deco-pink" aria-hidden="true" />
             <span className="photo-sticker-deco deco-yellow" aria-hidden="true" />
-            <span className="photo-sticker-camera" aria-hidden="true" />
+            <span className="photo-sticker-camera" aria-hidden="true">
+              <span className="camera-lens" />
+              <span className="camera-flash" />
+            </span>
             <span className="photography-sign-kicker">Tiny side quest</span>
             <span className="photography-sign-title">Did u know?</span>
             <span className="photography-sign-copy">I like photography!</span>
