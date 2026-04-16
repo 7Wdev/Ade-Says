@@ -21,7 +21,7 @@ function Blog() {
 
       <div className="page-heading">
         <span className="page-kicker">Archive</span>
-        <h1>All Blogs</h1>
+        <h1>All Articles</h1>
         <p>
           Browse the full trail of notes, projects, experiments, pinned picks, and thoughts from the notebook.
         </p>

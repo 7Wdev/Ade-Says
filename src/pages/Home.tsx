@@ -102,7 +102,7 @@ function Home() {
               <span className="page-kicker">Pinned</span>
               <h2>Hot Articles</h2>
             </div>
-            <Link to="/blog" className="section-link">All blogs</Link>
+            <Link to="/blog" className="section-link">All articles</Link>
           </div>
 
           {pinnedPosts.length > 0 ? (

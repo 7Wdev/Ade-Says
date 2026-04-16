@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Noto+Sans+Arabic:wght@300..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Noto+Sans+Arabic:wght@300..800&family=Noto+Sans+Hebrew:wght@300..900&display=swap");
 
 :root {
   /* Material 3 Expressive Dark Theme Variables */
@@ -49,6 +49,8 @@
   /* Editorial Typography Base */
   --md-sys-typescale-display-font: "Playfair Display", serif;
   --md-sys-typescale-body-font: "Roboto Flex", sans-serif;
+  --md-sys-typescale-arabic-font: "Noto Sans Arabic", sans-serif;
+  --md-sys-typescale-hebrew-font: "Noto Sans Hebrew", sans-serif;
 }
 
 * {
@@ -400,9 +402,16 @@ m3e-button,
   animation: greetingCycle 26s cubic-bezier(0.2, 0, 0, 1) infinite;
 }
 
-.greeting-word[lang="ar"],
+.greeting-word[lang="ar"] {
+  direction: rtl;
+}
+
 .greeting-word[lang="he"] {
   direction: rtl;
+  font-family: var(--md-sys-typescale-hebrew-font);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .greeting-word:nth-child(1) {
