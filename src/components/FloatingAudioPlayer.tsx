@@ -297,7 +297,6 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
   const syncToTime = useCallback((time: number) => {
     readAudioDuration();
-    activeWordRef.current = null;
     setCurrentTime(time);
     updateWordFromTime(time);
   }, [readAudioDuration, updateWordFromTime]);
@@ -462,9 +461,8 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   }, [finishScrubbing, getPointerSeekTime]);
 
   const handlePlay = useCallback(() => {
-    syncFromAudioTime();
     setIsPlaying(true);
-  }, [syncFromAudioTime]);
+  }, []);
 
   const handlePause = useCallback(() => {
     syncFromAudioTime();
@@ -473,9 +471,9 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
   const handleSeeked = useCallback(() => {
     const audio = audioRef.current;
-    const syncTime = audio && Math.abs(audio.currentTime - committedSeekTimeRef.current) < 0.25
+    const syncTime = isSeekPendingRef.current
       ? committedSeekTimeRef.current
-      : audio?.currentTime ?? committedSeekTimeRef.current;
+      : (audio?.currentTime ?? committedSeekTimeRef.current);
 
     isSeekPendingRef.current = false;
     syncToTime(syncTime);
