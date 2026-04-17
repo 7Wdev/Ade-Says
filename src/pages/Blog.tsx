@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { allPosts } from '../utils/markdown';
 import { searchPosts, type SearchResult } from '../utils/search';
 import ViewportRender from '../components/ViewportRender';
+import ArticleCardMetadata from '../components/ArticleCardMetadata';
 
 const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-brown', 'mag-color-pink', 'mag-color-blue', 'mag-color-glass'];
 const BLOG_CARD_VIRTUALIZATION_THRESHOLD = 12;
@@ -37,6 +38,7 @@ const BlogResultCardSkeleton = memo(function BlogResultCardSkeleton({ colorClass
 
 const BlogResultCard = memo(function BlogResultCard({ originalIndex, post }: BlogResultCardProps) {
   const colorClass = getBlogCardColorClass(post, originalIndex);
+  const isListenable = Boolean(post.meta.audioEn || post.meta.audioAr);
 
   return (
     <Link to={`/post/${post.meta.id}`} className={`blog-result-card ${colorClass}`}>
@@ -45,6 +47,7 @@ const BlogResultCard = memo(function BlogResultCard({ originalIndex, post }: Blo
         <span className="card-cat">{post.meta.pinned ? 'Pinned' : 'Blog'}</span>
         <h2>{post.meta.title}</h2>
         <p>{post.meta.excerpt}</p>
+        <ArticleCardMetadata isListenable={isListenable} pageCount={post.pages.length} />
       </div>
       <div className="card-footer">
         <span>{post.meta.date}</span>

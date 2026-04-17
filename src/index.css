@@ -861,6 +861,41 @@ m3e-button,
   color: #fff;
 }
 
+.article-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.article-card-meta-pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  color: currentColor;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.article-card-meta-pill .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.mag-color-yellow .article-card-meta-pill,
+.mag-color-pink .article-card-meta-pill,
+.blog-result-card.mag-color-yellow .article-card-meta-pill,
+.blog-result-card.mag-color-pink .article-card-meta-pill {
+  background: rgba(0, 0, 0, 0.12);
+  color: #000;
+}
+
 .editorial-card h3 {
   font-family: var(--md-sys-typescale-display-font);
   font-size: 40px;
@@ -968,6 +1003,12 @@ m3e-button,
 .editorial-card.has-thumbnail .card-cat {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #fff !important;
+}
+
+.editorial-card.has-thumbnail .article-card-meta-pill {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
 }
 
 /* Section Headers */
@@ -1333,6 +1374,12 @@ m3e-button,
 .blog-result-card.has-thumbnail .card-cat {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
+}
+
+.blog-result-card.has-thumbnail .article-card-meta-pill {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
 }
 
 .blog-result-card:hover .card-thumbnail {
@@ -2144,13 +2191,11 @@ m3e-button,
   z-index: 180;
   width: min(420px, calc(100vw - 32px));
   padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(16, 15, 19, 0.16);
   border-radius: 8px;
-  background: rgba(16, 15, 19, 0.92);
-  color: var(--md-sys-color-on-background);
+  background: var(--mag-accent-yellow);
+  color: #100f13;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   transform-origin: right bottom;
   transition:
     opacity 0.24s ease,
@@ -2200,6 +2245,11 @@ m3e-button,
   color: #100f13;
 }
 
+.floating-audio-player .audio-play-button,
+.floating-audio-player .audio-close-button {
+  border-color: rgba(16, 15, 19, 0.16);
+}
+
 .audio-play-button:hover,
 .audio-close-button:hover,
 .audio-fab:hover {
@@ -2215,8 +2265,8 @@ m3e-button,
   width: 34px;
   height: 34px;
   place-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(230, 224, 233, 0.82);
+  background: rgba(16, 15, 19, 0.08);
+  color: #100f13;
 }
 
 .audio-close-button .material-symbols-rounded {
@@ -2231,7 +2281,7 @@ m3e-button,
 }
 
 .audio-kicker {
-  color: var(--mag-accent-yellow);
+  color: #100f13;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 1px;
@@ -2241,7 +2291,7 @@ m3e-button,
 
 .audio-copy strong {
   overflow: hidden;
-  color: #fff;
+  color: #100f13;
   font-size: 14px;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -2254,41 +2304,66 @@ m3e-button,
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  color: rgba(230, 224, 233, 0.66);
+  color: rgba(16, 15, 19, 0.72);
   font-size: 12px;
   font-weight: 700;
 }
 
 .audio-progress-control {
   position: relative;
-  display: flex;
-  height: 24px;
+  display: grid;
+  height: 28px;
   align-items: center;
 }
 
-.audio-progress-control::before {
+.audio-progress-control::after {
   position: absolute;
-  right: 0;
-  left: 0;
-  height: 5px;
-  border-radius: 4px;
-  background:
-    linear-gradient(
-      90deg,
-      var(--mag-accent-yellow) 0 var(--audio-progress),
-      rgba(255, 255, 255, 0.14) var(--audio-progress) 100%
-    );
+  left: var(--audio-progress);
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #100f13;
+  box-shadow:
+    0 0 0 3px var(--mag-accent-yellow),
+    0 2px 8px rgba(16, 15, 19, 0.32);
   content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.audio-progress-control:has(input:focus-visible)::after,
+.audio-progress-control:hover::after {
+  box-shadow:
+    0 0 0 4px var(--mag-accent-yellow),
+    0 3px 10px rgba(16, 15, 19, 0.38);
+  transform: translateX(-50%) scale(1.08);
+}
+
+.audio-progress-indicator {
+  width: 100%;
+  pointer-events: none;
+  --m3e-linear-progress-indicator-shape: 8px;
+  --m3e-linear-progress-indicator-thickness: 5px;
+  --m3e-linear-wavy-progress-indicator-amplitude: 3px;
+  --m3e-linear-wavy-progress-indicator-wavelength: 24px;
+  --m3e-progress-indicator-color: #100f13;
+  --m3e-progress-indicator-track-color: rgba(16, 15, 19, 0.24);
 }
 
 .audio-progress-control input {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 24px;
+  height: 100%;
   margin: 0;
   appearance: none;
   background: transparent;
   cursor: pointer;
+  opacity: 0;
 }
 
 .audio-progress-control input::-webkit-slider-runnable-track {
@@ -2301,9 +2376,9 @@ m3e-button,
   height: 14px;
   margin-top: -4.5px;
   appearance: none;
-  border: 2px solid var(--mag-accent-yellow);
+  border: 2px solid #100f13;
   border-radius: 50%;
-  background: #fff;
+  background: #100f13;
 }
 
 .audio-progress-control input::-moz-range-track {
@@ -2314,9 +2389,9 @@ m3e-button,
 .audio-progress-control input::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  border: 2px solid var(--mag-accent-yellow);
+  border: 2px solid #100f13;
   border-radius: 50%;
-  background: #fff;
+  background: #100f13;
 }
 
 .audio-error {

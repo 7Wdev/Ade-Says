@@ -7,7 +7,12 @@ export type NarrationWordTiming = {
 
 export type NarrationTranscriptSegment = {
   text: string;
-  timestamp: [number, number];
+  timestamp: [number, number | null];
+};
+
+type RawNarrationTranscriptSegment = {
+  text: string;
+  timestamp: [unknown, unknown];
 };
 
 type WeightedNarrationToken =
@@ -119,19 +124,19 @@ export function createNarrationWordTimings(markdown: string, duration: number, l
   }));
 }
 
-function isTranscriptSegment(value: unknown): value is NarrationTranscriptSegment {
+function isTranscriptSegment(value: unknown): value is RawNarrationTranscriptSegment {
   if (!value || typeof value !== 'object') {
     return false;
   }
 
   const segment = value as { text?: unknown; timestamp?: unknown };
 
-  if (typeof segment.text !== 'string' || !Array.isArray(segment.timestamp)) {
+  if (typeof segment.text !== 'string' || !Array.isArray(segment.timestamp) || segment.timestamp.length < 2) {
     return false;
   }
 
   const [start, end] = segment.timestamp;
-  return Number.isFinite(Number(start)) && Number.isFinite(Number(end));
+  return Number.isFinite(Number(start)) && (end === null || Number.isFinite(Number(end)));
 }
 
 export function parseNarrationTranscript(value: unknown): NarrationTranscriptSegment[] {
@@ -143,15 +148,22 @@ export function parseNarrationTranscript(value: unknown): NarrationTranscriptSeg
     .filter(isTranscriptSegment)
     .map((segment) => ({
       text: segment.text,
-      timestamp: [Number(segment.timestamp[0]), Number(segment.timestamp[1])],
+      timestamp: [
+        Number(segment.timestamp[0]),
+        segment.timestamp[1] === null ? null : Number(segment.timestamp[1]),
+      ],
     }));
 }
 
 export function getNarrationTranscriptDuration(transcript: NarrationTranscriptSegment[]) {
   return transcript.reduce((duration, segment) => {
     const end = segment.timestamp[1];
-    return Number.isFinite(end) && end > duration ? end : duration;
+    return typeof end === 'number' && Number.isFinite(end) && end > duration ? end : duration;
   }, 0);
+}
+
+export function hasOpenEndedNarrationSegment(transcript: NarrationTranscriptSegment[]) {
+  return transcript.some((segment) => segment.timestamp[1] === null);
 }
 
 function normalizeNarrationWord(word: string) {
@@ -196,12 +208,14 @@ export function createNarrationWordTimingsFromTranscript(
   transcript: NarrationTranscriptSegment[],
   lang: NarrationLang,
   articleText?: string,
+  fallbackDuration = 0,
 ) {
   const timings: NarrationWordTiming[] = [];
   const getArticleWordIndex = createArticleWordMapper(articleText);
 
   transcript.forEach((segment) => {
-    const [start, end] = segment.timestamp;
+    const [start, rawEnd] = segment.timestamp;
+    const end = rawEnd ?? fallbackDuration;
 
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
       return;

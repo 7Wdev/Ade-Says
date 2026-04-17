@@ -14,7 +14,9 @@ import {
   createNarrationWordTimings,
   findActiveNarrationWord,
   getNarrationTranscriptDuration,
+  hasOpenEndedNarrationSegment,
   parseNarrationTranscript,
+  type NarrationTranscriptSegment,
   type NarrationWordTiming,
   type NarrationLang,
 } from '../utils/narration';
@@ -35,6 +37,7 @@ type FloatingAudioPlayerProps = {
 };
 
 const emptyNarrationTimings: NarrationWordTiming[] = [];
+const emptyNarrationTranscript: NarrationTranscriptSegment[] = [];
 
 function readAscii(view: DataView, offset: number, length: number) {
   let value = '';
@@ -97,29 +100,46 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [transcriptTimings, setTranscriptTimings] = useState<{
-    duration: number;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [transcriptData, setTranscriptData] = useState<{
     src: string;
-    timings: NarrationWordTiming[];
+    transcript: NarrationTranscriptSegment[];
   } | null>(null);
   const [error, setError] = useState('');
   const activeTrack = tracks[lang];
   const activeSrc = activeTrack?.src ?? '';
   const activeTranscriptSrc = activeTrack?.transcriptSrc ?? '';
   const activeContent = activeTrack?.content ?? '';
-  const activeTranscriptData = transcriptTimings?.src === activeTranscriptSrc ? transcriptTimings : null;
-  const activeTranscriptTimings = activeTranscriptData?.timings ?? emptyNarrationTimings;
+  const activeTranscript = transcriptData?.src === activeTranscriptSrc
+    ? transcriptData.transcript
+    : emptyNarrationTranscript;
+  const transcriptDuration = useMemo(
+    () => getNarrationTranscriptDuration(activeTranscript),
+    [activeTranscript],
+  );
+  const transcriptHasOpenEnd = useMemo(
+    () => hasOpenEndedNarrationSegment(activeTranscript),
+    [activeTranscript],
+  );
+  const effectiveDuration = transcriptHasOpenEnd
+    ? (duration > 0 ? duration : transcriptDuration)
+    : (transcriptDuration > 0 ? transcriptDuration : duration);
+  const activeTranscriptTimings = useMemo(
+    () => (
+      activeTranscript.length > 0
+        ? createNarrationWordTimingsFromTranscript(activeTranscript, lang, activeContent, effectiveDuration)
+        : emptyNarrationTimings
+    ),
+    [activeContent, activeTranscript, effectiveDuration, lang],
+  );
   const timings = useMemo(
     () => (
       activeTranscriptTimings.length > 0
         ? activeTranscriptTimings
-        : createNarrationWordTimings(activeContent, duration, lang)
+        : createNarrationWordTimings(activeContent, effectiveDuration, lang)
     ),
-    [activeContent, activeTranscriptTimings, duration, lang],
+    [activeContent, activeTranscriptTimings, effectiveDuration, lang],
   );
-  const transcriptDuration = activeTranscriptData?.duration ?? 0;
-  const effectiveDuration = transcriptDuration > 0 ? transcriptDuration : duration;
   const progress = effectiveDuration > 0 ? Math.min((currentTime / effectiveDuration) * 100, 100) : 0;
   const progressStyle = { '--audio-progress': `${progress}%` } as CSSProperties;
   const expandPlayer = useCallback(() => setIsExpanded(true), []);
@@ -152,24 +172,22 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
         }
 
         const transcript = parseNarrationTranscript(transcriptJson);
-        const timingsFromTranscript = createNarrationWordTimingsFromTranscript(transcript, lang, activeContent);
 
-        setTranscriptTimings({
-          duration: getNarrationTranscriptDuration(transcript),
+        setTranscriptData({
           src: activeTranscriptSrc,
-          timings: timingsFromTranscript,
+          transcript,
         });
       })
       .catch(() => {
         if (!isCancelled) {
-          setTranscriptTimings(null);
+          setTranscriptData(null);
         }
       });
 
     return () => {
       isCancelled = true;
     };
-  }, [activeContent, activeTranscriptSrc, lang]);
+  }, [activeTranscriptSrc]);
 
   useEffect(() => {
     audioRef.current?.load();
@@ -193,7 +211,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
         if (wavDuration > 0) {
           setDuration((currentDuration) => (
-            currentDuration > 0 ? currentDuration : wavDuration
+            Math.abs(currentDuration - wavDuration) > 0.05 ? wavDuration : currentDuration
           ));
         }
       })
@@ -212,6 +230,18 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       onActiveWordChange(nextWordIndex);
     }
   }, [onActiveWordChange, timings]);
+
+  const syncFromAudioTime = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    readAudioDuration();
+    setCurrentTime(audio.currentTime);
+    updateWordFromTime(audio.currentTime);
+  }, [readAudioDuration, updateWordFromTime]);
 
   const playAudio = useCallback(async () => {
     const audio = audioRef.current;
@@ -245,16 +275,8 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   }, [activeSrc, playAudio]);
 
   const handleTimeUpdate = useCallback(() => {
-    const audio = audioRef.current;
-
-    if (!audio) {
-      return;
-    }
-
-    readAudioDuration();
-    setCurrentTime(audio.currentTime);
-    updateWordFromTime(audio.currentTime);
-  }, [readAudioDuration, updateWordFromTime]);
+    syncFromAudioTime();
+  }, [syncFromAudioTime]);
 
   const handleSeek = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
@@ -264,18 +286,37 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       return;
     }
 
+    activeWordRef.current = null;
     audio.currentTime = nextTime;
     setCurrentTime(nextTime);
     updateWordFromTime(nextTime);
+
+    window.requestAnimationFrame(() => {
+      const settledAudio = audioRef.current;
+
+      if (!settledAudio) {
+        return;
+      }
+
+      setCurrentTime(settledAudio.currentTime);
+      updateWordFromTime(settledAudio.currentTime);
+    });
   }, [updateWordFromTime]);
 
   const handlePlay = useCallback(() => {
+    syncFromAudioTime();
     setIsPlaying(true);
-  }, []);
+  }, [syncFromAudioTime]);
 
   const handlePause = useCallback(() => {
+    syncFromAudioTime();
     setIsPlaying(false);
-  }, []);
+  }, [syncFromAudioTime]);
+
+  const handleSeeked = useCallback(() => {
+    activeWordRef.current = null;
+    syncFromAudioTime();
+  }, [syncFromAudioTime]);
 
   const handleEnded = useCallback(() => {
     const audio = audioRef.current;
@@ -340,6 +381,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
           onLoadedMetadata={readAudioDuration}
           onPause={handlePause}
           onPlay={handlePlay}
+          onSeeked={handleSeeked}
           onTimeUpdate={handleTimeUpdate}
           preload="auto"
           ref={audioRef}
@@ -377,6 +419,13 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
           <span>{formatTime(currentTime)}</span>
           <label className="audio-progress-control" style={progressStyle}>
             <span className="sr-only">Narration position</span>
+            <m3e-linear-progress-indicator
+              aria-hidden="true"
+              className="audio-progress-indicator"
+              max={effectiveDuration || 100}
+              value={effectiveDuration ? Math.min(currentTime, effectiveDuration) : 0}
+              variant="wavy"
+            />
             <input
               aria-label="Narration position"
               max={effectiveDuration || 0}

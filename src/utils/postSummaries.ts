@@ -6,10 +6,16 @@ export type PostSummaryMeta = Omit<PostMeta, 'tags'> & {
 };
 
 export type PostSummary = {
+  readonly isListenable: boolean;
   readonly meta: PostSummaryMeta;
+  readonly pageCount: number;
 };
 
-export const allPostSummaries: PostSummary[] = allPosts.map((post) => ({ meta: post.meta }));
+export const allPostSummaries: PostSummary[] = allPosts.map((post) => ({
+  isListenable: Boolean(post.meta.audioEn || post.meta.audioAr),
+  meta: post.meta,
+  pageCount: post.pages.length,
+}));
 
 export const pinnedPostSummaries: PostSummary[] = allPostSummaries
   .filter((post) => post.meta.pinned)

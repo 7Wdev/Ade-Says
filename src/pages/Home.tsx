@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ArticleCardMetadata from '../components/ArticleCardMetadata';
 import ViewportRender from '../components/ViewportRender';
 import {
   allPostSummaries,
@@ -212,6 +213,7 @@ const PinnedArticleCard = memo(function PinnedArticleCard({
         <span className="card-cat">Pinned</span>
         <h3>{post.meta.title}</h3>
         {isFeatured && <p>{post.meta.excerpt}</p>}
+        <ArticleCardMetadata isListenable={post.isListenable} pageCount={post.pageCount} />
       </div>
       <div className="card-footer">
         <span>{post.meta.date}</span>
