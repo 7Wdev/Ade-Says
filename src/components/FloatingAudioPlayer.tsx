@@ -96,6 +96,39 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainingSeconds}`;
 }
 
+function getTranscriptSegmentStart(
+  transcript: NarrationTranscriptSegment[],
+  time: number,
+  fallbackDuration: number,
+) {
+  if (transcript.length === 0 || !Number.isFinite(time)) {
+    return time;
+  }
+
+  let latestStart = 0;
+
+  for (const segment of transcript) {
+    const [start, rawEnd] = segment.timestamp;
+    const end = rawEnd ?? fallbackDuration;
+
+    if (!Number.isFinite(start)) {
+      continue;
+    }
+
+    if (time < start) {
+      return latestStart;
+    }
+
+    latestStart = start;
+
+    if (Number.isFinite(end) && time <= end) {
+      return start;
+    }
+  }
+
+  return latestStart;
+}
+
 function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeWordRef = useRef<number | null>(null);
@@ -107,6 +140,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   const pendingResumeAfterSeekRef = useRef(false);
   const resumeAfterScrubRef = useRef(false);
   const seekResumeTimerRef = useRef<number | null>(null);
+  const scrubStartTimeRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -288,6 +322,17 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     return nextTime;
   }, [getBoundedTime, updateWordFromTime]);
 
+  const resolveManualSeekTime = useCallback((time: number) => {
+    const boundedTime = getBoundedTime(time);
+    const isBackwardSeek = boundedTime < scrubStartTimeRef.current - 0.25;
+
+    if (!isBackwardSeek || activeTranscript.length === 0) {
+      return boundedTime;
+    }
+
+    return getTranscriptSegmentStart(activeTranscript, boundedTime, effectiveDuration);
+  }, [activeTranscript, effectiveDuration, getBoundedTime]);
+
   const syncFromAudioTime = useCallback((force = false) => {
     const audio = audioRef.current;
 
@@ -374,18 +419,19 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
   const finishScrubbing = useCallback((time: number) => {
     const shouldResume = resumeAfterScrubRef.current;
+    const seekTime = resolveManualSeekTime(time);
 
     isScrubbingRef.current = false;
     resumeAfterScrubRef.current = false;
     pendingResumeAfterSeekRef.current = shouldResume;
-    commitSeekTime(time);
+    commitSeekTime(seekTime);
 
     if (seekResumeTimerRef.current !== null) {
       window.clearTimeout(seekResumeTimerRef.current);
     }
 
     seekResumeTimerRef.current = window.setTimeout(resumeAfterSeekSettles, 120);
-  }, [commitSeekTime, resumeAfterSeekSettles]);
+  }, [commitSeekTime, resolveManualSeekTime, resumeAfterSeekSettles]);
 
   const handleSeekStart = useCallback((event: PointerEvent<HTMLLabelElement>) => {
     const audio = audioRef.current;
@@ -396,6 +442,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     isSeekPendingRef.current = false;
     pendingResumeAfterSeekRef.current = false;
     resumeAfterScrubRef.current = Boolean(audio && !audio.paused);
+    scrubStartTimeRef.current = audio?.currentTime ?? currentTime;
     event.currentTarget.setPointerCapture(event.pointerId);
     seekInputRef.current?.focus({ preventScroll: true });
 
@@ -404,7 +451,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     }
 
     previewSeekTime(nextTime);
-  }, [getPointerSeekTime, previewSeekTime]);
+  }, [currentTime, getPointerSeekTime, previewSeekTime]);
 
   const handleSeekMove = useCallback((event: PointerEvent<HTMLLabelElement>) => {
     if (!isScrubbingRef.current) {
