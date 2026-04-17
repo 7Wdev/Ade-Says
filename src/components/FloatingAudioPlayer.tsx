@@ -40,6 +40,8 @@ type FloatingAudioPlayerProps = {
 
 const emptyNarrationTimings: NarrationWordTiming[] = [];
 const emptyNarrationTranscript: NarrationTranscriptSegment[] = [];
+const BACKWARD_SEEK_SEGMENT_EPSILON = 0.08;
+const SEEK_RESUME_DELAY_MS = 80;
 
 function readAscii(view: DataView, offset: number, length: number) {
   let value = '';
@@ -132,6 +134,7 @@ function getTranscriptSegmentStart(
 function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeWordRef = useRef<number | null>(null);
+  const committedSeekTimeRef = useRef(0);
   const progressControlRef = useRef<HTMLLabelElement | null>(null);
   const seekInputRef = useRef<HTMLInputElement | null>(null);
   const isSeekPendingRef = useRef(false);
@@ -330,8 +333,17 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       return boundedTime;
     }
 
-    return getTranscriptSegmentStart(activeTranscript, boundedTime, effectiveDuration);
+    return getBoundedTime(
+      getTranscriptSegmentStart(activeTranscript, boundedTime, effectiveDuration) + BACKWARD_SEEK_SEGMENT_EPSILON,
+    );
   }, [activeTranscript, effectiveDuration, getBoundedTime]);
+
+  const syncToTime = useCallback((time: number) => {
+    readAudioDuration();
+    activeWordRef.current = null;
+    setCurrentTime(time);
+    updateWordFromTime(time);
+  }, [readAudioDuration, updateWordFromTime]);
 
   const syncFromAudioTime = useCallback((force = false) => {
     const audio = audioRef.current;
@@ -340,10 +352,8 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       return;
     }
 
-    readAudioDuration();
-    setCurrentTime(audio.currentTime);
-    updateWordFromTime(audio.currentTime);
-  }, [readAudioDuration, updateWordFromTime]);
+    syncToTime(audio.currentTime);
+  }, [syncToTime]);
 
   const playAudio = useCallback(async () => {
     const audio = audioRef.current;
@@ -390,7 +400,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
     if (isSeekPendingRef.current) {
       isSeekPendingRef.current = false;
-      syncFromAudioTime(true);
+      syncToTime(committedSeekTimeRef.current);
     }
 
     if (!pendingResumeAfterSeekRef.current) {
@@ -398,8 +408,11 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     }
 
     pendingResumeAfterSeekRef.current = false;
-    void playAudio();
-  }, [playAudio, syncFromAudioTime]);
+    seekResumeTimerRef.current = window.setTimeout(() => {
+      seekResumeTimerRef.current = null;
+      void playAudio();
+    }, SEEK_RESUME_DELAY_MS);
+  }, [playAudio, syncToTime]);
 
   const handleTimeUpdate = useCallback(() => {
     syncFromAudioTime();
@@ -414,6 +427,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     }
 
     isSeekPendingRef.current = true;
+    committedSeekTimeRef.current = nextTime;
     audio.currentTime = nextTime;
   }, [previewSeekTime]);
 
@@ -499,9 +513,13 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   }, [syncFromAudioTime]);
 
   const handleSeeked = useCallback(() => {
+    const audio = audioRef.current;
+    const syncTime = audio && Math.abs(audio.currentTime - committedSeekTimeRef.current) < 0.25
+      ? committedSeekTimeRef.current
+      : audio?.currentTime ?? committedSeekTimeRef.current;
+
     isSeekPendingRef.current = false;
-    activeWordRef.current = null;
-    syncFromAudioTime(true);
+    syncToTime(syncTime);
 
     if (seekResumeTimerRef.current !== null) {
       window.clearTimeout(seekResumeTimerRef.current);
@@ -510,9 +528,12 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
     if (pendingResumeAfterSeekRef.current) {
       pendingResumeAfterSeekRef.current = false;
-      void playAudio();
+      seekResumeTimerRef.current = window.setTimeout(() => {
+        seekResumeTimerRef.current = null;
+        void playAudio();
+      }, SEEK_RESUME_DELAY_MS);
     }
-  }, [playAudio, syncFromAudioTime]);
+  }, [playAudio, syncToTime]);
 
   const handleEnded = useCallback(() => {
     const audio = audioRef.current;
