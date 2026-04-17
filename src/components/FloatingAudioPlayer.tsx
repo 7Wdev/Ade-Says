@@ -101,7 +101,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeWordRef = useRef<number | null>(null);
   const committedSeekTimeRef = useRef(0);
-  const progressControlRef = useRef<HTMLLabelElement | null>(null);
+  const progressControlRef = useRef<HTMLDivElement | null>(null);
   const seekInputRef = useRef<HTMLInputElement | null>(null);
   const isSeekPendingRef = useRef(false);
   const isScrubbingRef = useRef(false);
@@ -406,7 +406,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     seekResumeTimerRef.current = window.setTimeout(resumeAfterSeekSettles, 120);
   }, [commitSeekTime, resumeAfterSeekSettles]);
 
-  const handleSeekStart = useCallback((event: PointerEvent<HTMLLabelElement>) => {
+  const handleSeekStart = useCallback((event: PointerEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
     const nextTime = getPointerSeekTime(event.clientX);
 
@@ -426,7 +426,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     clearActiveWord();
   }, [clearActiveWord, getPointerSeekTime, previewSeekTime]);
 
-  const handleSeekMove = useCallback((event: PointerEvent<HTMLLabelElement>) => {
+  const handleSeekMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!isScrubbingRef.current) {
       return;
     }
@@ -450,7 +450,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     commitSeekTime(nextTime);
   }, [commitSeekTime, previewSeekTime]);
 
-  const handleSeekEnd = useCallback((event: PointerEvent<HTMLLabelElement>) => {
+  const handleSeekEnd = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!isScrubbingRef.current) {
       return;
     }
@@ -593,7 +593,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
         <div className="audio-progress-row">
           <span>{formatTime(currentTime)}</span>
-          <label
+          <div
             className="audio-progress-control"
             onLostPointerCapture={handleSeekEnd}
             onPointerCancel={handleSeekEnd}
@@ -622,7 +622,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
               type="range"
               value={effectiveDuration ? Math.min(currentTime, effectiveDuration) : 0}
             />
-          </label>
+          </div>
           <span>{formatTime(effectiveDuration)}</span>
         </div>
 
