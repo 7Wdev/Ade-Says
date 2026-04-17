@@ -49,7 +49,7 @@ function AppShell() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const isBlog = location.pathname === '/blog' || location.pathname.startsWith('/post/');
-  const isPhotography = location.pathname === '/photography';
+  const isPhotography = location.pathname.startsWith('/photography');
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -83,6 +83,7 @@ function AppShell() {
             <Route path="/" element={<Home />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/photography" element={<Photography />} />
+            <Route path="/photography/:catalogSlug" element={<Photography />} />
             <Route path="/post/:id" element={<PostView />} />
           </Routes>
         </Suspense>
