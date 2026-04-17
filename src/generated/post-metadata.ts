@@ -15,8 +15,8 @@ export const postMetadata = [
       "first"
     ],
     "thumbnail": "./banner.webp",
-    "audioEn": "./audios/en/full.wav",
-    "audioAr": "./audios/ar/full.wav",
+    "audioEn": "./audios/en/full.mp3",
+    "audioAr": "./audios/ar/full.mp3",
     "transcriptEn": "./transcripts/en.json",
     "transcriptAr": "./transcripts/ar.json"
   }

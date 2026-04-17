@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useMemo, useRef } from 'react';
+import { lazy, memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
@@ -87,25 +87,31 @@ const ArticleBlockSkeleton = memo(function ArticleBlockSkeleton() {
   );
 });
 
-const PlainMarkdownBlock = memo(function PlainMarkdownBlock({
-  content,
-  narration,
-  wordOffset,
-}: Pick<MarkdownBlockProps, 'content' | 'narration' | 'wordOffset'>) {
+const PlainMarkdownBlock = memo(function PlainMarkdownBlock({ content, narration, wordOffset }: Pick<MarkdownBlockProps, 'content' | 'narration' | 'wordOffset'>) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!narration?.enabled || !rootRef.current) return;
+
+    const words = rootRef.current.querySelectorAll('.narration-word');
+    words.forEach((word, index) => {
+      word.setAttribute('data-narration-word-index', String(wordOffset + index));
+    });
+  }, [narration?.enabled, content, wordOffset]);
+
   const narrationState: NarrationRenderState | undefined = narration?.enabled
-    ? {
-      enabled: true,
-      wordCursor: { current: wordOffset },
-    }
+    ? { enabled: true }
     : undefined;
 
   return (
-    <ReactMarkdown
-      rehypePlugins={rehypePlugins}
-      components={createMarkdownComponents(narrationState)}
-    >
-      {content}
-    </ReactMarkdown>
+    <div style={{ display: 'contents' }} ref={rootRef}>
+      <ReactMarkdown
+        rehypePlugins={rehypePlugins}
+        components={createMarkdownComponents(narrationState)}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 });
 

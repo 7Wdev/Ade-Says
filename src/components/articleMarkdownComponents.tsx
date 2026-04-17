@@ -19,9 +19,6 @@ const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
 
 export type NarrationRenderState = {
   enabled: boolean;
-  wordCursor: {
-    current: number;
-  };
 };
 
 const dynamicBlockFallback = (
@@ -40,20 +37,16 @@ type NarratedElementProps = HTMLAttributes<HTMLElement> & {
 
 type NarratedTagName = 'p' | 'li' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'blockquote';
 
-function wrapNarrationText(text: string, narration: NarrationRenderState) {
+function wrapNarrationText(text: string) {
   return splitNarrationTextTokens(text).map((token, tokenIndex) => {
     if (!isNarrationWordToken(token)) {
       return token;
     }
 
-    const wordIndex = narration.wordCursor.current;
-    narration.wordCursor.current += 1;
-
     return (
       <span
         className="narration-word"
-        data-narration-word-index={wordIndex}
-        key={`${wordIndex}-${tokenIndex}`}
+        key={tokenIndex}
       >
         {token}
       </span>
@@ -73,7 +66,7 @@ function shouldSkipNarrationWrap(element: ReactElement) {
 function wrapNarrationNode(node: ReactNode, narration: NarrationRenderState): ReactNode {
   return Children.map(node, (child) => {
     if (typeof child === 'string') {
-      return wrapNarrationText(child, narration);
+      return wrapNarrationText(child);
     }
 
     if (!isValidElement(child) || shouldSkipNarrationWrap(child)) {

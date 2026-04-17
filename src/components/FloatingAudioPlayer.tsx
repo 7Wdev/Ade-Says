@@ -442,13 +442,22 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       return;
     }
 
+    if (event.type === 'change') {
+      if (isScrubbingRef.current) {
+        finishScrubbing(nextTime);
+      } else {
+        commitSeekTime(nextTime);
+      }
+      return;
+    }
+
     if (isScrubbingRef.current) {
       previewSeekTime(nextTime);
       return;
     }
 
     commitSeekTime(nextTime);
-  }, [commitSeekTime, previewSeekTime]);
+  }, [commitSeekTime, finishScrubbing, previewSeekTime]);
 
   const handleSeekEnd = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!isScrubbingRef.current) {
@@ -617,6 +626,9 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
               min="0"
               onChange={handleSeekInput}
               onInput={handleSeekInput}
+              onPointerCancel={handleSeekEnd}
+              onPointerDown={handleSeekStart}
+              onPointerUp={handleSeekEnd}
               ref={seekInputRef}
               step="0.01"
               type="range"

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
@@ -20,21 +20,31 @@ const remarkPlugins = [remarkMath];
 const rehypePlugins = [rehypeKatex, rehypeRaw];
 
 function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticleRendererProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!narration?.enabled || !rootRef.current) return;
+
+    const words = rootRef.current.querySelectorAll('.narration-word');
+    words.forEach((word, index) => {
+      word.setAttribute('data-narration-word-index', String(wordOffset + index));
+    });
+  }, [narration?.enabled, content, wordOffset]);
+
   const narrationState: NarrationRenderState | undefined = narration?.enabled
-    ? {
-      enabled: true,
-      wordCursor: { current: wordOffset },
-    }
+    ? { enabled: true }
     : undefined;
 
   return (
-    <ReactMarkdown
-      remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
-      components={createMarkdownComponents(narrationState)}
-    >
-      {content}
-    </ReactMarkdown>
+    <div style={{ display: 'contents' }} ref={rootRef}>
+      <ReactMarkdown
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        components={createMarkdownComponents(narrationState)}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 
