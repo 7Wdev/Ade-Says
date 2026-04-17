@@ -2364,6 +2364,7 @@ m3e-button,
   background: transparent;
   cursor: pointer;
   opacity: 0;
+  pointer-events: none;
 }
 
 .audio-progress-control input::-webkit-slider-runnable-track {

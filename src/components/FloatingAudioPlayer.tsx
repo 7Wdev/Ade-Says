@@ -99,8 +99,11 @@ function formatTime(seconds: number) {
 function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeWordRef = useRef<number | null>(null);
+  const progressControlRef = useRef<HTMLLabelElement | null>(null);
+  const seekInputRef = useRef<HTMLInputElement | null>(null);
   const isSeekPendingRef = useRef(false);
   const isScrubbingRef = useRef(false);
+  const lastPreviewSeekTimeRef = useRef(0);
   const pendingResumeAfterSeekRef = useRef(false);
   const resumeAfterScrubRef = useRef(false);
   const seekResumeTimerRef = useRef<number | null>(null);
@@ -261,9 +264,23 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     return Math.min(Math.max(0, time), maxTime);
   }, [duration, effectiveDuration]);
 
+  const getPointerSeekTime = useCallback((clientX: number) => {
+    const control = progressControlRef.current;
+
+    if (!control || effectiveDuration <= 0) {
+      return 0;
+    }
+
+    const rect = control.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+
+    return getBoundedTime(ratio * effectiveDuration);
+  }, [effectiveDuration, getBoundedTime]);
+
   const previewSeekTime = useCallback((time: number) => {
     const nextTime = getBoundedTime(time);
 
+    lastPreviewSeekTimeRef.current = nextTime;
     activeWordRef.current = null;
     setCurrentTime(nextTime);
     updateWordFromTime(nextTime);
@@ -370,21 +387,33 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     seekResumeTimerRef.current = window.setTimeout(resumeAfterSeekSettles, 120);
   }, [commitSeekTime, resumeAfterSeekSettles]);
 
-  const handleSeekStart = useCallback((event: PointerEvent<HTMLInputElement>) => {
+  const handleSeekStart = useCallback((event: PointerEvent<HTMLLabelElement>) => {
     const audio = audioRef.current;
+    const nextTime = getPointerSeekTime(event.clientX);
 
+    event.preventDefault();
     isScrubbingRef.current = true;
     isSeekPendingRef.current = false;
     pendingResumeAfterSeekRef.current = false;
     resumeAfterScrubRef.current = Boolean(audio && !audio.paused);
     event.currentTarget.setPointerCapture(event.pointerId);
+    seekInputRef.current?.focus({ preventScroll: true });
 
     if (audio && !audio.paused) {
       audio.pause();
     }
 
-    previewSeekTime(Number(event.currentTarget.value));
-  }, [previewSeekTime]);
+    previewSeekTime(nextTime);
+  }, [getPointerSeekTime, previewSeekTime]);
+
+  const handleSeekMove = useCallback((event: PointerEvent<HTMLLabelElement>) => {
+    if (!isScrubbingRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    previewSeekTime(getPointerSeekTime(event.clientX));
+  }, [getPointerSeekTime, previewSeekTime]);
 
   const handleSeekInput = useCallback((event: FormEvent<HTMLInputElement> | ChangeEvent<HTMLInputElement>) => {
     const nextTime = Number(event.currentTarget.value);
@@ -401,13 +430,16 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     commitSeekTime(nextTime);
   }, [commitSeekTime, previewSeekTime]);
 
-  const handleSeekEnd = useCallback((event: PointerEvent<HTMLInputElement>) => {
+  const handleSeekEnd = useCallback((event: PointerEvent<HTMLLabelElement>) => {
     if (!isScrubbingRef.current) {
       return;
     }
 
-    finishScrubbing(Number(event.currentTarget.value));
-  }, [finishScrubbing]);
+    event.preventDefault();
+    finishScrubbing(event.type === 'pointerup'
+      ? getPointerSeekTime(event.clientX)
+      : lastPreviewSeekTimeRef.current);
+  }, [finishScrubbing, getPointerSeekTime]);
 
   const handlePlay = useCallback(() => {
     syncFromAudioTime();
@@ -534,7 +566,16 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
         <div className="audio-progress-row">
           <span>{formatTime(currentTime)}</span>
-          <label className="audio-progress-control" style={progressStyle}>
+          <label
+            className="audio-progress-control"
+            onLostPointerCapture={handleSeekEnd}
+            onPointerCancel={handleSeekEnd}
+            onPointerDown={handleSeekStart}
+            onPointerMove={handleSeekMove}
+            onPointerUp={handleSeekEnd}
+            ref={progressControlRef}
+            style={progressStyle}
+          >
             <span className="sr-only">Narration position</span>
             <m3e-linear-progress-indicator
               aria-hidden="true"
@@ -549,10 +590,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
               min="0"
               onChange={handleSeekInput}
               onInput={handleSeekInput}
-              onLostPointerCapture={handleSeekEnd}
-              onPointerCancel={handleSeekEnd}
-              onPointerDown={handleSeekStart}
-              onPointerUp={handleSeekEnd}
+              ref={seekInputRef}
               step="0.01"
               type="range"
               value={effectiveDuration ? Math.min(currentTime, effectiveDuration) : 0}
