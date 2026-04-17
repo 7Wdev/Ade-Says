@@ -458,8 +458,11 @@ const PhotoLightbox = memo(function PhotoLightbox({
         </button>
 
         <figure className="photo-lightbox-stage">
+          {!loaded ? (
+            <span className="photo-lightbox-skeleton" aria-hidden="true" />
+          ) : null}
           <img
-            className={`photo-lightbox-image${loaded ? " is-loaded" : " is-loading"}`}
+            className={`photo-lightbox-image${loaded ? " is-loaded" : ""}`}
             src={displayedPhoto.originalSrc}
             width={displayedPhoto.width}
             height={displayedPhoto.height}
