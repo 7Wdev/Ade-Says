@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useMemo } from 'react';
+import { lazy, memo, Suspense, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
@@ -94,7 +94,6 @@ const PlainMarkdownBlock = memo(function PlainMarkdownBlock({
 }: Pick<MarkdownBlockProps, 'content' | 'narration' | 'wordOffset'>) {
   const narrationState: NarrationRenderState | undefined = narration?.enabled
     ? {
-      activeWordIndex: narration.activeWordIndex,
       enabled: true,
       wordCursor: { current: wordOffset },
     }
@@ -120,6 +119,13 @@ const MarkdownBlock = memo(function MarkdownBlock({ content, hasMath, narration,
   }
 
   return <PlainMarkdownBlock content={content} narration={narration} wordOffset={wordOffset} />;
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.hasMath === nextProps.hasMath &&
+    prevProps.wordOffset === nextProps.wordOffset &&
+    prevProps.narration?.enabled === nextProps.narration?.enabled
+  );
 });
 
 function ArticleRenderer({ content, narration }: ArticleRendererProps) {
@@ -133,10 +139,57 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
   }, [chunks]);
   const hasMath = mathDelimiterPattern.test(content);
   const shouldVirtualize = chunks.length > 1;
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!narration?.enabled) return;
+
+    const root = rootRef.current;
+    if (!root) return;
+
+    const applyStyles = () => {
+      const activeIndex = narration.activeWordIndex;
+      const words = root.querySelectorAll('.narration-word');
+
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        const idx = parseInt(word.getAttribute('data-narration-word-index') || '-1', 10);
+        if (idx === -1) continue;
+
+        if (idx === activeIndex) {
+          word.className = 'narration-word narration-word-active';
+        } else if (activeIndex !== null && idx < activeIndex) {
+          word.className = 'narration-word narration-word-played';
+        } else {
+          word.className = 'narration-word';
+        }
+      }
+    };
+
+    applyStyles();
+
+    const observer = new MutationObserver((mutations) => {
+      let shouldApply = false;
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          shouldApply = true;
+          break;
+        }
+      }
+      if (shouldApply) {
+        applyStyles();
+      }
+    });
+
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [narration?.activeWordIndex, narration?.enabled]);
+
 
   if (shouldVirtualize) {
     return (
-      <div className="virtual-article">
+      <div className="virtual-article" ref={rootRef}>
         {chunks.map((chunk, index) => {
           const blockHasMath = hasMath && mathDelimiterPattern.test(chunk);
 
@@ -174,7 +227,11 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
     );
   }
 
-  return <MarkdownBlock content={content} hasMath={hasMath} narration={narration} wordOffset={0} />;
+  return (
+    <div ref={rootRef} className="virtual-article">
+      <MarkdownBlock content={content} hasMath={hasMath} narration={narration} wordOffset={0} />
+    </div>
+  );
 }
 
 export default memo(ArticleRenderer);

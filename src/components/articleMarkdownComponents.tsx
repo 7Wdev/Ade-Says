@@ -18,7 +18,6 @@ const TikZRenderer = lazy(() => import('./TikZRenderer'));
 const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
 
 export type NarrationRenderState = {
-  activeWordIndex: number | null;
   enabled: boolean;
   wordCursor: {
     current: number;
@@ -41,18 +40,6 @@ type NarratedElementProps = HTMLAttributes<HTMLElement> & {
 
 type NarratedTagName = 'p' | 'li' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'blockquote';
 
-function getNarrationWordClass(wordIndex: number, activeWordIndex: number | null) {
-  if (activeWordIndex === wordIndex) {
-    return 'narration-word narration-word-active';
-  }
-
-  if (activeWordIndex !== null && wordIndex < activeWordIndex) {
-    return 'narration-word narration-word-played';
-  }
-
-  return 'narration-word';
-}
-
 function wrapNarrationText(text: string, narration: NarrationRenderState) {
   return splitNarrationTextTokens(text).map((token, tokenIndex) => {
     if (!isNarrationWordToken(token)) {
@@ -64,7 +51,7 @@ function wrapNarrationText(text: string, narration: NarrationRenderState) {
 
     return (
       <span
-        className={getNarrationWordClass(wordIndex, narration.activeWordIndex)}
+        className="narration-word"
         data-narration-word-index={wordIndex}
         key={`${wordIndex}-${tokenIndex}`}
       >

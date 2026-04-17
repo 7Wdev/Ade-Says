@@ -22,7 +22,6 @@ const rehypePlugins = [rehypeKatex, rehypeRaw];
 function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticleRendererProps) {
   const narrationState: NarrationRenderState | undefined = narration?.enabled
     ? {
-      activeWordIndex: narration.activeWordIndex,
       enabled: true,
       wordCursor: { current: wordOffset },
     }
@@ -39,4 +38,10 @@ function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticle
   );
 }
 
-export default memo(MathArticleRenderer);
+export default memo(MathArticleRenderer, (prevProps, nextProps) => {
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.wordOffset === nextProps.wordOffset &&
+    prevProps.narration?.enabled === nextProps.narration?.enabled
+  );
+});
