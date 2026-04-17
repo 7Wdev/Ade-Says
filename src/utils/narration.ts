@@ -270,26 +270,3 @@ export function findActiveNarrationWord(timings: NarrationWordTiming[], currentT
 
   return match >= 0 ? timings[match].wordIndex : null;
 }
-
-export function resolveNarrationSeekTime(timings: NarrationWordTiming[], currentTime: number) {
-  if (timings.length === 0 || !Number.isFinite(currentTime) || currentTime <= 0) {
-    return Math.max(0, currentTime);
-  }
-
-  let low = 0;
-  let high = timings.length - 1;
-  let match = -1;
-
-  while (low <= high) {
-    const middle = Math.floor((low + high) / 2);
-
-    if (timings[middle].start <= currentTime) {
-      match = middle;
-      low = middle + 1;
-    } else {
-      high = middle - 1;
-    }
-  }
-
-  return match >= 0 ? timings[match].start : currentTime;
-}
