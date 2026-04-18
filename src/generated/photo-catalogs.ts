@@ -2577,16 +2577,6 @@ export const photoCatalogs = [
         thumbHeight: 760,
       },
       {
-        id: 'urban-43',
-        alt: 'Barcelona travel photograph 158',
-        originalSrc: '/barcelona/urban-43.jpg',
-        thumbSrc: '/barcelona/thumbs/urban-43.webp',
-        width: 1801,
-        height: 3200,
-        thumbWidth: 428,
-        thumbHeight: 760,
-      },
-      {
         id: 'urban-45',
         alt: 'Barcelona travel photograph 159',
         originalSrc: '/barcelona/urban-45.jpg',
