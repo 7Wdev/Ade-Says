@@ -23,6 +23,8 @@ const CATALOG_CARD_MAX_WIDTH = 420;
 const CATALOG_GRID_GAP = 32;
 const CATALOG_GRID_MOBILE_GAP = 18;
 const CATALOG_GRID_OVERSCAN_ROWS = 2;
+const CATALOG_GRID_CENTER_MAX_WIDTH = 980;
+const GALLERY_COLUMN_SPEED_PX_PER_SECOND = 38;
 
 type MasonryItem = {
   readonly photo: PhotoAsset;
@@ -60,6 +62,7 @@ type CatalogGridLayout = {
   readonly columnCount: number;
   readonly gap: number;
   readonly height: number;
+  readonly leftInset: number;
   readonly rowStride: number;
 };
 
@@ -104,6 +107,7 @@ function buildCatalogGridLayout(catalogCount: number, width: number): CatalogGri
       columnCount: 1,
       gap: CATALOG_GRID_GAP,
       height: 0,
+      leftInset: 0,
       rowStride: 0,
     };
   }
@@ -117,12 +121,17 @@ function buildCatalogGridLayout(catalogCount: number, width: number): CatalogGri
   );
   const rowStride = cardWidth + gap;
   const rowCount = Math.ceil(catalogCount / columnCount);
+  const gridWidth = columnCount * cardWidth + Math.max(0, columnCount - 1) * gap;
+  const leftInset = width <= CATALOG_GRID_CENTER_MAX_WIDTH
+    ? Math.max(0, (width - gridWidth) / 2)
+    : 0;
 
   return {
     cardWidth,
     columnCount,
     gap,
     height: rowCount * cardWidth + Math.max(0, rowCount - 1) * gap,
+    leftInset,
     rowStride,
   };
 }
@@ -161,7 +170,7 @@ function getVirtualCatalogItems(
       catalog,
       index,
       key: catalog.slug,
-      left: column * layout.rowStride,
+      left: layout.leftInset + column * layout.rowStride,
       top: row * layout.rowStride,
     });
   }
@@ -170,7 +179,7 @@ function getVirtualCatalogItems(
 }
 
 function getColumnDurationMs(height: number) {
-  return clamp(height / 38, 72, 160) * 1000;
+  return (Math.max(height, 1) / GALLERY_COLUMN_SPEED_PX_PER_SECOND) * 1000;
 }
 
 function buildMasonryLayout(photos: readonly PhotoAsset[], width: number): MasonryLayout {
