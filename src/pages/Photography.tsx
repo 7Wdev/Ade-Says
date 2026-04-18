@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -12,8 +13,10 @@ import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
 
-const VIRTUAL_OVERSCAN = 900;
 const LIGHTBOX_EXIT_MS = 280;
+const VIRTUAL_OVERSCAN_MIN = 1600;
+const VIRTUAL_OVERSCAN_VIEWPORT_MULTIPLIER = 1.35;
+const VIRTUAL_MOTION_REFRESH_MS = 1000;
 
 type MasonryItem = {
   readonly photo: PhotoAsset;
@@ -25,12 +28,29 @@ type MasonryItem = {
   readonly columnIndex: number;
 };
 
-type MasonryLayout = {
+type MasonryColumn = {
+  readonly index: number;
+  readonly direction: "up" | "down";
+  readonly left: number;
+  readonly width: number;
   readonly height: number;
   readonly items: readonly MasonryItem[];
 };
 
+type MasonryLayout = {
+  readonly height: number;
+  readonly items: readonly MasonryItem[];
+  readonly columns: readonly MasonryColumn[];
+};
+
+type VirtualMasonryItem = {
+  readonly item: MasonryItem;
+  readonly key: string;
+  readonly top: number;
+};
+
 type GalleryTileStyle = CSSProperties & Record<`--${string}`, string | number>;
+type GalleryColumnStyle = CSSProperties & Record<`--${string}`, string | number>;
 type LightboxStageStyle = CSSProperties & Record<`--${string}`, string | number>;
 
 
@@ -53,15 +73,20 @@ function formatPhotoCount(count: number) {
   return `${count} ${count === 1 ? "photo" : "photos"}`;
 }
 
+function getColumnDurationMs(height: number) {
+  return clamp(height / 38, 72, 160) * 1000;
+}
+
 function buildMasonryLayout(photos: readonly PhotoAsset[], width: number): MasonryLayout {
   if (width <= 0) {
-    return { height: 0, items: [] };
+    return { height: 0, items: [], columns: [] };
   }
 
   const columnCount = getColumnCount(width);
   const gap = width >= 820 ? 22 : 16;
   const columnWidth = (width - gap * (columnCount - 1)) / columnCount;
   const columnHeights = Array.from({ length: columnCount }, () => 0);
+  const columnItems: MasonryItem[][] = Array.from({ length: columnCount }, () => []);
   const items = photos.map((photo, index) => {
     const columnIndex = columnHeights.indexOf(Math.min(...columnHeights));
     const naturalHeight = columnWidth * (photo.height / photo.width);
@@ -80,12 +105,23 @@ function buildMasonryLayout(photos: readonly PhotoAsset[], width: number): Mason
     };
 
     columnHeights[columnIndex] += height + gap;
+    columnItems[columnIndex].push(item);
     return item;
   });
+
+  const columns = columnItems.map((columnPhotos, index) => ({
+    index,
+    direction: index % 2 === 0 ? "up" as const : "down" as const,
+    left: index * (columnWidth + gap),
+    width: columnWidth,
+    height: Math.max(columnHeights[index], 1),
+    items: columnPhotos,
+  }));
 
   return {
     height: Math.max(...columnHeights, 0),
     items,
+    columns,
   };
 }
 
@@ -141,12 +177,10 @@ function useElementMetrics<TElement extends HTMLElement>() {
 
     observer.observe(element);
     window.addEventListener("resize", requestMeasure);
-    window.addEventListener("scroll", requestMeasure, { passive: true });
 
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", requestMeasure);
-      window.removeEventListener("scroll", requestMeasure);
 
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
@@ -201,6 +235,115 @@ function useWindowMetrics() {
 
   return metrics;
 }
+
+function useColumnMotionFreeze() {
+  const [scrolling, setScrolling] = useState(false);
+
+  useEffect(() => {
+    let freezeTimer = 0;
+
+    const pauseMotion = () => {
+      setScrolling(true);
+      window.clearTimeout(freezeTimer);
+      freezeTimer = window.setTimeout(() => setScrolling(false), 220);
+    };
+
+    window.addEventListener("scroll", pauseMotion, { passive: true });
+    window.addEventListener("touchmove", pauseMotion, { passive: true });
+
+    return () => {
+      window.clearTimeout(freezeTimer);
+      window.removeEventListener("scroll", pauseMotion);
+      window.removeEventListener("touchmove", pauseMotion);
+    };
+  }, []);
+
+  return scrolling;
+}
+
+function useMotionTimeline(paused: boolean) {
+  const [motionTime, setMotionTime] = useState(0);
+  const startedAtRef = useRef<number | null>(null);
+  const pausedAtRef = useRef<number | null>(null);
+  const pausedDurationRef = useRef(0);
+
+  const getMotionTime = useCallback(() => {
+    const now = performance.now();
+    const startedAt = startedAtRef.current ?? now;
+    const activePauseDuration = pausedAtRef.current === null ? 0 : now - pausedAtRef.current;
+    return Math.max(0, now - startedAt - pausedDurationRef.current - activePauseDuration);
+  }, []);
+
+  useEffect(() => {
+    const now = performance.now();
+
+    if (startedAtRef.current === null) {
+      startedAtRef.current = now;
+    }
+
+    if (paused && pausedAtRef.current === null) {
+      pausedAtRef.current = now;
+    }
+
+    if (!paused && pausedAtRef.current !== null) {
+      pausedDurationRef.current += now - pausedAtRef.current;
+      pausedAtRef.current = null;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => setMotionTime(getMotionTime()));
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [getMotionTime, paused]);
+
+  useEffect(() => {
+    if (paused) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setMotionTime(getMotionTime());
+    }, VIRTUAL_MOTION_REFRESH_MS);
+
+    return () => window.clearInterval(timer);
+  }, [getMotionTime, paused]);
+
+  return motionTime;
+}
+
+function getVirtualColumnItems(
+  column: MasonryColumn,
+  visibleTop: number,
+  visibleBottom: number,
+  motionTime: number,
+  durationMs: number,
+) {
+  const cycleHeight = Math.max(column.height, 1);
+  const phaseTime = (motionTime + column.index * 13000) % durationMs;
+  const offset = (phaseTime / durationMs) * cycleHeight;
+  const signedOffset = column.direction === "up" ? -offset : offset;
+  const virtualItems: VirtualMasonryItem[] = [];
+
+  for (const item of column.items) {
+    const currentBaseTop = item.top + signedOffset;
+    const firstRepeat = Math.floor((visibleTop - currentBaseTop - item.height) / cycleHeight);
+    const lastRepeat = Math.ceil((visibleBottom - currentBaseTop) / cycleHeight);
+
+    for (let repeat = firstRepeat; repeat <= lastRepeat; repeat += 1) {
+      const currentTop = currentBaseTop + repeat * cycleHeight;
+
+      if (currentTop + item.height >= visibleTop && currentTop <= visibleBottom) {
+        virtualItems.push({
+          item,
+          key: `${item.photo.id}-${repeat}`,
+          top: item.top + repeat * cycleHeight,
+        });
+      }
+    }
+  }
+
+  virtualItems.sort((first, second) => first.top - second.top);
+  return virtualItems;
+}
+
 const GallerySkeleton = memo(function GallerySkeleton() {
   return (
     <div className="gallery-skeleton-grid" aria-hidden="true">
@@ -279,27 +422,32 @@ const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps)
 type PhotoTileProps = {
   readonly item: MasonryItem;
   readonly onOpenPhoto: (photo: PhotoAsset) => void;
+  readonly top: number;
 };
 
-const PhotoTile = memo(function PhotoTile({ item, onOpenPhoto }: PhotoTileProps) {
+function getMotionDelay(motionTime: number, columnIndex: number, durationMs: number) {
+  return -((motionTime + columnIndex * 13000) % durationMs);
+}
+
+const PhotoTile = memo(function PhotoTile({
+  item,
+  onOpenPhoto,
+  top,
+}: PhotoTileProps) {
   const [loaded, setLoaded] = useState(false);
   const handleOpen = useCallback(() => onOpenPhoto(item.photo), [item.photo, onOpenPhoto]);
   const handleTileLoaded = useCallback(() => setLoaded(true), []);
-  const [globalSyncDelay] = useState(() => -(Date.now() % 24000));
   const style = useMemo<GalleryTileStyle>(() => ({
-    top: item.top,
-    left: item.left,
+    top,
+    left: 0,
     width: item.width,
     height: item.height,
     "--tile-delay": `${Math.min(item.index, 12) * 36}ms`,
-    "--float-delay": `${globalSyncDelay}ms`,
-  }), [item.height, item.index, item.left, item.top, item.width, globalSyncDelay]);
-
-  const cyclicClass = item.columnIndex % 2 === 0 ? "gallery-motion-up" : "gallery-motion-down";
+  }), [item.height, item.index, item.width, top]);
 
   return (
     <button
-      className={`gallery-photo-shell ${cyclicClass}`}
+      className="gallery-photo-shell"
       type="button"
       style={style}
       onClick={handleOpen}
@@ -324,6 +472,50 @@ const PhotoTile = memo(function PhotoTile({ item, onOpenPhoto }: PhotoTileProps)
   );
 });
 
+type PhotoColumnProps = {
+  readonly column: MasonryColumn;
+  readonly durationMs: number;
+  readonly motionTime: number;
+  readonly onOpenPhoto: (photo: PhotoAsset) => void;
+  readonly virtualItems: readonly VirtualMasonryItem[];
+};
+
+const PhotoColumn = memo(function PhotoColumn({
+  column,
+  durationMs,
+  motionTime,
+  onOpenPhoto,
+  virtualItems,
+}: PhotoColumnProps) {
+  const cycleHeight = Math.max(column.height, 1);
+  const [motionDelay] = useState(() => getMotionDelay(motionTime, column.index, durationMs));
+  const columnStyle = useMemo<GalleryColumnStyle>(() => ({
+    left: column.left,
+    width: column.width,
+  }), [column.left, column.width]);
+  const trackStyle = useMemo<GalleryColumnStyle>(() => ({
+    "--column-cycle": `${cycleHeight}px`,
+    "--column-cycle-negative": `-${cycleHeight}px`,
+    "--column-duration": `${durationMs}ms`,
+    "--motion-delay": `${motionDelay}ms`,
+  }), [cycleHeight, durationMs, motionDelay]);
+
+  return (
+    <div className="gallery-column" style={columnStyle}>
+      <div className={`gallery-column-track gallery-motion-${column.direction}`} style={trackStyle}>
+        {virtualItems.map((virtualItem) => (
+          <PhotoTile
+            item={virtualItem.item}
+            key={`${virtualItem.key}-${Math.round(column.height)}-${Math.round(column.width)}`}
+            onOpenPhoto={onOpenPhoto}
+            top={virtualItem.top}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
 type PhotoMasonryProps = {
   readonly photos: readonly PhotoAsset[];
   readonly onOpenPhoto: (photo: PhotoAsset) => void;
@@ -332,20 +524,23 @@ type PhotoMasonryProps = {
 const PhotoMasonry = memo(function PhotoMasonry({ photos, onOpenPhoto }: PhotoMasonryProps) {
   const [containerRef, containerMetrics] = useElementMetrics<HTMLDivElement>();
   const { scrollY, viewportHeight } = useWindowMetrics();
+  const scrollMotionFrozen = useColumnMotionFreeze();
+  const motionTime = useMotionTimeline(scrollMotionFrozen);
   const layout = useMemo(() => buildMasonryLayout(photos, containerMetrics.width), [containerMetrics.width, photos]);
-  
-  const visibleItems = useMemo(() => {
-    if (containerMetrics.width === 0 || viewportHeight === 0) {
-      return layout.items.slice(0, Math.min(layout.items.length, 12));
-    }
+  const virtualOverscan = Math.max(VIRTUAL_OVERSCAN_MIN, viewportHeight * VIRTUAL_OVERSCAN_VIEWPORT_MULTIPLIER);
+  const visibleTop = scrollY - containerMetrics.pageTop - virtualOverscan;
+  const visibleBottom = scrollY + viewportHeight - containerMetrics.pageTop + virtualOverscan;
+  const visibleColumns = useMemo(() => (
+    layout.columns.map((column) => {
+      const durationMs = getColumnDurationMs(column.height);
 
-    const visibleTop = scrollY - containerMetrics.pageTop - VIRTUAL_OVERSCAN;
-    const visibleBottom = scrollY + viewportHeight - containerMetrics.pageTop + VIRTUAL_OVERSCAN;
-
-    return layout.items.filter((item) => (
-      item.top + item.height >= visibleTop && item.top <= visibleBottom
-    ));
-  }, [containerMetrics.pageTop, containerMetrics.width, layout.items, scrollY, viewportHeight]);
+      return {
+        column,
+        durationMs,
+        virtualItems: getVirtualColumnItems(column, visibleTop, visibleBottom, motionTime, durationMs),
+      };
+    })
+  ), [layout.columns, motionTime, visibleBottom, visibleTop]);
   const canvasStyle = useMemo<CSSProperties>(() => ({
     height: layout.height,
   }), [layout.height]);
@@ -353,12 +548,15 @@ const PhotoMasonry = memo(function PhotoMasonry({ photos, onOpenPhoto }: PhotoMa
   return (
     <div className="photo-masonry-frame" ref={containerRef}>
       {containerMetrics.width > 0 ? (
-        <div className="photo-masonry-canvas" style={canvasStyle}>
-          {visibleItems.map((item) => (
-            <PhotoTile
-              item={item}
-              key={item.photo.id}
+        <div className={`photo-masonry-canvas${scrollMotionFrozen ? " is-scroll-freeze" : ""}`} style={canvasStyle}>
+          {visibleColumns.map(({ column, durationMs, virtualItems }) => (
+            <PhotoColumn
+              column={column}
+              key={`${column.index}-${Math.round(column.height)}-${Math.round(column.width)}`}
+              durationMs={durationMs}
+              motionTime={motionTime}
               onOpenPhoto={onOpenPhoto}
+              virtualItems={virtualItems}
             />
           ))}
         </div>
@@ -416,25 +614,56 @@ const PhotoLightbox = memo(function PhotoLightbox({
 
   const loaded = currentPhoto ? loadedPhotoId === currentPhoto.id : false;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!currentPhoto) {
       return undefined;
     }
 
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const previousOverflow = document.body.style.overflow;
-    const previousPaddingRight = document.body.style.paddingRight;
+    const lockedScrollY = window.scrollY;
+    let scrollFrame = 0;
 
+    const syncScrollbarGutter = () => {
+      const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+      document.documentElement.style.setProperty("--viewer-scrollbar-width", `${scrollbarWidth}px`);
+    };
+
+    const preventScroll = (event: Event) => {
+      event.preventDefault();
+    };
+
+    const keepScrollLocked = () => {
+      if (window.scrollY === lockedScrollY || scrollFrame) {
+        return;
+      }
+
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = 0;
+        window.scrollTo(0, lockedScrollY);
+      });
+    };
+
+    syncScrollbarGutter();
     document.body.classList.add("photo-viewer-open");
-    document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
+    window.addEventListener("resize", syncScrollbarGutter);
+    window.addEventListener("wheel", preventScroll, { passive: false });
+    window.addEventListener("touchmove", preventScroll, { passive: false });
+    window.addEventListener("scroll", keepScrollLocked, { passive: true });
 
     return () => {
       document.body.classList.remove("photo-viewer-open");
-      document.body.style.overflow = previousOverflow;
-      document.body.style.paddingRight = previousPaddingRight;
+      document.documentElement.style.removeProperty("--viewer-scrollbar-width");
+      window.removeEventListener("resize", syncScrollbarGutter);
+      window.removeEventListener("wheel", preventScroll);
+      window.removeEventListener("touchmove", preventScroll);
+      window.removeEventListener("scroll", keepScrollLocked);
+
+      if (scrollFrame) {
+        window.cancelAnimationFrame(scrollFrame);
+      }
+
+      if (window.scrollY !== lockedScrollY) {
+        window.scrollTo(0, lockedScrollY);
+      }
     };
   }, [currentPhoto]);
 
