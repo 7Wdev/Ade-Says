@@ -2,7 +2,7 @@
 title: My first post!
 titleAr: منشوري الأول!
 author: Ade
-date: April 16, 2026
+date: April 18, 2026
 excerpt: Welcome to my personal platform!
 excerptAr: يا هلا فيكم بمنصتي الشخصية!
 pinned: true

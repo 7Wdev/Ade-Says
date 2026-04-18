@@ -4,7 +4,7 @@ export const postMetadata = [
     "id": "01-my-first-post",
     "title": "My first post!",
     "author": "Ade",
-    "date": "April 16, 2026",
+    "date": "April 18, 2026",
     "excerpt": "Welcome to my personal platform!",
     "titleAr": "منشوري الأول!",
     "excerptAr": "يا هلا فيكم بمنصتي الشخصية!",
