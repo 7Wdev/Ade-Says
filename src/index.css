@@ -536,6 +536,32 @@ body.photo-viewer-open .app-container {
   margin-bottom: 32px;
 }
 
+.developer-links {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.developer-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--md-sys-color-on-surface-variant);
+  transition: all 0.2s ease;
+}
+
+.developer-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .profile-socials {
   display: flex;
   gap: 12px;
