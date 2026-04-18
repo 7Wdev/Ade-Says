@@ -1559,7 +1559,7 @@ body.photo-viewer-open .app-container {
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background-image: url("/plastic-wrap.png");
+  background-image: url("/plastic-wrap-light.jpg");
   background-size: cover;
   background-position: center;
   mix-blend-mode: screen; /* Blends beautifully with cover image and dark gradient */
