@@ -113,6 +113,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isScrubbing, setIsScrubbing] = useState(false);
   const [transcriptData, setTranscriptData] = useState<{
     src: string;
     transcript: NarrationTranscriptSegment[];
@@ -249,13 +250,6 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     }
   }, [onActiveWordChange, timings]);
 
-  const clearActiveWord = useCallback(() => {
-    if (activeWordRef.current !== null) {
-      activeWordRef.current = null;
-      onActiveWordChange(null);
-    }
-  }, [onActiveWordChange]);
-
   const getBoundedTime = useCallback((time: number) => {
     if (!Number.isFinite(time)) {
       return 0;
@@ -291,9 +285,10 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
     lastPreviewSeekTimeRef.current = nextTime;
     setCurrentTime(nextTime);
+    updateWordFromTime(nextTime);
 
     return nextTime;
-  }, [getBoundedTime]);
+  }, [getBoundedTime, updateWordFromTime]);
 
   const syncToTime = useCallback((time: number) => {
     readAudioDuration();
@@ -383,18 +378,20 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
       return;
     }
 
-    clearActiveWord();
+    activeWordRef.current = null;
     setCurrentTime(nextTime);
+    updateWordFromTime(nextTime);
     lastPreviewSeekTimeRef.current = nextTime;
     isSeekPendingRef.current = true;
     committedSeekTimeRef.current = nextTime;
     audio.currentTime = nextTime;
-  }, [clearActiveWord, getBoundedTime]);
+  }, [getBoundedTime, updateWordFromTime]);
 
   const finishScrubbing = useCallback((time: number) => {
     const shouldResume = resumeAfterScrubRef.current;
 
     isScrubbingRef.current = false;
+    setIsScrubbing(false);
     resumeAfterScrubRef.current = false;
     pendingResumeAfterSeekRef.current = shouldResume;
     commitSeekTime(time);
@@ -412,6 +409,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
 
     event.preventDefault();
     isScrubbingRef.current = true;
+    setIsScrubbing(true);
     isSeekPendingRef.current = false;
     pendingResumeAfterSeekRef.current = false;
     resumeAfterScrubRef.current = Boolean(audio && !audio.paused);
@@ -423,8 +421,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
     }
 
     previewSeekTime(nextTime);
-    clearActiveWord();
-  }, [clearActiveWord, getPointerSeekTime, previewSeekTime]);
+  }, [getPointerSeekTime, previewSeekTime]);
 
   const handleSeekMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
     if (!isScrubbingRef.current) {
@@ -603,7 +600,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
         <div className="audio-progress-row">
           <span>{formatTime(currentTime)}</span>
           <div
-            className="audio-progress-control"
+            className={`audio-progress-control${isScrubbing ? ' is-scrubbing' : ''}`}
             onLostPointerCapture={handleSeekEnd}
             onPointerCancel={handleSeekEnd}
             onPointerDown={handleSeekStart}

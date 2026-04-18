@@ -3005,6 +3005,10 @@ body.photo-viewer-open .app-container {
   display: grid;
   height: 28px;
   align-items: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .audio-progress-control::after {
@@ -3019,6 +3023,7 @@ body.photo-viewer-open .app-container {
     0 0 0 3px var(--mag-accent-yellow),
     0 2px 8px rgba(16, 15, 19, 0.32);
   content: "";
+  cursor: inherit;
   pointer-events: none;
   transform: translateX(-50%);
   transition:
@@ -3032,6 +3037,10 @@ body.photo-viewer-open .app-container {
     0 0 0 4px var(--mag-accent-yellow),
     0 3px 10px rgba(16, 15, 19, 0.38);
   transform: translateX(-50%) scale(1.08);
+}
+
+.audio-progress-control.is-scrubbing {
+  cursor: grabbing;
 }
 
 .audio-progress-indicator {
@@ -3053,7 +3062,7 @@ body.photo-viewer-open .app-container {
   margin: 0;
   appearance: none;
   background: transparent;
-  cursor: pointer;
+  cursor: inherit;
   opacity: 0;
   pointer-events: none;
 }
