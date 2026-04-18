@@ -9,7 +9,7 @@ import {
   type CSSProperties,
   type SyntheticEvent,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, preload } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
 
@@ -17,6 +17,12 @@ const LIGHTBOX_EXIT_MS = 280;
 const VIRTUAL_OVERSCAN_MIN = 1600;
 const VIRTUAL_OVERSCAN_VIEWPORT_MULTIPLIER = 1.35;
 const VIRTUAL_MOTION_REFRESH_MS = 1000;
+const CATALOG_TEXTURE_SRC = "/plastic-wrap-light.jpg";
+const CATALOG_CARD_MIN_WIDTH = 340;
+const CATALOG_CARD_MAX_WIDTH = 420;
+const CATALOG_GRID_GAP = 32;
+const CATALOG_GRID_MOBILE_GAP = 18;
+const CATALOG_GRID_OVERSCAN_ROWS = 2;
 
 type MasonryItem = {
   readonly photo: PhotoAsset;
@@ -49,8 +55,26 @@ type VirtualMasonryItem = {
   readonly top: number;
 };
 
+type CatalogGridLayout = {
+  readonly cardWidth: number;
+  readonly columnCount: number;
+  readonly gap: number;
+  readonly height: number;
+  readonly rowStride: number;
+};
+
+type VirtualCatalogItem = {
+  readonly catalog: PhotoCatalog;
+  readonly index: number;
+  readonly key: string;
+  readonly left: number;
+  readonly top: number;
+};
+
 type GalleryTileStyle = CSSProperties & Record<`--${string}`, string | number>;
 type GalleryColumnStyle = CSSProperties & Record<`--${string}`, string | number>;
+type CatalogGridStyle = CSSProperties & Record<`--${string}`, string | number>;
+type CatalogSlotStyle = CSSProperties & Record<`--${string}`, string | number>;
 type LightboxStageStyle = CSSProperties & Record<`--${string}`, string | number>;
 
 
@@ -71,6 +95,78 @@ function getCatalogCover(catalog: PhotoCatalog) {
 
 function formatPhotoCount(count: number) {
   return `${count} ${count === 1 ? "photo" : "photos"}`;
+}
+
+function buildCatalogGridLayout(catalogCount: number, width: number): CatalogGridLayout {
+  if (catalogCount === 0 || width <= 0) {
+    return {
+      cardWidth: 0,
+      columnCount: 1,
+      gap: CATALOG_GRID_GAP,
+      height: 0,
+      rowStride: 0,
+    };
+  }
+
+  const gap = width <= 620 ? CATALOG_GRID_MOBILE_GAP : CATALOG_GRID_GAP;
+  const minCardWidth = Math.min(CATALOG_CARD_MIN_WIDTH, width);
+  const columnCount = Math.max(1, Math.floor((width + gap) / (minCardWidth + gap)));
+  const cardWidth = Math.min(
+    CATALOG_CARD_MAX_WIDTH,
+    (width - gap * (columnCount - 1)) / columnCount,
+  );
+  const rowStride = cardWidth + gap;
+  const rowCount = Math.ceil(catalogCount / columnCount);
+
+  return {
+    cardWidth,
+    columnCount,
+    gap,
+    height: rowCount * cardWidth + Math.max(0, rowCount - 1) * gap,
+    rowStride,
+  };
+}
+
+function getVirtualCatalogItems(
+  catalogs: readonly PhotoCatalog[],
+  layout: CatalogGridLayout,
+  visibleTop: number,
+  visibleBottom: number,
+) {
+  if (layout.cardWidth <= 0 || catalogs.length === 0) {
+    return [];
+  }
+
+  const lastRow = Math.max(0, Math.ceil(catalogs.length / layout.columnCount) - 1);
+  const startRow = clamp(
+    Math.floor(visibleTop / layout.rowStride) - CATALOG_GRID_OVERSCAN_ROWS,
+    0,
+    lastRow,
+  );
+  const endRow = clamp(
+    Math.ceil(visibleBottom / layout.rowStride) + CATALOG_GRID_OVERSCAN_ROWS,
+    startRow,
+    lastRow,
+  );
+  const startIndex = startRow * layout.columnCount;
+  const endIndex = Math.min(catalogs.length - 1, (endRow + 1) * layout.columnCount - 1);
+  const virtualItems: VirtualCatalogItem[] = [];
+
+  for (let index = startIndex; index <= endIndex; index += 1) {
+    const catalog = catalogs[index];
+    const row = Math.floor(index / layout.columnCount);
+    const column = index % layout.columnCount;
+
+    virtualItems.push({
+      catalog,
+      index,
+      key: catalog.slug,
+      left: column * layout.rowStride,
+      top: row * layout.rowStride,
+    });
+  }
+
+  return virtualItems;
 }
 
 function getColumnDurationMs(height: number) {
@@ -132,7 +228,7 @@ function useElementMetrics<TElement extends HTMLElement>() {
     width: 0,
   }));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current;
 
     if (!element) {
@@ -193,8 +289,8 @@ function useElementMetrics<TElement extends HTMLElement>() {
 
 function useWindowMetrics() {
   const [metrics, setMetrics] = useState(() => ({
-    scrollY: 0,
-    viewportHeight: 0,
+    scrollY: typeof window === "undefined" ? 0 : window.scrollY,
+    viewportHeight: typeof window === "undefined" ? 0 : window.innerHeight,
   }));
 
   useEffect(() => {
@@ -360,13 +456,20 @@ const GallerySkeleton = memo(function GallerySkeleton() {
 
 type CatalogCardProps = {
   readonly catalog: PhotoCatalog;
+  readonly priority?: boolean;
 };
 
-const CatalogCard = memo(function CatalogCard({ catalog }: CatalogCardProps) {
-  const coverPhoto = getCatalogCover(catalog);
+const CatalogCard = memo(function CatalogCard({ catalog, priority = false }: CatalogCardProps) {
+  const coverPhoto = useMemo(() => getCatalogCover(catalog), [catalog]);
+  const [coverLoaded, setCoverLoaded] = useState(false);
+  const handleCoverLoaded = useCallback(() => setCoverLoaded(true), []);
+  const photoCountLabel = useMemo(() => formatPhotoCount(catalog.photos.length), [catalog.photos.length]);
 
   return (
-    <Link to={`/photography/${catalog.slug}`} className="photo-catalog-card">
+    <Link
+      to={`/photography/${catalog.slug}`}
+      className={`photo-catalog-card${coverLoaded ? " is-cover-loaded" : ""}`}
+    >
       <span className="photo-catalog-tab" aria-hidden="true" />
       {coverPhoto ? (
         <img
@@ -376,7 +479,10 @@ const CatalogCard = memo(function CatalogCard({ catalog }: CatalogCardProps) {
           height={coverPhoto.thumbHeight}
           alt=""
           decoding="async"
-          fetchPriority="high"
+          fetchPriority={priority ? "high" : "low"}
+          loading={priority ? "eager" : "lazy"}
+          onError={handleCoverLoaded}
+          onLoad={handleCoverLoaded}
         />
       ) : null}
       <span className="photo-catalog-grain" aria-hidden="true" />
@@ -384,11 +490,59 @@ const CatalogCard = memo(function CatalogCard({ catalog }: CatalogCardProps) {
         <span className="photo-catalog-kicker">{catalog.locationLabel}</span>
         <span className="photo-catalog-title">{catalog.name}</span>
         <span className="photo-catalog-meta">
-          <span>{formatPhotoCount(catalog.photos.length)}</span>
+          <span>{photoCountLabel}</span>
           <span>Open gallery</span>
         </span>
       </span>
     </Link>
+  );
+});
+
+type VirtualCatalogGridProps = {
+  readonly catalogs: readonly PhotoCatalog[];
+};
+
+const VirtualCatalogGrid = memo(function VirtualCatalogGrid({ catalogs }: VirtualCatalogGridProps) {
+  const [gridRef, gridMetrics] = useElementMetrics<HTMLDivElement>();
+  const { scrollY, viewportHeight } = useWindowMetrics();
+  const layout = useMemo(
+    () => buildCatalogGridLayout(catalogs.length, gridMetrics.width),
+    [catalogs.length, gridMetrics.width],
+  );
+  const visibleTop = scrollY - gridMetrics.pageTop;
+  const visibleBottom = scrollY + viewportHeight - gridMetrics.pageTop;
+  const virtualItems = useMemo(
+    () => getVirtualCatalogItems(catalogs, layout, visibleTop, visibleBottom),
+    [catalogs, layout, visibleBottom, visibleTop],
+  );
+  const gridStyle = useMemo<CatalogGridStyle>(() => ({
+    "--catalog-grid-height": `${layout.height}px`,
+    "--catalog-grid-gap": `${layout.gap}px`,
+    "--catalog-card-size": `${layout.cardWidth}px`,
+  }), [layout.cardWidth, layout.gap, layout.height]);
+
+  return (
+    <div
+      className="photo-catalog-grid"
+      aria-label="Photography catalogs"
+      ref={gridRef}
+      style={gridStyle}
+    >
+      {virtualItems.map((item) => {
+        const slotStyle: CatalogSlotStyle = {
+          "--catalog-card-size": `${layout.cardWidth}px`,
+          height: layout.cardWidth,
+          transform: `translate3d(${item.left}px, ${item.top}px, 0)`,
+          width: layout.cardWidth,
+        };
+
+        return (
+          <div className="photo-catalog-slot" key={item.key} style={slotStyle}>
+            <CatalogCard catalog={item.catalog} priority={item.index === 0} />
+          </div>
+        );
+      })}
+    </div>
   );
 });
 
@@ -397,6 +551,21 @@ type CatalogIndexProps = {
 };
 
 const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps) {
+  const priorityCover = catalogs[0] ? getCatalogCover(catalogs[0]) : undefined;
+
+  preload(CATALOG_TEXTURE_SRC, {
+    as: "image",
+    fetchPriority: "high",
+    type: "image/jpeg",
+  });
+
+  if (priorityCover) {
+    preload(priorityCover.thumbSrc, {
+      as: "image",
+      fetchPriority: "high",
+    });
+  }
+
   return (
     <section className="page-shell photography-page">
       <Link to="/" className="back-link">
@@ -410,11 +579,7 @@ const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps)
         <p>A quiet space for frames from life that I took.</p>
       </div>
 
-      <div className="photo-catalog-grid" aria-label="Photography catalogs">
-        {catalogs.map((catalog) => (
-          <CatalogCard catalog={catalog} key={catalog.slug} />
-        ))}
-      </div>
+      <VirtualCatalogGrid catalogs={catalogs} />
     </section>
   );
 });
