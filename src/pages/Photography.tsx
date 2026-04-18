@@ -1,18 +1,19 @@
 import {
   memo,
-  startTransition,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
 
 const VIRTUAL_OVERSCAN = 900;
+const LIGHTBOX_EXIT_MS = 280;
 
 type MasonryItem = {
   readonly photo: PhotoAsset;
@@ -30,6 +31,7 @@ type MasonryLayout = {
 };
 
 type GalleryTileStyle = CSSProperties & Record<`--${string}`, string | number>;
+type LightboxStageStyle = CSSProperties & Record<`--${string}`, string | number>;
 
 
 
@@ -282,6 +284,7 @@ type PhotoTileProps = {
 const PhotoTile = memo(function PhotoTile({ item, onOpenPhoto }: PhotoTileProps) {
   const [loaded, setLoaded] = useState(false);
   const handleOpen = useCallback(() => onOpenPhoto(item.photo), [item.photo, onOpenPhoto]);
+  const handleTileLoaded = useCallback(() => setLoaded(true), []);
   const [globalSyncDelay] = useState(() => -(Date.now() % 24000));
   const style = useMemo<GalleryTileStyle>(() => ({
     top: item.top,
@@ -313,8 +316,8 @@ const PhotoTile = memo(function PhotoTile({ item, onOpenPhoto }: PhotoTileProps)
           loading="lazy"
           decoding="async"
           fetchPriority={item.index < 8 ? "high" : "low"}
-          onLoad={() => setLoaded(true)}
-          onError={() => setLoaded(true)}
+          onLoad={handleTileLoaded}
+          onError={handleTileLoaded}
         />
       </span>
     </button>
@@ -378,9 +381,14 @@ const PhotoLightbox = memo(function PhotoLightbox({
   const [closing, setClosing] = useState(false);
   const [displayedPhoto, setDisplayedPhoto] = useState(photo);
   const [loadedPhotoId, setLoadedPhotoId] = useState<string | null>(null);
+  const currentPhoto = photo ?? displayedPhoto;
+  const currentPhotoId = currentPhoto?.id ?? null;
 
   if (photo && photo !== displayedPhoto) {
     setDisplayedPhoto(photo);
+  }
+
+  if (photo && closing) {
     setClosing(false);
   }
 
@@ -388,33 +396,50 @@ const PhotoLightbox = memo(function PhotoLightbox({
     setClosing(true);
   }
 
-  useEffect(() => {
-    if (closing && !photo) {
-      const timer = setTimeout(() => {
-        setDisplayedPhoto(null);
-        setClosing(false);
-      }, 220);
-      return () => clearTimeout(timer);
-    }
-  }, [closing, photo]);
-
-  const loaded = displayedPhoto ? loadedPhotoId === displayedPhoto.id : false;
+  if (currentPhoto && loadedPhotoId && loadedPhotoId !== currentPhoto.id) {
+    setLoadedPhotoId(null);
+  }
 
   useEffect(() => {
-    if (!displayedPhoto) {
+    if (!closing || photo || !displayedPhoto) {
       return undefined;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const timer = window.setTimeout(() => {
+      setDisplayedPhoto(null);
+      setClosing(false);
+      setLoadedPhotoId(null);
+    }, LIGHTBOX_EXIT_MS);
 
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [displayedPhoto]);
+    return () => window.clearTimeout(timer);
+  }, [closing, displayedPhoto, photo]);
+
+  const loaded = currentPhoto ? loadedPhotoId === currentPhoto.id : false;
 
   useEffect(() => {
-    if (!displayedPhoto || closing) {
+    if (!currentPhoto) {
+      return undefined;
+    }
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    document.body.classList.add("photo-viewer-open");
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.classList.remove("photo-viewer-open");
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [currentPhoto]);
+
+  useEffect(() => {
+    if (!currentPhoto || closing) {
       return undefined;
     }
 
@@ -426,7 +451,7 @@ const PhotoLightbox = memo(function PhotoLightbox({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closing, onClose, displayedPhoto]);
+  }, [closing, onClose, currentPhoto]);
 
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
     if (event.target === event.currentTarget) {
@@ -434,13 +459,39 @@ const PhotoLightbox = memo(function PhotoLightbox({
     }
   }, [onClose]);
 
-  const handleImageLoaded = useCallback(() => {
-    if (displayedPhoto) {
-      setLoadedPhotoId(displayedPhoto.id);
-    }
-  }, [displayedPhoto]);
+  const handleImageLoaded = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    const loadedId = image.dataset.photoId;
 
-  if (!displayedPhoto) {
+    if (!loadedId) {
+      return;
+    }
+
+    const revealImage = () => {
+      if (currentPhotoId === loadedId) {
+        window.requestAnimationFrame(() => setLoadedPhotoId(loadedId));
+      }
+    };
+
+    if (typeof image.decode === "function") {
+      void image.decode().then(revealImage, revealImage);
+      return;
+    }
+
+    revealImage();
+  }, [currentPhotoId]);
+
+  const stageStyle = useMemo<LightboxStageStyle | undefined>(() => {
+    if (!currentPhoto) {
+      return undefined;
+    }
+
+    return {
+      "--photo-aspect": currentPhoto.width / currentPhoto.height,
+    };
+  }, [currentPhoto]);
+
+  if (!currentPhoto) {
     return null;
   }
 
@@ -449,7 +500,7 @@ const PhotoLightbox = memo(function PhotoLightbox({
       className={`photo-lightbox${closing ? " is-closing" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-label={displayedPhoto.alt}
+      aria-label={currentPhoto.alt}
       onMouseDown={handleMouseDown}
     >
       <div className="photo-lightbox-panel">
@@ -457,18 +508,29 @@ const PhotoLightbox = memo(function PhotoLightbox({
           <span className="material-symbols-rounded">close</span>
         </button>
 
-        <figure className="photo-lightbox-stage">
-          {!loaded ? (
-            <span className="photo-lightbox-skeleton" aria-hidden="true" />
-          ) : null}
+        <figure className={`photo-lightbox-stage${loaded ? " is-loaded" : ""}`} style={stageStyle}>
+          <img
+            className="photo-lightbox-preview"
+            src={currentPhoto.thumbSrc}
+            width={currentPhoto.thumbWidth}
+            height={currentPhoto.thumbHeight}
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+          />
+          <span className={`photo-lightbox-loader${loaded ? " is-hidden" : ""}`} aria-hidden="true">
+            <m3e-loading-indicator variant="contained" aria-label="Loading full resolution photo" />
+          </span>
           <img
             className={`photo-lightbox-image${loaded ? " is-loaded" : ""}`}
-            src={displayedPhoto.originalSrc}
-            width={displayedPhoto.width}
-            height={displayedPhoto.height}
-            alt={displayedPhoto.alt}
+            src={currentPhoto.originalSrc}
+            width={currentPhoto.width}
+            height={currentPhoto.height}
+            alt={currentPhoto.alt}
+            data-photo-id={currentPhoto.id}
             decoding="async"
             loading="eager"
+            fetchPriority="high"
             onLoad={handleImageLoaded}
             onError={handleImageLoaded}
           />
@@ -486,7 +548,7 @@ type GalleryPageProps = {
 const GalleryPage = memo(function GalleryPage({ catalog }: GalleryPageProps) {
   const [activePhoto, setActivePhoto] = useState<PhotoAsset | null>(null);
   const handleOpenPhoto = useCallback((photo: PhotoAsset) => {
-    startTransition(() => setActivePhoto(photo));
+    setActivePhoto(photo);
   }, []);
   const handleClosePhoto = useCallback(() => setActivePhoto(null), []);
 
