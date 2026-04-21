@@ -16,6 +16,7 @@ import { isNarrationWordToken, splitNarrationTextTokens } from '../utils/narrati
 
 const TikZRenderer = lazy(() => import('./TikZRenderer'));
 const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
+const hexColorPattern = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
 
 export type NarrationRenderState = {
   enabled: boolean;
@@ -95,7 +96,7 @@ function createNarratedElement(tagName: NarratedTagName, narration: NarrationRen
   };
 }
 
-export const markdownComponents: Components = {
+export const markdownComponents = {
   code({ className, children, node, ...props }) {
     void node;
 
@@ -128,6 +129,21 @@ export const markdownComponents: Components = {
       );
     }
 
+    if (!isBlock && hexColorPattern.test(codeString.trim())) {
+      const color = codeString.trim().toUpperCase();
+
+      return (
+        <span className="article-hex-chip" title={`Color ${color}`}>
+          <span className="article-hex-chip-code">{color}</span>
+          <span
+            aria-hidden="true"
+            className="article-hex-chip-swatch"
+            style={{ backgroundColor: color }}
+          />
+        </span>
+      );
+    }
+
     return (
       <code className={className} {...props}>
         {children}
@@ -152,7 +168,7 @@ export const markdownComponents: Components = {
     }
     return <pre {...props}>{children}</pre>;
   },
-};
+} as Components;
 
 export function createMarkdownComponents(narration?: NarrationRenderState): Components {
   if (!narration?.enabled) {

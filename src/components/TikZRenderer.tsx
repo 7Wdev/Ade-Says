@@ -8,10 +8,14 @@ interface TikZRendererProps {
 
 const typedTikzCache = tikzCache as Record<string, string>;
 
+function normalizeTikzContent(content: string) {
+  return content.replace(/\r\n/g, "\n").trim();
+}
+
 function TikZRenderer({ content }: TikZRendererProps) {
   // Hash the content to find it in the cache, exactly as the build script does
   const hash = useMemo(() => {
-    return CryptoJS.SHA256(content).toString(CryptoJS.enc.Hex).slice(0, 16);
+    return CryptoJS.SHA256(normalizeTikzContent(content)).toString(CryptoJS.enc.Hex).slice(0, 16);
   }, [content]);
 
   const svgContent = typedTikzCache[hash];

@@ -2503,6 +2503,54 @@ body.photo-viewer-open .app-container {
   color: rgba(230, 224, 233, 0.95);
 }
 
+.article-content .inline-red,
+.article-content .inline-green,
+.article-content .inline-blue,
+.article-content .inline-yellow,
+.article-content .inline-secret,
+.article-content .inline-carrier,
+.article-content .inline-loud,
+.article-content .inline-quiet {
+  font-weight: 900;
+}
+
+.article-content .inline-red {
+  color: #ff8a80;
+}
+
+.article-content .inline-green,
+.article-content .inline-secret {
+  color: #9bd77f;
+}
+
+.article-content .inline-blue {
+  color: #82b4ff;
+}
+
+.article-content .inline-yellow,
+.article-content .inline-carrier,
+.article-content .inline-loud {
+  color: var(--mag-accent-yellow);
+}
+
+.article-content .inline-quiet {
+  color: #80d8ff;
+}
+
+.article-content .inline-hex {
+  display: inline-block;
+  padding: 1px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+  font-size: 0.92em;
+  font-weight: 900;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 .article-content a {
   color: var(--mag-accent-yellow);
   text-decoration: underline;
@@ -2582,6 +2630,32 @@ body.photo-viewer-open .app-container {
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   word-break: break-word;
+}
+
+.article-content .article-hex-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 7px 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--mag-accent-yellow);
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+  font-size: 0.9em;
+  font-weight: 900;
+  line-height: 1.25;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.article-content .article-hex-chip-swatch {
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(16, 15, 19, 0.12);
 }
 
 /* --- Code Blocks --- */

@@ -9,7 +9,7 @@ export const postMetadata = [
     "titleAr": "منشوري الأول!",
     "excerptAr": "يا هلا فيكم بمنصتي الشخصية!",
     "pinned": true,
-    "pinnedRank": 1,
+    "pinnedRank": 2,
     "tags": [
       "introduction",
       "first"
@@ -19,5 +19,23 @@ export const postMetadata = [
     "audioAr": "./audios/ar/full.mp3",
     "transcriptEn": "./transcripts/en.json",
     "transcriptAr": "./transcripts/ar.json"
+  },
+  {
+    "id": "02-steganography",
+    "title": "Steganography, The Art of Hiding a Whisper Inside a Picture!",
+    "author": "Ade",
+    "date": "April -, 2026",
+    "excerpt": "A walk through hidden messages, old tricks, pixel secrets, and hiding techniques.",
+    "titleAr": "الستيغانوغرافي، فن إخفاء الهمسة داخل صورة!",
+    "excerptAr": "المرور عبر الرسائل المخفية، من الحيل القديمة وصولا الى أسرار البكسلات وأساليب اخفاء المعلومات.",
+    "pinned": true,
+    "pinnedRank": 1,
+    "tags": [
+      "steganography",
+      "cryptography",
+      "images",
+      "experiment"
+    ],
+    "thumbnail": "./banner.webp"
   }
 ] as const;

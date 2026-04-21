@@ -130,6 +130,45 @@ function resolveArticleAsset(value: string | undefined, markdownPath: string) {
   return postAssetUrls[assetPath] ?? value;
 }
 
+function transformMarkdownOutsideFences(markdown: string, transform: (segment: string) => string) {
+  return markdown
+    .split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g)
+    .map((segment) => (
+      segment.startsWith('```') || segment.startsWith('~~~')
+        ? segment
+        : transform(segment)
+    ))
+    .join('');
+}
+
+function resolveMarkdownAssetReferences(markdown: string, markdownPath: string) {
+  return transformMarkdownOutsideFences(markdown, (segment) => segment
+    .replace(/(!\[[^\]]*]\()(\s*)(<([^>]+)>|[^\s)]+)([^)]*\))/g, (
+      _match,
+      prefix: string,
+      whitespace: string,
+      rawUrl: string,
+      angleUrl: string | undefined,
+      suffix: string,
+    ) => {
+      const url = angleUrl ?? rawUrl;
+      const resolvedUrl = resolveArticleAsset(url, markdownPath) ?? url;
+      const formattedUrl = angleUrl ? `<${resolvedUrl}>` : resolvedUrl;
+
+      return `${prefix}${whitespace}${formattedUrl}${suffix}`;
+    })
+    .replace(/(<img\b[^>]*\bsrc\s*=\s*["'])([^"']+)(["'][^>]*>)/gi, (
+      _match,
+      prefix: string,
+      url: string,
+      suffix: string,
+    ) => {
+      const resolvedUrl = resolveArticleAsset(url, markdownPath) ?? url;
+
+      return `${prefix}${resolvedUrl}${suffix}`;
+    }));
+}
+
 function getArticleFileInfo(path: string, rawContent: string): ArticleMarkdownFile {
   const normalizedPath = path.replace(/\\/g, '/');
   const relativePath = normalizedPath.replace('../content/posts/', '');
@@ -237,7 +276,7 @@ function createPost(articleId: string, files: ArticleMarkdownFile[]): Post {
 
     return {
       id: getPageId(file.filename),
-      content: parsed.content.trim(),
+      content: resolveMarkdownAssetReferences(parsed.content.trim(), file.path),
       label: getPageLabel(parsed.fields, index + 1),
       labelAr: parsed.fields.pageTitleAr || parsed.fields.titleAr,
       order: index,

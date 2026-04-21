@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 interface InteractiveSandboxProps {
   code: string;
@@ -7,6 +7,19 @@ interface InteractiveSandboxProps {
 function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const sandboxHeight = useMemo(() => {
+    const match = /<!--\s*sandbox-height:\s*(\d+)\s*-->/i.exec(code);
+    const parsedHeight = match ? Number(match[1]) : 0;
+
+    if (!Number.isFinite(parsedHeight) || parsedHeight <= 0) {
+      return null;
+    }
+
+    return Math.min(760, Math.max(260, parsedHeight));
+  }, [code]);
+  const sandboxStyle = useMemo<CSSProperties | undefined>(() => (
+    sandboxHeight ? { minHeight: `${sandboxHeight}px` } : undefined
+  ), [sandboxHeight]);
 
   const html = useMemo(() => `<!DOCTYPE html>
 <html>
@@ -41,9 +54,9 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   }, [html]);
 
   return (
-    <div className="sandbox-wrapper">
+    <div className="sandbox-wrapper" style={sandboxStyle}>
       {!loaded && (
-        <div className="sandbox-loading" role="status" aria-live="polite">
+        <div className="sandbox-loading" style={sandboxStyle} role="status" aria-live="polite">
           <m3e-loading-indicator variant="contained" aria-label="Loading interactive demo" />
           <span>Preparing sandbox…</span>
         </div>
@@ -52,6 +65,7 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         ref={iframeRef}
         className={`interactive-sandbox ${loaded ? 'sandbox-ready' : ''}`}
         sandbox="allow-scripts"
+        style={sandboxStyle}
         title="Interactive code sandbox"
         onLoad={handleLoad}
       />

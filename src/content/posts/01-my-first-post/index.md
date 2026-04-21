@@ -6,7 +6,7 @@ date: April 18, 2026
 excerpt: Welcome to my personal platform!
 excerptAr: يا هلا فيكم بمنصتي الشخصية!
 pinned: true
-pinnedRank: 1
+pinnedRank: 2
 tags: introduction, first
 thumbnail: ./banner.webp
 audioEn: ./audios/en/full.mp3

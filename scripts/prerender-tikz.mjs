@@ -180,7 +180,8 @@ function extractTikzBlocks(markdown) {
 
 // Create a stable hash for a TikZ code string
 function hashContent(content) {
-  return createHash('sha256').update(content).digest('hex').slice(0, 16);
+  const normalizedContent = content.replace(/\r\n/g, '\n').trim();
+  return createHash('sha256').update(normalizedContent).digest('hex').slice(0, 16);
 }
 
 async function main() {
