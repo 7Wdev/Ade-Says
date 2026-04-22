@@ -398,819 +398,201 @@ Here is a more playful way to see it. **Move around the pixel field.** The big *
 
 ## How To Hide A Pixel Inside A Pixel!
 
-- visible <span class="inline-yellow">yellow</span>: `#FFC359`
-- hidden <span class="inline-green">green</span>: `#8FC56C`
+Every pixel is made of color channels (red, green, blue), and each channel is represented by a number from `0` to `255`.
+Inside the computer, that number is stored as **8 bits**. A bit is simply one binary slot (either $0$ or $1$).
 
-Each RGB channel is one byte: 8 bits. But those 8 positions are not equal. Their weights are `128, 64, 32, 16, 8, 4, 2, 1`, because every step to the left is another power of two.
+The question here is: do all bits have the same importance?
 
-That makes the split very uneven. The high 4 bits (`bits 7..4`) can contribute up to `240`. The low 4 bits (`bits 3..0`) can contribute only `15`. So when steganography edits only the low half, it is not repainting the pixel. It is only nudging the shade inside the same 16-value neighborhood.
+To understand that, let’s go back to the math for a moment. Bits work on powers of 2 (that is, $2^x$).
+The first bit (from the right) is worth $2^0 = 1$, the next is $2^1 = 2$, and so on until we reach the eighth bit, which is worth $2^7 = 128$.
 
-```html-live
-<!-- sandbox-height: 650 -->
-<style>
-  :root {
-    color-scheme: dark;
-  }
+$$
+\begin{array}{cccccccc}
+2^7 & 2^6 & 2^5 & 2^4 & 2^3 & 2^2 & 2^1 & 2^0 \\
+\mathbf{128} & \mathbf{64} & \mathbf{32} & \mathbf{16} & \mathbf{8} & \mathbf{4} & \mathbf{2} & \mathbf{1}
+\end{array}
+$$
 
-  body {
-    min-height: 100vh;
-    margin: 0;
-    padding: 24px 16px;
-    background:
-      radial-gradient(circle at top left, rgba(246, 200, 92, 0.12), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(142, 85, 255, 0.12), transparent 34%),
-      #0f1012;
-    color: #f2eee8;
-    font-family: "Roboto Flex", system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+If we split the 8 bits into two halves:
+- **The Strong Half (Most Significant Bits):** These are the 4 bits on the left. Their values are the big numbers ($128, 64, 32, 16$). This half is what mainly defines the **identity of the color**.
+- **The Quiet Half (Least Significant Bits):** These are the 4 bits on the right. Their values are tiny ($8, 4, 2, 1$). If we add them all up, they give us only $15$ out of $255$! That means their effect on the color does not exceed about $6\%$, and changing them creates such a tiny difference that the human eye usually does not notice it.
 
-  .bit-lab {
-    width: min(940px, 100%);
-    padding: 24px;
-    border-radius: 28px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
-      rgba(12, 13, 16, 0.92);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.05),
-      0 24px 48px rgba(0,0,0,0.35);
-  }
+In other words, the quiet half (the 4 weak bits) can be treated as **empty space** or a “secret room” that we can use.
 
-  .eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.58);
-    margin-bottom: 10px;
-  }
+### The Trick: Merge Two Colors Into One Pixel
 
-  h3 {
-    margin: 0;
-    font-size: clamp(22px, 3vw, 32px);
-    line-height: 1.1;
-    color: #fff7e8;
-  }
+To hide a <span class="inline-secret">secret pixel</span> inside a <span class="inline-carrier">cover pixel</span>, we do this:
+1. We clear the quiet half of the **cover pixel** (because its effect is almost negligible).
+2. We take the strong half of the **secret pixel** (because it carries the most important information about the secret color).
+3. We place that strong half from the secret pixel where the quiet half used to be in the cover pixel.
 
-  .sub {
-    margin: 12px 0 0;
-    max-width: 58ch;
-    font-size: 15px;
-    line-height: 1.7;
-    color: rgba(242, 238, 232, 0.78);
-  }
+The result is a **carrier pixel** that still looks very close to the cover pixel, but secretly contains the hidden data.
 
-  .readout {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 22px;
-  }
+Let’s see it as a diagram:
 
-  .chip {
-    padding: 14px 16px;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
+```tikz
+\begin{tikzpicture}[font=\sffamily, every node/.style={align=center}]
+  \node[draw=yellow, text=yellow, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (cover) at (0, 2) {\textbf{Cover Pixel}\\ \small \texttt{1111} \textcolor{gray}{\texttt{1111}}};
+  
+  \node[draw=green, text=green, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (secret) at (0, -2) {\textbf{Secret Pixel}\\ \small \texttt{1000} \textcolor{gray}{\texttt{1111}}};
+  
+  \node[draw=orange, text=orange, rounded corners=6pt, minimum width=4.2cm, minimum height=1.4cm, thick] (carrier) at (6, 0) {\textbf{Carrier Pixel}\\ \small \texttt{1111} \textcolor{green}{\texttt{1000}}};
 
-  .chip span {
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.5);
-  }
-
-  .chip strong {
-    font-size: 28px;
-    line-height: 1;
-    color: #fff;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-  }
-
-  .slider-wrap {
-    display: block;
-    margin-top: 18px;
-  }
-
-  .slider-wrap label {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 10px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.68);
-  }
-
-  input[type="range"] {
-    width: 100%;
-    accent-color: #f6c85c;
-  }
-
-  .bit-grid {
-    display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 18px;
-  }
-
-  .bit-card {
-    padding: 14px 10px;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.07);
-    background: rgba(255,255,255,0.03);
-    text-align: center;
-    transition:
-      transform 0.28s ease,
-      border-color 0.28s ease,
-      background 0.28s ease,
-      box-shadow 0.28s ease,
-      opacity 0.28s ease;
-  }
-
-  .bit-card.high {
-    border-color: rgba(246, 200, 92, 0.14);
-  }
-
-  .bit-card.low {
-    border-color: rgba(121, 142, 255, 0.14);
-  }
-
-  .bit-card.on.high {
-    background: linear-gradient(180deg, rgba(246, 200, 92, 0.24), rgba(246, 200, 92, 0.08));
-    border-color: rgba(246, 200, 92, 0.34);
-    box-shadow: 0 14px 28px rgba(246, 200, 92, 0.12);
-    transform: translateY(-4px);
-  }
-
-  .bit-card.on.low {
-    background: linear-gradient(180deg, rgba(139, 94, 255, 0.22), rgba(74, 132, 255, 0.08));
-    border-color: rgba(121, 142, 255, 0.32);
-    box-shadow: 0 14px 28px rgba(121, 142, 255, 0.12);
-    transform: translateY(-4px);
-  }
-
-  .bit-card.off {
-    opacity: 0.58;
-  }
-
-  .bit-top {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.52);
-    margin-bottom: 12px;
-  }
-
-  .bit-digit {
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 30px;
-    font-weight: 700;
-    color: #fff6df;
-    line-height: 1;
-  }
-
-  .bit-weight {
-    margin-top: 10px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.58);
-  }
-
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 18px;
-  }
-
-  .summary-card {
-    padding: 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-  }
-
-  .summary-card span,
-  .summary-card em {
-    display: block;
-  }
-
-  .summary-card span {
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.52);
-  }
-
-  .summary-card strong {
-    display: block;
-    margin: 10px 0 8px;
-    font-size: clamp(24px, 3.8vw, 34px);
-    line-height: 1;
-    color: #fff;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-  }
-
-  .summary-card em {
-    font-style: normal;
-    color: rgba(242, 238, 232, 0.74);
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  .summary-card.loud strong {
-    color: #f6c85c;
-  }
-
-  .summary-card.quiet strong {
-    color: #8fa9ff;
-  }
-
-  .summary-card.bucket strong {
-    color: #ffb780;
-  }
-
-  .bit-note {
-    margin-top: 18px;
-    padding: 16px 18px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    color: rgba(242, 238, 232, 0.84);
-    line-height: 1.7;
-    font-size: 15px;
-  }
-
-  .bit-note strong {
-    color: #fff7e8;
-  }
-
-  @media (max-width: 760px) {
-    .bit-lab {
-      padding: 20px;
-    }
-
-    .readout,
-    .summary {
-      grid-template-columns: 1fr;
-    }
-
-    .bit-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-</style>
-
-<div class="bit-lab" dir="ltr">
-  <div class="eyebrow">Bit Weights</div>
-  <h3>Why the low 4 bits are the quiet part</h3>
-  <p class="sub">Move the slider. The high half locks the channel into a 16-value neighborhood. The low half only fine-tunes the shade inside that neighborhood.</p>
-
-  <div class="readout">
-    <div class="chip"><span>Decimal</span><strong id="bw-dec">195</strong></div>
-    <div class="chip"><span>Hex</span><strong id="bw-hex">C3</strong></div>
-    <div class="chip"><span>Binary</span><strong id="bw-bin">11000011</strong></div>
-  </div>
-
-  <div class="slider-wrap">
-    <label><span>Channel value</span><span id="bw-label">195 / 255</span></label>
-    <input id="bw-slider" type="range" min="0" max="255" value="195" />
-  </div>
-
-  <div class="bit-grid">
-    <div class="bit-card high"><div class="bit-top"><span>bit 7</span><span>2^7</span></div><div class="bit-digit" id="bw-bit-7">1</div><div class="bit-weight">128</div></div>
-    <div class="bit-card high"><div class="bit-top"><span>bit 6</span><span>2^6</span></div><div class="bit-digit" id="bw-bit-6">1</div><div class="bit-weight">64</div></div>
-    <div class="bit-card high"><div class="bit-top"><span>bit 5</span><span>2^5</span></div><div class="bit-digit" id="bw-bit-5">0</div><div class="bit-weight">32</div></div>
-    <div class="bit-card high"><div class="bit-top"><span>bit 4</span><span>2^4</span></div><div class="bit-digit" id="bw-bit-4">0</div><div class="bit-weight">16</div></div>
-    <div class="bit-card low"><div class="bit-top"><span>bit 3</span><span>2^3</span></div><div class="bit-digit" id="bw-bit-3">0</div><div class="bit-weight">8</div></div>
-    <div class="bit-card low"><div class="bit-top"><span>bit 2</span><span>2^2</span></div><div class="bit-digit" id="bw-bit-2">0</div><div class="bit-weight">4</div></div>
-    <div class="bit-card low"><div class="bit-top"><span>bit 1</span><span>2^1</span></div><div class="bit-digit" id="bw-bit-1">1</div><div class="bit-weight">2</div></div>
-    <div class="bit-card low"><div class="bit-top"><span>bit 0</span><span>2^0</span></div><div class="bit-digit" id="bw-bit-0">1</div><div class="bit-weight">1</div></div>
-  </div>
-
-  <div class="summary">
-    <div class="summary-card loud"><span>Loud half</span><strong id="bw-high">192</strong><em>The high 4 bits can reach 240 all by themselves.</em></div>
-    <div class="summary-card quiet"><span>Quiet half</span><strong id="bw-low">3</strong><em>The low 4 bits can only add 0 through 15.</em></div>
-    <div class="summary-card bucket"><span>Same neighborhood</span><strong id="bw-range">192-207</strong><em>As long as the high 4 bits stay the same, the channel stays in this 16-step block.</em></div>
-  </div>
-
-  <div class="bit-note" id="bw-note"></div>
-</div>
-
-<script>
-  const bwWeights = [128, 64, 32, 16, 8, 4, 2, 1];
-  const bwSlider = document.getElementById('bw-slider');
-
-  function renderBitWeights(value) {
-    const binary = value.toString(2).padStart(8, '0');
-    const high = value & 0xF0;
-    const low = value & 0x0F;
-
-    document.getElementById('bw-dec').textContent = value;
-    document.getElementById('bw-hex').textContent = value.toString(16).padStart(2, '0').toUpperCase();
-    document.getElementById('bw-bin').textContent = binary;
-    document.getElementById('bw-label').textContent = value + ' / 255';
-    document.getElementById('bw-high').textContent = high;
-    document.getElementById('bw-low').textContent = low;
-    document.getElementById('bw-range').textContent = high + '-' + (high + 15);
-    document.getElementById('bw-note').innerHTML = 'If you replace only the <strong>low 4 bits</strong>, this channel can move only inside <strong>' + high + '-' + (high + 15) + '</strong>. That is why the eye usually still reads it as the same general color.';
-
-    bwWeights.forEach(function(weight, index) {
-      const bitIndex = 7 - index;
-      const bit = (value >> bitIndex) & 1;
-      const card = document.getElementById('bw-bit-' + bitIndex).parentElement;
-      document.getElementById('bw-bit-' + bitIndex).textContent = bit;
-      card.classList.toggle('on', bit === 1);
-      card.classList.toggle('off', bit === 0);
-    });
-  }
-
-  bwSlider.addEventListener('input', function(e) {
-    renderBitWeights(Number(e.target.value));
-  });
-
-  renderBitWeights(Number(bwSlider.value));
-</script>
+  \draw[->, thick, yellow, shorten >=2pt] (cover.east) .. controls (3, 2) and (3, 0.5) .. (carrier.west) node[midway, above=4pt, sloped] {\small Keep the strong half};
+  
+  \draw[->, thick, green, dashed, shorten >=2pt] (secret.east) .. controls (3, -2) and (3, -0.5) .. (carrier.west) node[midway, below=4pt, sloped] {\small Hide the strong half};
+\end{tikzpicture}
 ```
 
-That quiet half is the hiding pocket. The toy version of the trick is:
-
-```text
-carrier = (visible & 0xF0) | (secret >> 4)
-reveal  = (carrier & 0x0F) << 4
-```
-
-In plain words: keep the visible pixel's strong half, copy the secret pixel's strong half into the visible pixel's quiet half, then shift it back left when you reveal it.
+Let’s make it concrete: take this <span class="inline-yellow">yellow</span> as the cover, and this <span class="inline-green">green</span> as the secret.
+If we apply that bitwise logic, this is the flow. Try following it yourself below and watch how the colors merge and separate:
 
 ```html-live
-<!-- sandbox-height: 760 -->
+<!-- sandbox-height: 480 -->
 <style>
-  :root {
-    color-scheme: dark;
-  }
-
+  :root { color-scheme: dark; }
   body {
-    min-height: 100vh;
-    margin: 0;
-    padding: 24px 16px;
-    background:
-      radial-gradient(circle at top left, rgba(246, 200, 92, 0.12), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(119, 98, 255, 0.1), transparent 34%),
-      #0f1012;
-    color: #f2eee8;
-    font-family: "Roboto Flex", system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    min-height: 100vh; margin: 0; padding: 24px;
+    background: #0f1012; color: #fff;
+    font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
+    display: flex; justify-content: center; align-items: center;
   }
-
-  .embed-lab {
-    width: min(980px, 100%);
-    padding: 24px;
-    border-radius: 28px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
-      rgba(12, 13, 16, 0.92);
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.05),
-      0 24px 48px rgba(0,0,0,0.35);
-  }
-
-  .topline {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.58);
-    margin-bottom: 10px;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: clamp(22px, 3vw, 32px);
-    line-height: 1.1;
-    color: #fff7e8;
-  }
-
-  .sub {
-    margin: 12px 0 0;
-    font-size: 15px;
-    line-height: 1.7;
-    color: rgba(242, 238, 232, 0.78);
-    max-width: 54ch;
-  }
-
-  button {
-    flex: 0 0 auto;
-    border: none;
-    border-radius: 999px;
-    padding: 11px 16px;
-    background: linear-gradient(180deg, #f6c85c, #edb94a);
-    color: #1c1607;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 12px 24px rgba(246, 200, 92, 0.2);
-  }
-
-  .swatches {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 22px;
-  }
-
-  .swatch-card {
-    padding: 14px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-  }
-
-  .swatch-card span {
-    display: block;
-  }
-
-  .swatch-label {
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.52);
-  }
-
-  .swatch-code {
-    margin-top: 10px;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 22px;
-    color: #fff;
-  }
-
-  .swatch-bar {
-    height: 14px;
-    border-radius: 999px;
-    margin-top: 12px;
-    border: 1px solid rgba(255,255,255,0.16);
-  }
-
-  .steps {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 18px;
-  }
-
-  .step-pill {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.56);
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: background 0.28s ease, color 0.28s ease, border-color 0.28s ease;
-  }
-
-  .step-pill.is-active {
-    background: rgba(246, 200, 92, 0.16);
-    border-color: rgba(246, 200, 92, 0.34);
-    color: #fff3d3;
-  }
-
-  .step-copy {
-    margin: 14px 0 0;
-    font-size: 15px;
-    line-height: 1.7;
-    color: rgba(242, 238, 232, 0.84);
-  }
-
-  .channel-stack {
-    display: grid;
-    gap: 14px;
-    margin-top: 18px;
-  }
-
-  .channel-row {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
-    gap: 12px;
-    align-items: stretch;
-    --tone: #ffffff;
-  }
-
-  .channel-name {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--tone);
-  }
-
-  .mini-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .mini-card {
-    padding: 12px;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-    transition: border-color 0.28s ease, background 0.28s ease;
-  }
-
-  .mini-label {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.52);
-    margin-bottom: 10px;
-  }
-
-  .byte {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 28px;
-    font-weight: 700;
-  }
-
-  .half {
-    width: 1.55em;
-    text-align: center;
-    padding: 8px 0;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.04);
+  .sleek-lab {
+    width: 100%; max-width: 900px; position: relative;
+    padding: 32px; border-radius: 32px;
+    background: transparent;
     border: 1px solid rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.34);
-    transition:
-      transform 0.35s ease,
-      background 0.35s ease,
-      border-color 0.35s ease,
-      box-shadow 0.35s ease,
-      color 0.35s ease,
-      opacity 0.35s ease;
+    overflow: hidden;
   }
-
-  .mini-card.cover .half.hi {
-    color: var(--tone);
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+  .subtitle { font-size: 11px; letter-spacing: 0.2em; color: #58c4dd; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+  h2 { margin: 0; font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
+  button {
+    background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+    padding: 10px 20px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
+    transition: all 0.3s ease;
   }
-
-  .mini-card.cover .half.lo {
-    color: rgba(255,255,255,0.36);
+  button:hover { background: #fff; color: #000; }
+  
+  .data-flow { display: flex; flex-direction: column; gap: 24px; }
+  .channel-row {
+    display: grid; grid-template-columns: 40px repeat(4, 1fr); align-items: center; gap: 16px;
+    padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
   }
+  .channel-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .ch-label { font-size: 24px; font-weight: bold; color: var(--color); text-shadow: 0 0 15px var(--color); text-align: center; }
+  .byte-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .b-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+  .byte { font-family: "JetBrains Mono", monospace; font-size: 32px; font-weight: 300; color: rgba(255,255,255,0.15); display: flex; gap: 6px; }
+  .byte span { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; }
+  
+  .r-chan { --color: #ff5f58; }
+  .g-chan { --color: #28c940; }
+  .b-chan { --color: #2da1ff; }
 
-  .mini-card.secret .half.hi,
-  .mini-card.carrier .half.lo,
-  .mini-card.reveal .half.hi {
-    color: #f6c85c;
-  }
-
-  .mini-card.reveal .half.lo {
-    color: rgba(255,255,255,0.22);
-  }
-
-  .embed-lab[data-step="0"] .mini-card.cover .half.hi {
-    transform: translateY(-3px);
-    background: rgba(255,255,255,0.08);
-    border-color: color-mix(in srgb, var(--tone) 50%, white 10%);
-    box-shadow: 0 12px 24px color-mix(in srgb, var(--tone) 20%, transparent);
-  }
-
-  .embed-lab[data-step="1"] .mini-card.cover .half.lo {
-    opacity: 0.18;
-    transform: translateY(7px) scale(0.96);
-  }
-
-  .embed-lab[data-step="1"] .mini-card.secret .half.hi {
-    transform: translateY(-3px);
-    background: rgba(246, 200, 92, 0.14);
-    border-color: rgba(246, 200, 92, 0.3);
-    box-shadow: 0 12px 24px rgba(246, 200, 92, 0.14);
-  }
-
-  .embed-lab[data-step="2"] .mini-card.carrier .half.lo {
-    transform: translateY(-3px) scale(1.03);
-    background: rgba(246, 200, 92, 0.14);
-    border-color: rgba(246, 200, 92, 0.3);
-    box-shadow: 0 12px 24px rgba(246, 200, 92, 0.14);
-  }
-
-  .embed-lab[data-step="3"] .mini-card.reveal .half.hi {
-    transform: translateY(-3px) scale(1.03);
-    background: rgba(246, 200, 92, 0.14);
-    border-color: rgba(246, 200, 92, 0.3);
-    box-shadow: 0 12px 24px rgba(246, 200, 92, 0.14);
-  }
-
-  .formula-grid,
-  .note-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 18px;
-  }
-
-  .formula-card,
-  .note-card {
-    padding: 16px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.04);
-  }
-
-  .formula-card code {
-    white-space: normal;
-    word-break: break-word;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 14px;
-    color: #fff3d3;
-  }
-
-  .note-card strong,
-  .note-card span {
-    display: block;
-  }
-
-  .note-card strong {
-    color: #fff7e8;
-    font-size: 15px;
-  }
-
-  .note-card span {
-    margin-top: 8px;
-    line-height: 1.6;
-    color: rgba(242, 238, 232, 0.76);
-    font-size: 14px;
+  .sleek-lab[data-step="0"] .cover .h1 { color: #fff; font-weight: 700; text-shadow: 0 0 15px rgba(255,255,255,0.6); transform: translateY(-3px); }
+  
+  .sleek-lab[data-step="1"] .cover .h1 { color: #fff; }
+  .sleek-lab[data-step="1"] .secret .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
+  
+  .sleek-lab[data-step="2"] .carrier .h1 { color: #fff; font-weight: 700; }
+  .sleek-lab[data-step="2"] .carrier .h2 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-2px) scale(1.05); }
+  
+  .sleek-lab[data-step="3"] .carrier .h1 { color: #fff; }
+  .sleek-lab[data-step="3"] .carrier .h2 { color: var(--color); }
+  .sleek-lab[data-step="3"] .reveal .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
+  
+  .message-box {
+    margin-top: 32px; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center;
+    min-height: 48px; display: flex; align-items: center; justify-content: center;
   }
 
   @media (max-width: 760px) {
-    .embed-lab {
-      padding: 20px;
-    }
-
-    .topline {
-      flex-direction: column;
-    }
-
-    .swatches,
-    .formula-grid,
-    .note-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .channel-row {
-      grid-template-columns: 1fr;
-    }
-
-    .channel-name {
-      min-height: 44px;
-    }
-
-    .mini-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    .sleek-lab { padding: 24px 16px; border-radius: 20px; }
+    .channel-row { grid-template-columns: 1fr; gap: 24px; padding-bottom: 32px; position: relative; }
+    .ch-label { position: absolute; top: 0; left: 16px; font-size: 20px; }
+    .byte-group { display: grid; grid-template-columns: 80px 1fr; align-items: center; justify-items: start; gap: 16px; width: 100%; padding-left: 48px; box-sizing: border-box; }
+    .b-label { text-align: left; }
+    .byte { font-size: 28px; }
+    .top-bar { flex-direction: column; align-items: flex-start; gap: 16px; }
   }
 </style>
 
-<div class="embed-lab" id="embed-lab" data-step="0" dir="ltr">
-  <div class="topline">
+<div class="sleek-lab" id="eng-lab" data-step="0">
+  <div class="top-bar">
     <div>
-      <div class="eyebrow">Hide + Reveal</div>
-      <h3>Keep the cover's loud half. Spend the quiet half on the secret.</h3>
-      <p class="sub">This uses the same yellow visible pixel and green secret pixel from the text above. The reveal is rougher because we keep only the secret's top 4 bits.</p>
+      <div class="subtitle">Hide & Extract</div>
+      <h2>Pixel Merge Engine</h2>
     </div>
-    <button id="embed-replay" type="button">Replay</button>
+    <button id="eng-replay">Replay</button>
   </div>
-
-  <div class="swatches">
-    <div class="swatch-card"><span class="swatch-label">Visible</span><span class="swatch-code">#FFC359</span><div class="swatch-bar" style="background:#FFC359"></div></div>
-    <div class="swatch-card"><span class="swatch-label">Secret</span><span class="swatch-code">#8FC56C</span><div class="swatch-bar" style="background:#8FC56C"></div></div>
-    <div class="swatch-card"><span class="swatch-label">Carrier</span><span class="swatch-code">#F8CC56</span><div class="swatch-bar" style="background:#F8CC56"></div></div>
-    <div class="swatch-card"><span class="swatch-label">Reveal</span><span class="swatch-code">#80C060</span><div class="swatch-bar" style="background:#80C060"></div></div>
+  
+  <div class="data-flow">
+     <div class="channel-row r-chan">
+        <div class="ch-label">R</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">F</span><span class="h2">F</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">8</span><span class="h2">F</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">F</span><span class="h2">8</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">8</span><span class="h2">0</span></div></div>
+     </div>
+     <div class="channel-row g-chan">
+        <div class="ch-label">G</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">C</span><span class="h2">3</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">C</span><span class="h2">5</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">C</span><span class="h2">C</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">C</span><span class="h2">0</span></div></div>
+     </div>
+     <div class="channel-row b-chan">
+        <div class="ch-label">B</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">5</span><span class="h2">9</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">6</span><span class="h2">C</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">5</span><span class="h2">6</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">6</span><span class="h2">0</span></div></div>
+     </div>
   </div>
-
-  <div class="steps">
-    <div class="step-pill">1 Keep</div>
-    <div class="step-pill">2 Borrow</div>
-    <div class="step-pill">3 Store</div>
-    <div class="step-pill">4 Reveal</div>
-  </div>
-
-  <p class="step-copy" id="embed-copy"></p>
-
-  <div class="channel-stack">
-    <div class="channel-row" style="--tone:#ff7a6b">
-      <div class="channel-name">R</div>
-      <div class="mini-grid">
-        <div class="mini-card cover"><div class="mini-label">Visible</div><div class="byte"><span class="half hi">F</span><span class="half lo">F</span></div></div>
-        <div class="mini-card secret"><div class="mini-label">Secret</div><div class="byte"><span class="half hi">8</span><span class="half lo">F</span></div></div>
-        <div class="mini-card carrier"><div class="mini-label">Carrier</div><div class="byte"><span class="half hi">F</span><span class="half lo">8</span></div></div>
-        <div class="mini-card reveal"><div class="mini-label">Reveal</div><div class="byte"><span class="half hi">8</span><span class="half lo">0</span></div></div>
-      </div>
-    </div>
-
-    <div class="channel-row" style="--tone:#9ae26d">
-      <div class="channel-name">G</div>
-      <div class="mini-grid">
-        <div class="mini-card cover"><div class="mini-label">Visible</div><div class="byte"><span class="half hi">C</span><span class="half lo">3</span></div></div>
-        <div class="mini-card secret"><div class="mini-label">Secret</div><div class="byte"><span class="half hi">C</span><span class="half lo">5</span></div></div>
-        <div class="mini-card carrier"><div class="mini-label">Carrier</div><div class="byte"><span class="half hi">C</span><span class="half lo">C</span></div></div>
-        <div class="mini-card reveal"><div class="mini-label">Reveal</div><div class="byte"><span class="half hi">C</span><span class="half lo">0</span></div></div>
-      </div>
-    </div>
-
-    <div class="channel-row" style="--tone:#7ec8ff">
-      <div class="channel-name">B</div>
-      <div class="mini-grid">
-        <div class="mini-card cover"><div class="mini-label">Visible</div><div class="byte"><span class="half hi">5</span><span class="half lo">9</span></div></div>
-        <div class="mini-card secret"><div class="mini-label">Secret</div><div class="byte"><span class="half hi">6</span><span class="half lo">C</span></div></div>
-        <div class="mini-card carrier"><div class="mini-label">Carrier</div><div class="byte"><span class="half hi">5</span><span class="half lo">6</span></div></div>
-        <div class="mini-card reveal"><div class="mini-label">Reveal</div><div class="byte"><span class="half hi">6</span><span class="half lo">0</span></div></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="formula-grid">
-    <div class="formula-card"><code>carrier = (visible &amp; 0xF0) | (secret &gt;&gt; 4)</code></div>
-    <div class="formula-card"><code>reveal = (carrier &amp; 0x0F) &lt;&lt; 4</code></div>
-  </div>
-
-  <div class="note-grid">
-    <div class="note-card"><strong>Max visible change</strong><span>Each channel shifts by at most 15, because only the low 4 bits are replaced.</span></div>
-    <div class="note-card"><strong>Why reveal looks rougher</strong><span>Only the secret's top 4 bits survive. The lower 4 bits are gone, so the recovered color comes back in steps of 16.</span></div>
-  </div>
+  
+  <div class="message-box" id="eng-msg"></div>
 </div>
 
 <script>
-  const embedLab = document.getElementById('embed-lab');
-  const embedCopy = document.getElementById('embed-copy');
-  const embedPills = Array.from(document.querySelectorAll('.step-pill'));
-  const embedSteps = [
-    'Step 1: keep the visible pixel\\'s high 4 bits. They carry most of the color your eye notices.',
-    'Step 2: take the secret pixel\\'s high 4 bits. That preserves the secret\\'s rough color shape.',
-    'Step 3: place those 4 secret bits into the visible pixel\\'s low slot. The carrier changes only a little.',
-    'Step 4: read that low slot back and shift it left. The hidden pixel returns as an approximation.'
+  const engLab = document.getElementById('eng-lab');
+  const engMsg = document.getElementById('eng-msg');
+  const engSteps = [
+    "Step 1: Keep the strong half (the left 4 bits) of the cover pixel, because that is the part the eye mainly reads as the color.",
+    "Step 2: Take the strong half of the secret pixel so its overall shape survives, and ignore its quiet half.",
+    "Step 3: Merge the strong half from the secret into the quiet space of the cover. Result: a carrier pixel with a barely noticeable change.",
+    "Step 4: To extract the secret, read the quiet half from the carrier pixel and shift it back to the left so it becomes the strong half again."
   ];
-  let embedTimers = [];
+  let engTimers = [];
 
-  function setEmbedStep(step) {
-    embedLab.dataset.step = String(step);
-    embedCopy.textContent = embedSteps[step];
-    embedPills.forEach(function(pill, index) {
-      pill.classList.toggle('is-active', index === step);
+  function setEngStep(step) {
+    engLab.dataset.step = String(step);
+    engMsg.style.opacity = 0;
+    setTimeout(() => {
+      engMsg.textContent = engSteps[step];
+      engMsg.style.opacity = 1;
+    }, 200);
+  }
+
+  function playEng() {
+    engTimers.forEach(clearTimeout);
+    engTimers = [];
+    setEngStep(0);
+    [1, 2, 3].forEach((step, index) => {
+      engTimers.push(setTimeout(() => setEngStep(step), (index + 1) * 1400));
     });
   }
 
-  function playEmbed() {
-    embedTimers.forEach(clearTimeout);
-    embedTimers = [];
-    setEmbedStep(0);
-    [1, 2, 3].forEach(function(step, index) {
-      embedTimers.push(setTimeout(function() {
-        setEmbedStep(step);
-      }, (index + 1) * 950));
-    });
-  }
-
-  document.getElementById('embed-replay').addEventListener('click', playEmbed);
-  setEmbedStep(0);
-  setTimeout(playEmbed, 120);
+  document.getElementById('eng-replay').addEventListener('click', playEng);
+  engMsg.style.transition = 'opacity 0.2s';
+  setEngStep(0);
+  setTimeout(playEng, 400);
 </script>
 ```
 
-For the two colors above, the math lands here:
+The nicest thing about this example is that it is **not dramatic**. The image does not suddenly look broken. It does not scream "<span class="inline-secret">there is a secret here</span>". It just changes a few *small numbers*, and bets that the eye will ignore them.
 
-```text
-visible yellow: #FFC359
-hidden green:   #8FC56C
-carrier pixel:  #F8CC56
-revealed trace: #80C060
-```
-
-The <span class="inline-carrier">carrier pixel</span> still looks close to the original yellow because each channel moved by at most `15`. The <span class="inline-secret">revealed trace</span> is only an approximation because we saved only the secret's high 4 bits. Its fine shading is gone, but its bigger color shape survives.
-
-That is why this trick is both subtle and limited. It hides well inside ordinary images, but it is lossy, and it is not the same thing as security. If someone knows to inspect the low bits, they can look for it. In real systems, steganography is often paired with encryption.
+That is also why we should be careful: steganography by itself is **not always security**. If someone suspects it, they can inspect it. In real security, we often combine it with **encryption**: first make the message itself unreadable, then hide it in a boring place.
 
 ## Same Old Instinct, New Places
 
@@ -1751,216 +1133,202 @@ And this is the real image that carries it:
 
 ## كيف تخبّي بكسل جوّا بكسل!
 
-خذ هاد <span class="inline-yellow">الأصفر</span>:
+كل بكسل مكوّن من قنوات ألوان (أحمر، أخضر، أزرق)، وكل قناة بنعبّر عنها برقم من `0` لـ `255`.
+بالكمبيوتر، هاد الرقم بتخزن على شكل **8 بِت (Bits)**. البِت هو ببساطة خانة ثنائية (يا $0$ يا $1$).
 
-`#FFC359`
+السؤال هون: هل كل البِتّات إلها نفس الأهمية؟
 
-وهاد <span class="inline-green">الأخضر</span>:
+لنفهم الموضوع، خلينا نرجع للرياضيات شوي. البِتّات بتشتغل بنظام مضاعفات الرقم 2 (أي $2^x$).
+البِت الأول (من اليمين) قيمته $2^0 = 1$، واللي بعده $2^1 = 2$، وهكذا لحد ما نوصل للبِت الثامن اللي قيمته $2^7 = 128$.
 
-`#8FC56C`
+$$
+\begin{array}{cccccccc}
+2^7 & 2^6 & 2^5 & 2^4 & 2^3 & 2^2 & 2^1 & 2^0 \\
+\mathbf{128} & \mathbf{64} & \mathbf{32} & \mathbf{16} & \mathbf{8} & \mathbf{4} & \mathbf{2} & \mathbf{1}
+\end{array}
+$$
 
-كل لون هو تلات أرقام بالـ hexadecimal: <span class="inline-red">أحمر</span>، <span class="inline-green">أخضر</span>، <span class="inline-blue">أزرق</span>. كل قناة إلها رقمين. الرقم الأول <span class="inline-loud">صوته عالي</span>. الرقم التاني <span class="inline-quiet">أهدى</span>.
+لو قسمنا الـ 8 بِت لنصين:
+- **النص القوي (Most Significant Bits):** هي الـ 4 بِتّات اللي على اليسار. قيمتهم بتمثل الأرقام الكبيرة ($128, 64, 32, 16$). هاد النص هو اللي بحدد **هوية اللون** بشكل أساسي.
+- **النص الهادي (Least Significant Bits):** هي الـ 4 بِتّات اللي على اليمين. قيمتهم صغيرة جداً ($8, 4, 2, 1$). لو جمعناهم كلهم بيعطونا $15$ فقط من أصل $255$! يعني تأثيرهم على اللون ما بتجاوز الـ $6\%$، وتغييرهم بيعمل فرق دقيق جداً مستحيل العين البشرية تلاحظه.
 
-فالخدعة هيك:
+بمعنى آخر، النص الهادي (الـ 4 بِتّات الضعيفة) ممكن نعتبره **مساحة فارغة** أو "غرفة سرية" نقدر نستغلها!
 
-```text
-carrier = (visible_color & 0xF0) | (secret_color >> 4)
-reveal  = (carrier & 0x0F) << 4
-```
+### الخدعة: دمج لونين في بكسل واحد
 
-بكلام أبسط: بنخلي النص القوي من <span class="inline-yellow">اللون الظاهر</span>، وبنحط النص القوي من <span class="inline-secret">اللون المخفي</span> جوّا <span class="inline-quiet">النص الهادي</span> من اللون الظاهر.
+عشان نخفي <span class="inline-secret">بكسل سري (Secret)</span> داخل <span class="inline-carrier">بكسل غلاف (Cover)</span>، بنعمل التالي:
+1. بنمسح النص الهادي من **بكسل الغلاف** (لأنه تأثيره شبه معدوم).
+2. بناخذ النص القوي من **البكسل السري** (اللي بحمل أهم معلومات اللون السري).
+3. بنحط النص القوي تبع البكسل السري مكان النص الهادي في بكسل الغلاف.
 
-مع اللونين اللي فوق:
+النتيجة بتكون **بكسل حامل (Carrier)** بشبه بكسل الغلاف بنسبة عالية جداً، بس بيحتوي جواته على السر!
 
-```text
-اللون الظاهر:   #FFC359
-اللون المخفي:  #8FC56C
-لون الحامل:    #F8CC56
-الأثر المستخرج:#80C060
-```
-
-<span class="inline-carrier">لون الحامل</span> قريب كتير من الأصفر الأصلي. بس إذا ركزنا بس <span class="inline-quiet">بالأجزاء الهادية</span>، <span class="inline-secret">الأخضر المخفي</span> برجع يبين.
+خلينا نشوفها برسمة توضيحية:
 
 ```tikz
 \begin{tikzpicture}[font=\sffamily, every node/.style={align=center}]
-  \node[draw, rounded corners=4pt, fill=yellow!20, minimum width=2.7cm, minimum height=0.85cm] (visible) at (0, 1.3) {visible\\\ttfamily \#FFC359};
-  \node[draw, rounded corners=4pt, fill=green!18, minimum width=2.7cm, minimum height=0.85cm] (secret) at (0, -1.3) {secret\\\ttfamily \#8FC56C};
-  \node[draw, rounded corners=4pt, thick, minimum width=2.8cm, minimum height=0.85cm] (carrier) at (4.1, 0) {carrier\\\ttfamily \#F8CC56};
-  \node[draw, rounded corners=4pt, minimum width=2.8cm, minimum height=0.85cm] (reveal) at (8.2, 0) {revealed\\\ttfamily \#80C060};
-  \draw[->, thick] (visible) -- node[above, sloped] {keep loud half} (carrier);
-  \draw[->, thick] (secret) -- node[below, sloped] {borrow loud half} (carrier);
-  \draw[->, thick] (carrier) -- node[above] {read quiet half} (reveal);
-  \node[font=\small] at (4.1, -1.35) {high nibble stays visible, low nibble carries the secret};
+  \node[draw=yellow, text=yellow, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (cover) at (0, 2) {\textbf{بكسل الغلاف}\\ \small \texttt{1111} \textcolor{gray}{\texttt{1111}}};
+  
+  \node[draw=green, text=green, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (secret) at (0, -2) {\textbf{البكسل السري}\\ \small \texttt{1000} \textcolor{gray}{\texttt{1111}}};
+  
+  \node[draw=orange, text=orange, rounded corners=6pt, minimum width=4.2cm, minimum height=1.4cm, thick] (carrier) at (6, 0) {\textbf{البكسل الحامل}\\ \small \texttt{1111} \textcolor{green}{\texttt{1000}}};
+
+  \draw[->, thick, yellow, shorten >=2pt] (cover.east) .. controls (3, 2) and (3, 0.5) .. (carrier.west) node[midway, above=4pt, sloped] {\small خذ النص القوي};
+  
+  \draw[->, thick, green, dashed, shorten >=2pt] (secret.east) .. controls (3, -2) and (3, -0.5) .. (carrier.west) node[midway, below=4pt, sloped] {\small خبّي النص القوي};
 \end{tikzpicture}
 ```
 
+لنعطي مثال عملي، خذ هاد <span class="inline-yellow">الأصفر</span> كغلاف، وهاد <span class="inline-green">الأخضر</span> كسر.
+إذا طبّقنا المنطق البرمجي باستخدام العمليات الثنائية (Bitwise Operations)، بتكون المعادلة هيك:
+
+جرب تتبّع العملية بنفسك هون، وشوف كيف الألوان بتندمج وتنفصل:
+
 ```html-live
-<!-- sandbox-height: 520 -->
+<!-- sandbox-height: 480 -->
 <style>
+  :root { color-scheme: dark; }
   body {
-    min-height: 100vh;
-    margin: 0;
-    padding: 24px;
-    background: #0f1012;
-    color: #e0e0e0;
-    font-family: "Roboto Flex", system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow-x: hidden;
+    min-height: 100vh; margin: 0; padding: 24px;
+    background: #0f1012; color: #fff;
+    font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
+    display: flex; justify-content: center; align-items: center;
   }
-
-  .lab {
-    width: 100%;
-    max-width: 900px;
-    display: flex;
-    gap: 60px;
-    align-items: center;
-    justify-content: center;
+  .sleek-lab {
+    width: 100%; max-width: 900px; position: relative;
+    padding: 32px; border-radius: 32px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.05);
+    overflow: hidden;
   }
-
-  .stage {
-    flex: 1.2;
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-  }
-
-  .ch-block {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-family: "Courier New", Courier, monospace;
-    font-size: 18px;
-  }
-
-  .ch-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    color: #888;
-  }
-
-  .ch-val {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .nibble {
-    display: flex;
-    position: relative;
-  }
-
-  .nibble span {
-    transition: color 0.3s, transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3);
-  }
-
-  .ch-label {
-    width: 70px;
-    font-family: "Roboto Flex", sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  /* 3blue1brown inspired colors */
-  .ch-r .hi { color: #fc6255; font-weight: bold; }
-  .ch-g .hi { color: #83c167; font-weight: bold; }
-  .ch-b .hi { color: #58c4dd; font-weight: bold; }
-  .hi-sec { color: #E8C170; font-weight: bold; }
-  
-  .ch-row.carrier .hi { color: #ccc; font-weight: bold; }
-  .ch-row.carrier .lo { color: #E8C170; font-weight: bold; }
-  .ch-row.reveal .hi { color: #E8C170; font-weight: bold; }
-
-  .formulas {
-    flex: 0.8;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .formulas h2 {
-    font-size: 20px;
-    color: #fff;
-    margin-bottom: 8px;
-    font-weight: 400;
-  }
-
-  .math-line {
-    font-family: "Courier New", monospace;
-    font-size: 15px;
-    color: #ccc;
-    background: rgba(255,255,255,0.03);
-    padding: 12px 16px;
-    border-radius: 6px;
-    border-left: 2px solid #58c4dd;
-  }
-
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+  .subtitle { font-size: 11px; letter-spacing: 0.2em; color: #58c4dd; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+  h2 { margin: 0; font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
   button {
-    margin-top: 16px;
-    background: #E8C170;
-    color: #111;
-    border: none;
-    padding: 10px 16px;
-    font-weight: bold;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: opacity 0.2s;
+    background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+    padding: 10px 20px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
+    transition: all 0.3s ease;
   }
-  button:hover { opacity: 0.8; }
-
-  #lab-container.is-running .anim-target {
-    animation: mathPop 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  button:hover { background: #fff; color: #000; }
+  
+  .data-flow { display: flex; flex-direction: column; gap: 24px; }
+  .channel-row {
+    display: grid; grid-template-columns: 40px repeat(4, 1fr); align-items: center; gap: 16px;
+    padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
   }
+  .channel-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .ch-label { font-size: 24px; font-weight: bold; color: var(--color); text-shadow: 0 0 15px var(--color); text-align: center; }
+  .byte-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .b-label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em; }
+  .byte { font-family: "JetBrains Mono", monospace; font-size: 32px; font-weight: 300; color: rgba(255,255,255,0.15); display: flex; gap: 6px; }
+  .byte span { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); display: inline-block; }
+  
+  .r-chan { --color: #ff5f58; }
+  .g-chan { --color: #28c940; }
+  .b-chan { --color: #2da1ff; }
 
-  @keyframes mathPop {
-    0% { transform: scale(0.8) translateY(-10px); color: #fff; text-shadow: 0 0 10px #fff; opacity: 0; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
+  /* Animation States using data-step */
+  .sleek-lab[data-step="0"] .cover .h1 { color: #fff; font-weight: 700; text-shadow: 0 0 15px rgba(255,255,255,0.6); transform: translateY(-3px); }
+  
+  .sleek-lab[data-step="1"] .cover .h1 { color: #fff; }
+  .sleek-lab[data-step="1"] .secret .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
+  
+  .sleek-lab[data-step="2"] .carrier .h1 { color: #fff; font-weight: 700; }
+  .sleek-lab[data-step="2"] .carrier .h2 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-2px) scale(1.05); }
+  
+  .sleek-lab[data-step="3"] .carrier .h1 { color: #fff; }
+  .sleek-lab[data-step="3"] .carrier .h2 { color: var(--color); }
+  .sleek-lab[data-step="3"] .reveal .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
+  
+  .message-box {
+    margin-top: 32px; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center;
+    min-height: 48px; display: flex; align-items: center; justify-content: center;
+    direction: rtl;
   }
 
   @media (max-width: 760px) {
-    .lab {
-      flex-direction: column;
-      gap: 40px;
-      padding: 0;
-    }
-    .math-line {
-      font-size: 13px;
-    }
+    .sleek-lab { padding: 24px 16px; border-radius: 20px; }
+    .channel-row { grid-template-columns: 1fr; gap: 24px; padding-bottom: 32px; position: relative; }
+    .ch-label { position: absolute; top: 0; left: 16px; font-size: 20px; }
+    .byte-group { display: grid; grid-template-columns: 80px 1fr; align-items: center; justify-items: start; gap: 16px; width: 100%; padding-left: 48px; box-sizing: border-box; }
+    .b-label { text-align: left; }
+    .byte { font-size: 28px; }
+    .top-bar { flex-direction: column; align-items: flex-end; gap: 16px; text-align: right; width: 100%; }
+    .top-bar h2 { font-size: 24px; }
   }
 </style>
 
-<div class="lab" id="lab-container" dir="ltr">
-  <div class="stage">
-    <div class="ch-block ch-r"><div class="ch-row cover"><div class="ch-label">غلاف (R)</div><div class="ch-val">[ <span class="nibble hi">F</span> <span class="nibble lo">F</span> ]</div></div><div class="ch-row secret"><div class="ch-label">سر</div><div class="ch-val">[ <span class="nibble hi-sec">8</span> <span class="nibble lo">F</span> ]</div></div><div class="ch-row carrier"><div class="ch-label" style="color:#fff">حامل</div><div class="ch-val">[ <span class="nibble hi">F</span> <span class="nibble lo anim-target" style="animation-delay: 0.1s">8</span> ]</div></div><div class="ch-row reveal"><div class="ch-label" style="color:#E8C170">إظهار</div><div class="ch-val">[ <span class="nibble hi anim-target" style="animation-delay: 0.2s">8</span> <span class="nibble lo">0</span> ]</div></div></div>
-    <div class="ch-block ch-g"><div class="ch-row cover"><div class="ch-label">غلاف (G)</div><div class="ch-val">[ <span class="nibble hi">C</span> <span class="nibble lo">3</span> ]</div></div><div class="ch-row secret"><div class="ch-label">Secret</div><div class="ch-val">[ <span class="nibble hi-sec">C</span> <span class="nibble lo">5</span> ]</div></div><div class="ch-row carrier"><div class="ch-label" style="color:#fff">Carrier</div><div class="ch-val">[ <span class="nibble hi">C</span> <span class="nibble lo anim-target" style="animation-delay: 0.3s">C</span> ]</div></div><div class="ch-row reveal"><div class="ch-label" style="color:#E8C170">Reveal</div><div class="ch-val">[ <span class="nibble hi anim-target" style="animation-delay: 0.4s">C</span> <span class="nibble lo">0</span> ]</div></div></div>
-    <div class="ch-block ch-b"><div class="ch-row cover"><div class="ch-label">غلاف (B)</div><div class="ch-val">[ <span class="nibble hi">5</span> <span class="nibble lo">9</span> ]</div></div><div class="ch-row secret"><div class="ch-label">Secret</div><div class="ch-val">[ <span class="nibble hi-sec">6</span> <span class="nibble lo">C</span> ]</div></div><div class="ch-row carrier"><div class="ch-label" style="color:#fff">Carrier</div><div class="ch-val">[ <span class="nibble hi">5</span> <span class="nibble lo anim-target" style="animation-delay: 0.5s">6</span> ]</div></div><div class="ch-row reveal"><div class="ch-label" style="color:#E8C170">Reveal</div><div class="ch-val">[ <span class="nibble hi anim-target" style="animation-delay: 0.6s">6</span> <span class="nibble lo">0</span> ]</div></div></div>
+<div class="sleek-lab" id="ar-lab" data-step="0" dir="ltr">
+  <div class="top-bar" dir="rtl">
+    <div>
+      <div class="subtitle">إخفاء واستخراج</div>
+      <h2>محرك دمج البكسلات</h2>
+    </div>
+    <button id="ar-replay">إعادة العرض</button>
   </div>
-  <div class="formulas">
-    <h2>العمليات الثنائية</h2>
-    <div class="math-line">C = (cover &amp; 0xF0) | (secret &gt;&gt; 4)</div>
-    <div class="math-line">R = (carrier &amp; 0x0F) &lt;&lt; 4</div>
-    <button id="replay">إعادة الحركة</button>
+  
+  <div class="data-flow">
+     <div class="channel-row r-chan">
+        <div class="ch-label">R</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">F</span><span class="h2">F</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">8</span><span class="h2">F</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">F</span><span class="h2">8</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">8</span><span class="h2">0</span></div></div>
+     </div>
+     <div class="channel-row g-chan">
+        <div class="ch-label">G</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">C</span><span class="h2">3</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">C</span><span class="h2">5</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">C</span><span class="h2">C</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">C</span><span class="h2">0</span></div></div>
+     </div>
+     <div class="channel-row b-chan">
+        <div class="ch-label">B</div>
+        <div class="byte-group cover"><div class="b-label">Cover</div><div class="byte"><span class="h1">5</span><span class="h2">9</span></div></div>
+        <div class="byte-group secret"><div class="b-label">Secret</div><div class="byte"><span class="h1">6</span><span class="h2">C</span></div></div>
+        <div class="byte-group carrier"><div class="b-label">Carrier</div><div class="byte"><span class="h1">5</span><span class="h2">6</span></div></div>
+        <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">6</span><span class="h2">0</span></div></div>
+     </div>
   </div>
+  
+  <div class="message-box" id="ar-msg"></div>
 </div>
 
 <script>
-  const lab = document.getElementById('lab-container');
-  const replay = document.getElementById('replay');
-  function run() {
-    lab.classList.remove('is-running');
-    void lab.offsetWidth;
-    lab.classList.add('is-running');
+  const arLab = document.getElementById('ar-lab');
+  const arMsg = document.getElementById('ar-msg');
+  const arSteps = [
+    'الخطوة الأولى: نحتفظ بالنص القوي (4 بتات يسار) من بكسل الغلاف، لأنه المسؤول عن وضوح اللون للعين.',
+    'الخطوة الثانية: نأخذ النص القوي من البكسل السري (للحفاظ على شكله العام)، ونتجاهل النص الهادي.',
+    'الخطوة الثالثة: ندمج النص القوي من السر داخل المساحة الهادية للغلاف. النتيجة: بكسل حامل للسر بتغيير غير ملحوظ!',
+    'الخطوة الرابعة: لاستخراج السر، نقرأ النص الهادي من البكسل الحامل ونزيحه لليسار ليعود كنص قوي.'
+  ];
+  let arTimers = [];
+
+  function setArStep(step) {
+    arLab.dataset.step = String(step);
+    arMsg.style.opacity = 0;
+    setTimeout(() => {
+      arMsg.textContent = arSteps[step];
+      arMsg.style.opacity = 1;
+    }, 200);
   }
-  replay.addEventListener('click', run);
-  setTimeout(run, 100);
+
+  function playAr() {
+    arTimers.forEach(clearTimeout);
+    arTimers = [];
+    setArStep(0);
+    [1, 2, 3].forEach((step, index) => {
+      arTimers.push(setTimeout(() => setArStep(step), (index + 1) * 1400));
+    });
+  }
+
+  document.getElementById('ar-replay').addEventListener('click', playAr);
+  arMsg.style.transition = 'opacity 0.2s';
+  setArStep(0);
+  setTimeout(playAr, 400);
 </script>
 ```
-
 أحلى إشي بالمثال إنه **مش درامي**. الصورة ما بتصير مشوشة. ما بتصرخ "<span class="inline-secret">في سر هون</span>". بس بتغير كم *رقم صغير*، وبتراهن إن العين رح تطنش.
 
 عشان هيك كمان لازم ننتبه: الستيغانوغرافي لحاله **مش دايما أمان**. إذا حدا شك بالموضوع، بقدر يفحص. بالأمان الحقيقي غالبا بنجمعه مع **التشفير**: أول إشي بنخلي الرسالة نفسها غير مقروءة، بعدين بنخبيها بمكان ممل.
@@ -2111,3 +1479,6 @@ reveal  = (carrier & 0x0F) << 4
 وهاي الصورة الحقيقية اللي شايلتها جواتها:
 
 ![صورة شارع فيها صورة مخفية داخل أقل bits من الألوان](./assets/carrier-lsb.png)
+
+
+

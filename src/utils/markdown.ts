@@ -61,12 +61,13 @@ const postAssetUrls = import.meta.glob(
 const assetMetaKeys = ['audioEn', 'audioAr', 'thumbnail', 'transcriptEn', 'transcriptAr'] as const;
 
 function parseMarkdown(rawMarkdown: string): ParsedMarkdown {
+  const normalizedMarkdown = rawMarkdown.replace(/^\uFEFF/, '');
   const frontmatterRegex = /^---\r?\n([\s\S]+?)\r?\n---\r?\n([\s\S]*)$/;
-  const match = frontmatterRegex.exec(rawMarkdown);
+  const match = frontmatterRegex.exec(normalizedMarkdown);
 
   if (!match) {
     return {
-      content: rawMarkdown,
+      content: normalizedMarkdown,
       fields: {},
     };
   }

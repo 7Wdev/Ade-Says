@@ -6,7 +6,7 @@ interface TikZRendererProps {
   content: string;
 }
 
-const typedTikzCache = tikzCache as Record<string, string>;
+const typedTikzCache = tikzCache as Record<string, string | null>;
 
 function normalizeTikzContent(content: string) {
   return content.replace(/\r\n/g, "\n").trim();

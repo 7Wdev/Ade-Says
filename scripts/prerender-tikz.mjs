@@ -24,8 +24,9 @@ const OUTPUT_FILE = resolve(ROOT, 'src/generated/tikz-cache.json');
 const POST_METADATA_FILE = resolve(ROOT, 'src/generated/post-metadata.ts');
 
 function parseFrontmatter(rawMarkdown, id) {
+  const normalizedMarkdown = rawMarkdown.replace(/^\uFEFF/, '');
   const frontmatterRegex = /^---\r?\n([\s\S]+?)\r?\n---\r?\n([\s\S]*)$/;
-  const match = frontmatterRegex.exec(rawMarkdown);
+  const match = frontmatterRegex.exec(normalizedMarkdown);
   const defaultMeta = {
     id,
     title: 'Untitled',
