@@ -1,11 +1,13 @@
 import { memo, useCallback, useDeferredValue, useMemo, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import SeoHead from '../components/SeoHead';
 import { allPosts } from '../utils/markdown';
+import { buildBlogSeo, resolvePostSeoImage } from '../utils/seo';
 import { searchPosts, type SearchResult } from '../utils/search';
 import ViewportRender from '../components/ViewportRender';
 import ArticleCardMetadata from '../components/ArticleCardMetadata';
 
-const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-brown', 'mag-color-pink', 'mag-color-blue', 'mag-color-glass'];
+const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-orange', 'mag-color-brown', 'mag-color-lilac', 'mag-color-red', 'mag-color-pink', 'mag-color-blue', 'mag-color-teal', 'mag-color-glass'];
 const BLOG_CARD_VIRTUALIZATION_THRESHOLD = 12;
 const BLOG_INITIAL_CARD_COUNT = 6;
 
@@ -85,6 +87,7 @@ function Blog() {
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const isSearchPending = query !== deferredQuery;
+  const seoMeta = useMemo(() => buildBlogSeo(resolvePostSeoImage(allPosts[0]?.meta)), []);
 
   const results = useMemo(() => searchPosts(deferredQuery, allPosts), [deferredQuery]);
   const shouldVirtualizeCards = results.length > BLOG_CARD_VIRTUALIZATION_THRESHOLD;
@@ -94,6 +97,7 @@ function Blog() {
 
   return (
     <section className="page-shell blog-page">
+      <SeoHead meta={seoMeta} />
       <Link to="/" className="back-link">
         <span className="material-symbols-rounded">arrow_back</span>
         Back Home

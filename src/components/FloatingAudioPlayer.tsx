@@ -227,20 +227,6 @@ function FloatingAudioPlayer({
   }, [activeSrc]);
 
   useEffect(() => {
-    if (activeSrc) {
-      return;
-    }
-
-    setIsPlaying(false);
-
-    if (expanded === undefined) {
-      setInternalIsExpanded(false);
-    }
-
-    onExpandedChange?.(false);
-  }, [activeSrc, expanded, onExpandedChange]);
-
-  useEffect(() => {
     onPlayingChange?.(isPlaying);
   }, [isPlaying, onPlayingChange]);
 

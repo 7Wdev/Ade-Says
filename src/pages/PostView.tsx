@@ -6,6 +6,8 @@ import FloatingAudioPlayer, { type NarrationTrackMap } from '../components/Float
 import PageLoading from '../components/PageLoading';
 import PostDiscussion from '../components/PostDiscussion';
 import { allPosts } from '../utils/markdown';
+import SeoHead from '../components/SeoHead';
+import { buildNotFoundSeo, buildPostSeo } from '../utils/seo';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
 
@@ -267,9 +269,20 @@ function PostView() {
     };
   }, [isFabMenuVisible]);
 
+  const seoMeta = useMemo(() => (
+    post
+      ? buildPostSeo(post, lang)
+      : buildNotFoundSeo(
+        'Post not found',
+        'The requested article could not be found on Ade Says.',
+        '/blog',
+      )
+  ), [lang, post]);
+
   if (!post) {
     return (
       <div className="not-found">
+        <SeoHead meta={seoMeta} />
         <h1>Post not found</h1>
         <Link to="/blog" className="back-link">Return to blog</Link>
       </div>
@@ -278,6 +291,7 @@ function PostView() {
 
   return (
     <>
+      <SeoHead meta={seoMeta} />
       {post.meta.thumbnail && createPortal(
         <div
           className="post-banner"

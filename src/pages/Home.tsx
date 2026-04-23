@@ -1,12 +1,14 @@
-import { lazy, memo, Suspense, useEffect, useState } from "react";
+import { lazy, memo, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import ArticleCardMetadata from "../components/ArticleCardMetadata";
+import SeoHead from "../components/SeoHead";
 import ViewportRender from "../components/ViewportRender";
 import {
   allPostSummaries,
   pinnedPostSummaries,
   type PostSummary,
 } from "../utils/postSummaries";
+import { buildHomeSeo, resolvePostSeoImage } from "../utils/seo";
 
 const DeveloperBioImage = lazy(() => import("../components/DeveloperBioImage"));
 const PixelBlast = lazy(() => import("../components/PixelBlast"));
@@ -15,9 +17,13 @@ const editorialColors = [
   "mag-color-dark",
   "mag-color-yellow",
   "mag-color-green",
+  "mag-color-orange",
   "mag-color-brown",
+  "mag-color-lilac",
+  "mag-color-red",
   "mag-color-pink",
   "mag-color-blue",
+  "mag-color-teal",
   "mag-color-glass",
 ];
 const greetingLangByLanguage: Record<string, "ar" | "he"> = {
@@ -333,8 +339,13 @@ const PinnedArticles = memo(function PinnedArticles() {
 });
 
 function Home() {
+  const seoMeta = useMemo(() => buildHomeSeo(
+    resolvePostSeoImage(pinnedPostSummaries[0]?.meta ?? allPostSummaries[0]?.meta),
+  ), []);
+
   return (
     <div className="home-container">
+      <SeoHead meta={seoMeta} />
       <HomeBackground />
       <HeroSection />
 

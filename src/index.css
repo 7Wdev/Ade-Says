@@ -20,8 +20,11 @@
   --mag-accent-green: #4caf50;
   --mag-accent-blue: #2962ff;
   --mag-accent-red: #d32f2f;
+  --mag-accent-orange: #ff9b45;
+  --mag-accent-teal: #0b8f87;
   --mag-accent-brown: #5d4037;
   --mag-accent-pink: #f48fb1;
+  --mag-accent-lilac: #ccb9ff;
 
   --md-sys-color-background: #100f13;
   --md-sys-color-on-background: #e6e0e9;
@@ -892,26 +895,102 @@ body.photo-viewer-open .app-container {
   background: #1a1a1a;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.7);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
 }
 .mag-color-yellow {
   background: var(--mag-accent-yellow);
   color: #000;
+  --mag-card-heading-color: #000;
+  --mag-card-body-color: rgba(0, 0, 0, 0.8);
+  --mag-card-badge-background: #000;
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(0, 0, 0, 0.12);
+  --mag-card-pill-color: #000;
 }
 .mag-color-green {
   background: var(--mag-accent-green);
   color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.7);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
 }
 .mag-color-brown {
   background: var(--mag-accent-brown);
   color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.7);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
 }
 .mag-color-blue {
   background: var(--mag-accent-blue);
   color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.7);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
 }
 .mag-color-pink {
   background: var(--mag-accent-pink);
   color: #000;
+  --mag-card-heading-color: #000;
+  --mag-card-body-color: rgba(0, 0, 0, 0.8);
+  --mag-card-badge-background: #000;
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(0, 0, 0, 0.12);
+  --mag-card-pill-color: #000;
+}
+.mag-color-red {
+  background: var(--mag-accent-red);
+  color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.72);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.18);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
+}
+.mag-color-orange {
+  background: var(--mag-accent-orange);
+  color: #000;
+  --mag-card-heading-color: #000;
+  --mag-card-body-color: rgba(0, 0, 0, 0.82);
+  --mag-card-badge-background: #000;
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(0, 0, 0, 0.14);
+  --mag-card-pill-color: #000;
+}
+.mag-color-teal {
+  background: var(--mag-accent-teal);
+  color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.72);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
+}
+.mag-color-lilac {
+  background: var(--mag-accent-lilac);
+  color: #000;
+  --mag-card-heading-color: #000;
+  --mag-card-body-color: rgba(0, 0, 0, 0.82);
+  --mag-card-badge-background: #000;
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(0, 0, 0, 0.14);
+  --mag-card-pill-color: #000;
 }
 .mag-color-glass {
   background: rgba(255, 255, 255, 0.03);
@@ -919,6 +998,12 @@ body.photo-viewer-open .app-container {
   -webkit-backdrop-filter: blur(30px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
+  --mag-card-heading-color: #fff;
+  --mag-card-body-color: rgba(255, 255, 255, 0.7);
+  --mag-card-badge-background: rgba(255, 255, 255, 0.2);
+  --mag-card-badge-color: #fff;
+  --mag-card-pill-background: rgba(255, 255, 255, 0.18);
+  --mag-card-pill-color: #fff;
 }
 
 .card-cat {
@@ -930,20 +1015,8 @@ body.photo-viewer-open .app-container {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 4px;
-}
-/* Invert category badge colors for light backgrounds */
-.mag-color-yellow .card-cat,
-.mag-color-pink .card-cat {
-  background: #000;
-  color: #fff;
-}
-.mag-color-dark .card-cat,
-.mag-color-glass .card-cat,
-.mag-color-green .card-cat,
-.mag-color-brown .card-cat,
-.mag-color-blue .card-cat {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: var(--mag-card-badge-background, rgba(255, 255, 255, 0.2));
+  color: var(--mag-card-badge-color, #fff);
 }
 
 .article-card-meta {
@@ -960,8 +1033,8 @@ body.photo-viewer-open .app-container {
   gap: 6px;
   padding: 5px 10px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.18);
-  color: currentColor;
+  background: var(--mag-card-pill-background, rgba(255, 255, 255, 0.18));
+  color: var(--mag-card-pill-color, currentColor);
   font-size: 12px;
   font-weight: 850;
   letter-spacing: 0.5px;
@@ -973,14 +1046,6 @@ body.photo-viewer-open .app-container {
   font-size: 16px;
 }
 
-.mag-color-yellow .article-card-meta-pill,
-.mag-color-pink .article-card-meta-pill,
-.blog-result-card.mag-color-yellow .article-card-meta-pill,
-.blog-result-card.mag-color-pink .article-card-meta-pill {
-  background: rgba(0, 0, 0, 0.12);
-  color: #000;
-}
-
 .editorial-card h3 {
   font-family: var(--md-sys-typescale-display-font);
   font-size: 40px;
@@ -988,6 +1053,7 @@ body.photo-viewer-open .app-container {
   line-height: 1.1;
   margin-bottom: 20px;
   letter-spacing: -1px;
+  color: var(--mag-card-heading-color, currentColor);
 }
 
 .card-featured h3 {
@@ -995,29 +1061,12 @@ body.photo-viewer-open .app-container {
   letter-spacing: -2px;
 }
 
-.mag-color-yellow h3,
-.mag-color-pink h3 {
-  color: #000;
-}
-.mag-color-dark h3,
-.mag-color-glass h3 {
-  color: #fff;
-}
-
 .editorial-card p {
   font-size: 18px;
   line-height: 1.5;
   opacity: 0.9;
   font-weight: 400;
-}
-
-.mag-color-yellow p,
-.mag-color-pink p {
-  color: rgba(0, 0, 0, 0.8);
-}
-.mag-color-dark p,
-.mag-color-glass p {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--mag-card-body-color, rgba(230, 224, 233, 0.78));
 }
 
 .card-footer {
@@ -1308,7 +1357,13 @@ body.photo-viewer-open .app-container {
 .blog-result-card.mag-color-yellow .blog-skeleton-circle,
 .blog-result-card.mag-color-pink .blog-skeleton-chip,
 .blog-result-card.mag-color-pink .blog-skeleton-line,
-.blog-result-card.mag-color-pink .blog-skeleton-circle {
+.blog-result-card.mag-color-pink .blog-skeleton-circle,
+.blog-result-card.mag-color-orange .blog-skeleton-chip,
+.blog-result-card.mag-color-orange .blog-skeleton-line,
+.blog-result-card.mag-color-orange .blog-skeleton-circle,
+.blog-result-card.mag-color-lilac .blog-skeleton-chip,
+.blog-result-card.mag-color-lilac .blog-skeleton-line,
+.blog-result-card.mag-color-lilac .blog-skeleton-circle {
   background: rgba(0, 0, 0, 0.18);
 }
 
@@ -1374,13 +1429,7 @@ body.photo-viewer-open .app-container {
   color: #fff;
 }
 
-.blog-result-card.mag-color-dark,
-.blog-result-card.mag-color-yellow,
-.blog-result-card.mag-color-green,
-.blog-result-card.mag-color-brown,
-.blog-result-card.mag-color-blue,
-.blog-result-card.mag-color-pink,
-.blog-result-card.mag-color-glass {
+.blog-result-card[class*='mag-color-'] {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -1408,6 +1457,22 @@ body.photo-viewer-open .app-container {
   background: var(--mag-accent-pink);
   color: #000;
 }
+.blog-result-card.mag-color-red {
+  background: var(--mag-accent-red);
+  color: #fff;
+}
+.blog-result-card.mag-color-orange {
+  background: var(--mag-accent-orange);
+  color: #000;
+}
+.blog-result-card.mag-color-teal {
+  background: var(--mag-accent-teal);
+  color: #fff;
+}
+.blog-result-card.mag-color-lilac {
+  background: var(--mag-accent-lilac);
+  color: #000;
+}
 .blog-result-card.mag-color-glass {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(30px);
@@ -1415,39 +1480,12 @@ body.photo-viewer-open .app-container {
   color: #fff;
 }
 
-.blog-result-card.mag-color-yellow h2,
-.blog-result-card.mag-color-pink h2 {
-  color: #000;
+.blog-result-card h2 {
+  color: var(--mag-card-heading-color, currentColor);
 }
 
-.blog-result-card.mag-color-yellow p,
-.blog-result-card.mag-color-pink p {
-  color: rgba(0, 0, 0, 0.8);
-}
-
-.blog-result-card.mag-color-dark h2,
-.blog-result-card.mag-color-glass h2 {
-  color: #fff;
-}
-
-.blog-result-card.mag-color-dark p,
-.blog-result-card.mag-color-glass p {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.blog-result-card.mag-color-yellow .card-cat,
-.blog-result-card.mag-color-pink .card-cat {
-  background: #000;
-  color: #fff;
-}
-
-.blog-result-card.mag-color-dark .card-cat,
-.blog-result-card.mag-color-glass .card-cat,
-.blog-result-card.mag-color-green .card-cat,
-.blog-result-card.mag-color-brown .card-cat,
-.blog-result-card.mag-color-blue .card-cat {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+.blog-result-card p {
+  color: var(--mag-card-body-color, rgba(230, 224, 233, 0.78));
 }
 
 .blog-result-card.has-thumbnail h2,

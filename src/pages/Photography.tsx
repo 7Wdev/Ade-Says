@@ -11,7 +11,9 @@ import {
 } from "react";
 import { createPortal, preload } from "react-dom";
 import { Link, useParams } from "react-router-dom";
+import SeoHead from "../components/SeoHead";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
+import { buildNotFoundSeo, buildPhotographyCatalogSeo, buildPhotographySeo } from "../utils/seo";
 
 const LIGHTBOX_EXIT_MS = 280;
 const VIRTUAL_OVERSCAN_MIN = 1600;
@@ -561,6 +563,7 @@ type CatalogIndexProps = {
 
 const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps) {
   const priorityCover = catalogs[0] ? getCatalogCover(catalogs[0]) : undefined;
+  const seoMeta = useMemo(() => buildPhotographySeo(priorityCover?.originalSrc), [priorityCover?.originalSrc]);
 
   preload(CATALOG_TEXTURE_SRC, {
     as: "image",
@@ -577,6 +580,7 @@ const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps)
 
   return (
     <section className="page-shell photography-page">
+      <SeoHead meta={seoMeta} />
       <Link to="/" className="back-link">
         <span className="material-symbols-rounded">arrow_back</span>
         Back Home
@@ -950,6 +954,7 @@ type GalleryPageProps = {
 
 const GalleryPage = memo(function GalleryPage({ catalog }: GalleryPageProps) {
   const [activePhoto, setActivePhoto] = useState<PhotoAsset | null>(null);
+  const seoMeta = useMemo(() => buildPhotographyCatalogSeo(catalog), [catalog]);
   const handleOpenPhoto = useCallback((photo: PhotoAsset) => {
     setActivePhoto(photo);
   }, []);
@@ -957,6 +962,7 @@ const GalleryPage = memo(function GalleryPage({ catalog }: GalleryPageProps) {
 
   return (
     <section className="page-shell photography-page gallery-page">
+      <SeoHead meta={seoMeta} />
       <Link to="/photography" className="back-link">
         <span className="material-symbols-rounded">arrow_back</span>
         All Catalogs
@@ -980,8 +986,15 @@ const GalleryPage = memo(function GalleryPage({ catalog }: GalleryPageProps) {
 });
 
 function CatalogNotFound() {
+  const seoMeta = buildNotFoundSeo(
+    'Photography catalog not found',
+    'This photography catalog does not exist on Ade Says.',
+    '/photography',
+  );
+
   return (
     <section className="page-shell photography-page">
+      <SeoHead meta={seoMeta} />
       <Link to="/photography" className="back-link">
         <span className="material-symbols-rounded">arrow_back</span>
         All Catalogs
