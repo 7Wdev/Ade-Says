@@ -2533,6 +2533,21 @@ body.photo-viewer-open .app-container {
   color: var(--mag-accent-yellow);
 }
 
+.article-content .inline-cover-hex {
+  color: #ffc359;
+  font-weight: 900;
+}
+
+.article-content .inline-secret-hex {
+  color: #8fc56c;
+  font-weight: 900;
+}
+
+.article-content .inline-carrier-hex {
+  color: #f8cc56;
+  font-weight: 900;
+}
+
 .article-content .inline-quiet {
   color: #80d8ff;
 }
@@ -2803,16 +2818,46 @@ body.photo-viewer-open .app-container {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .article-content .katex-display > .katex {
   text-align: center;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 /* Make KaTeX text white on dark backgrounds */
 .article-content .katex {
   color: rgba(230, 224, 233, 0.95);
   font-size: 1.35em; /* Slightly bigger on desktop */
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: KaTeX_Main, "Times New Roman", serif !important;
+}
+
+/* Keep math fonts intact inside RTL articles instead of inheriting the Arabic UI font */
+.article-content .katex * {
+  font-family: inherit !important;
+}
+
+.article-content .katex .mathnormal,
+.article-content .katex .mathit {
+  font-family: KaTeX_Math, "Times New Roman", serif !important;
+}
+
+.article-content .katex .mathbf {
+  font-family: KaTeX_Main, "Times New Roman", serif !important;
+  font-weight: 700;
+}
+
+.article-content .katex .amsrm {
+  font-family: KaTeX_AMS, KaTeX_Main, "Times New Roman", serif !important;
+}
+
+.article-content .katex .mathtt {
+  font-family: KaTeX_Typewriter, "Courier New", monospace !important;
 }
 
 /* Inline math alignment tweak */
@@ -2844,7 +2889,6 @@ body.photo-viewer-open .app-container {
 .tikz-container svg {
   max-width: 100%;
   height: auto;
-  filter: invert(1) hue-rotate(180deg);
   transform: scale(1.1); /* make it slightly bigger */
   transform-origin: center;
   margin: 20px 0;
@@ -2905,6 +2949,12 @@ body.photo-viewer-open .app-container {
   min-height: 320px;
 }
 
+.sandbox-wrapper.sandbox-wrapper-no-chrome {
+  margin: 24px 0 28px;
+  border-radius: 0;
+  overflow: visible;
+}
+
 .sandbox-loading {
   position: absolute;
   inset: 0;
@@ -2921,6 +2971,12 @@ body.photo-viewer-open .app-container {
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.3px;
+}
+
+.sandbox-loading.sandbox-loading-no-chrome {
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .sandbox-loading m3e-loading-indicator {
@@ -2941,12 +2997,23 @@ body.photo-viewer-open .app-container {
   opacity: 0;
 }
 
+.interactive-sandbox.sandbox-no-chrome {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .interactive-sandbox.sandbox-ready {
   opacity: 1;
 }
 
 .interactive-sandbox:hover {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.interactive-sandbox.sandbox-no-chrome:hover {
+  box-shadow: none;
 }
 
 /* ===================================================================

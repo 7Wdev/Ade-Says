@@ -12,6 +12,13 @@ function normalizeTikzContent(content: string) {
   return content.replace(/\r\n/g, "\n").trim();
 }
 
+function themeTikzSvg(svg: string) {
+  return svg
+    .replace(/stroke="#000"/g, 'stroke="#e6e0e9"')
+    .replace(/fill="#000"/g, 'fill="#e6e0e9"')
+    .replace(/ fill="#000" /g, ' fill="#e6e0e9" ');
+}
+
 function TikZRenderer({ content }: TikZRendererProps) {
   // Hash the content to find it in the cache, exactly as the build script does
   const hash = useMemo(() => {
@@ -19,8 +26,9 @@ function TikZRenderer({ content }: TikZRendererProps) {
   }, [content]);
 
   const svgContent = typedTikzCache[hash];
+  const themedSvgContent = svgContent ? themeTikzSvg(svgContent) : null;
 
-  if (!svgContent) {
+  if (!themedSvgContent) {
     return (
       <div className="tikz-wrapper">
         <div className="tikz-error" role="alert">
@@ -35,7 +43,7 @@ function TikZRenderer({ content }: TikZRendererProps) {
     <div className="tikz-wrapper">
       <div 
         className="tikz-container" 
-        dangerouslySetInnerHTML={{ __html: svgContent }} 
+        dangerouslySetInnerHTML={{ __html: themedSvgContent }} 
       />
     </div>
   );

@@ -398,12 +398,14 @@ Here is a more playful way to see it. **Move around the pixel field.** The big *
 
 ## How To Hide A Pixel Inside A Pixel!
 
-Every pixel is made of color channels (red, green, blue), and each channel is represented by a number from `0` to `255`.
-Inside the computer, that number is stored as **8 bits**. A bit is simply one binary slot (either $0$ or $1$).
+As we said, every pixel is made of three variables: <span class="inline-red">red</span>, <span class="inline-green">green</span>, <span class="inline-blue">blue</span>. And we describe each variable with a number from `0` to `255`.
+Inside the computer, that number is stored as **8 bits**. A bit is simply a binary slot that stores either `0` or `1`.
+
+That means an `RGB` pixel contains **3 bytes** in total: one `byte` for red, one `byte` for green, and one `byte` for blue. And each `byte` is made of **8 bits**. So in this trick, we are not taking `4 bytes` from a channel, because each channel is already just one `byte`. What we actually take is **4 strong bits from each channel**.
 
 The question here is: do all bits have the same importance?
 
-To understand that, let’s go back to the math for a moment. Bits work on powers of 2 (that is, $2^x$).
+Let's touch the math for a moment, but don't worry, it is not complicated. Bits work on powers of 2 (that is, $2^x$).
 The first bit (from the right) is worth $2^0 = 1$, the next is $2^1 = 2$, and so on until we reach the eighth bit, which is worth $2^7 = 128$.
 
 $$
@@ -415,66 +417,398 @@ $$
 
 If we split the 8 bits into two halves:
 - **The Strong Half (Most Significant Bits):** These are the 4 bits on the left. Their values are the big numbers ($128, 64, 32, 16$). This half is what mainly defines the **identity of the color**.
-- **The Quiet Half (Least Significant Bits):** These are the 4 bits on the right. Their values are tiny ($8, 4, 2, 1$). If we add them all up, they give us only $15$ out of $255$! That means their effect on the color does not exceed about $6\%$, and changing them creates such a tiny difference that the human eye usually does not notice it.
+- **The Quiet Half (Least Significant Bits):** These are the 4 bits on the right. Their values are very small ($8, 4, 2, 1$). If we add them all up, they give us only $15$ out of the full $255$! That means their effect on the color does not go beyond about $6\%$, so changing them creates such a tiny difference that the human eye usually cannot notice it.
 
-In other words, the quiet half (the 4 weak bits) can be treated as **empty space** or a “secret room” that we can use.
+In other words, the quiet half (the 4 weak bits) can be treated as **empty space** or a "secret room" that we can use.
 
 ### The Trick: Merge Two Colors Into One Pixel
 
-To hide a <span class="inline-secret">secret pixel</span> inside a <span class="inline-carrier">cover pixel</span>, we do this:
-1. We clear the quiet half of the **cover pixel** (because its effect is almost negligible).
-2. We take the strong half of the **secret pixel** (because it carries the most important information about the secret color).
-3. We place that strong half from the secret pixel where the quiet half used to be in the cover pixel.
+To hide a <span class="inline-secret-hex">secret pixel</span> `#8FC56C` inside a <span class="inline-cover-hex">cover pixel</span> `#FFC359`, we do this:
+1. From each channel in the **cover pixel**, we clear the **4 quiet bits** on the right.
+2. From each channel in the **secret pixel**, we take the **4 strong bits** on the left.
+3. We place those **4 strong bits** where the **4 quiet bits** used to be in the cover.
 
-The result is a **carrier pixel** that still looks very close to the cover pixel, but secretly contains the hidden data.
+The result is a <span class="inline-carrier-hex">carrier pixel</span> `#F8CC56` that looks extremely close to the cover pixel, but secretly carries the hidden data inside it.
 
-Let’s see it as a diagram:
+Let's see it as a diagram that shows **the three channels together**. The same trick happens inside every channel:
 
-```tikz
-\begin{tikzpicture}[font=\sffamily, every node/.style={align=center}]
-  \node[draw=yellow, text=yellow, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (cover) at (0, 2) {\textbf{Cover Pixel}\\ \small \texttt{1111} \textcolor{gray}{\texttt{1111}}};
-  
-  \node[draw=green, text=green, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (secret) at (0, -2) {\textbf{Secret Pixel}\\ \small \texttt{1000} \textcolor{gray}{\texttt{1111}}};
-  
-  \node[draw=orange, text=orange, rounded corners=6pt, minimum width=4.2cm, minimum height=1.4cm, thick] (carrier) at (6, 0) {\textbf{Carrier Pixel}\\ \small \texttt{1111} \textcolor{green}{\texttt{1000}}};
+```html-live
+<!-- sandbox-height: 560 -->
+<!-- sandbox-chrome: none -->
+<style>
+  :root {
+    color-scheme: dark;
+    --cover: #ffc359;
+    --secret: #8fc56c;
+    --carrier: #f8cc56;
+    --ink: #17141a;
+    --muted: rgba(23, 20, 26, 0.54);
+    --panel: rgba(15, 16, 18, 0.92);
+    --row-bg: rgba(255, 255, 255, 0.16);
+    --row-border: rgba(255, 255, 255, 0.14);
+    --red-ink: #a22b1c;
+    --green-ink: #2f6325;
+    --blue-ink: #1e4b83;
+  }
 
-  \draw[->, thick, yellow, shorten >=2pt] (cover.east) .. controls (3, 2) and (3, 0.5) .. (carrier.west) node[midway, above=4pt, sloped] {\small Keep the strong half};
-  
-  \draw[->, thick, green, dashed, shorten >=2pt] (secret.east) .. controls (3, -2) and (3, -0.5) .. (carrier.west) node[midway, below=4pt, sloped] {\small Hide the strong half};
-\end{tikzpicture}
+  html, body {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    background: transparent;
+  }
+
+  body {
+    min-height: 0;
+    margin: 0;
+    padding: 4px 8px 8px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
+    box-sizing: border-box;
+  }
+
+  .diagram-shell {
+    width: 100%;
+    height: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .diagram {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 820px;
+    height: 540px;
+    transform-origin: top left;
+    box-sizing: border-box;
+  }
+
+  .arrow-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .card {
+    position: absolute;
+    width: 292px;
+    padding: 14px 14px 14px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 10px 28px rgba(0, 0, 0, 0.18);
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .card.cover {
+    top: 28px;
+    left: 8px;
+    background: var(--cover);
+  }
+
+  .card.secret {
+    top: 284px;
+    left: 8px;
+    background: var(--secret);
+  }
+
+  .card.carrier {
+    top: 156px;
+    right: 8px;
+    background: var(--carrier);
+  }
+
+  .title {
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .hex {
+    color: rgba(23, 20, 26, 0.9);
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    font-weight: 900;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .channel-grid {
+    width: 100%;
+    display: grid;
+    gap: 6px;
+  }
+
+  .channel-row {
+    display: grid;
+    grid-template-columns: 18px 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    box-sizing: border-box;
+  }
+
+  .channel-label,
+  .channel-pair,
+  .channel-bits {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .channel-label {
+    font-size: 13px;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .channel-pair {
+    font-size: 13px;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .channel-bits {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .channel-bits .bit-divider {
+    display: inline-block;
+    margin: 0 0.22em;
+    color: rgba(23, 20, 26, 0.34);
+  }
+
+  .channel-bits .muted {
+    color: var(--muted);
+  }
+
+  .channel-bits .from-secret-bit {
+    color: var(--green-ink);
+  }
+
+  .channel-row.red .channel-label,
+  .channel-row.red .channel-pair {
+    color: var(--red-ink);
+  }
+
+  .channel-row.green .channel-label,
+  .channel-row.green .channel-pair {
+    color: var(--green-ink);
+  }
+
+  .channel-row.blue .channel-label,
+  .channel-row.blue .channel-pair {
+    color: var(--blue-ink);
+  }
+
+  .arrow-label rect {
+    fill: var(--panel);
+    rx: 15;
+    ry: 15;
+  }
+
+  .arrow-label text {
+    font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+
+  .arrow-label.cover text {
+    fill: var(--cover);
+  }
+
+  .arrow-label.secret text {
+    fill: var(--secret);
+  }
+</style>
+
+<div class="diagram-shell" id="eng-byte-diagram-shell">
+<div class="diagram" id="eng-byte-diagram" aria-label="Diagram showing how the three color channels of a secret pixel are merged into a cover pixel">
+  <svg class="arrow-layer" viewBox="0 0 820 540" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <marker id="eng-arrow-cover" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#FFC359"></path>
+      </marker>
+      <marker id="eng-arrow-secret" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#8FC56C"></path>
+      </marker>
+    </defs>
+
+    <path
+      d="M300 118 C 400 118, 438 196, 506 240"
+      fill="none"
+      stroke="#FFC359"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      marker-end="url(#eng-arrow-cover)"
+    />
+    <path
+      d="M300 374 C 400 374, 438 312, 506 276"
+      fill="none"
+      stroke="#8FC56C"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      stroke-dasharray="7 7"
+      marker-end="url(#eng-arrow-secret)"
+    />
+    <g class="arrow-label cover" transform="translate(416 160) rotate(18)">
+      <rect x="-86" y="-23" width="172" height="46"></rect>
+      <text x="0" y="-9">Take the strong half</text>
+      <text x="0" y="9">from each channel</text>
+    </g>
+    <g class="arrow-label secret" transform="translate(404 356) rotate(-15)">
+      <rect x="-86" y="-23" width="172" height="46"></rect>
+      <text x="0" y="-9">Hide the strong half</text>
+      <text x="0" y="9">from each channel</text>
+    </g>
+  </svg>
+
+  <div class="card cover">
+    <div class="title">Cover Pixel</div>
+    <div class="hex">#FFC359</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">FF</div>
+        <div class="channel-bits">1111<span class="bit-divider">|</span><span class="muted">1111</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">C3</div>
+        <div class="channel-bits">1100<span class="bit-divider">|</span><span class="muted">0011</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">59</div>
+        <div class="channel-bits">0101<span class="bit-divider">|</span><span class="muted">1001</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card carrier">
+    <div class="title">Carrier Pixel</div>
+    <div class="hex">#F8CC56</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">F8</div>
+        <div class="channel-bits">1111<span class="bit-divider">|</span><span class="from-secret-bit">1000</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">CC</div>
+        <div class="channel-bits">1100<span class="bit-divider">|</span><span class="from-secret-bit">1100</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">56</div>
+        <div class="channel-bits">0101<span class="bit-divider">|</span><span class="from-secret-bit">0110</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card secret">
+    <div class="title">Secret Pixel</div>
+    <div class="hex">#8FC56C</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">8F</div>
+        <div class="channel-bits"><span class="from-secret-bit">1000</span><span class="bit-divider">|</span><span class="muted">1111</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">C5</div>
+        <div class="channel-bits"><span class="from-secret-bit">1100</span><span class="bit-divider">|</span><span class="muted">0101</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">6C</div>
+        <div class="channel-bits"><span class="from-secret-bit">0110</span><span class="bit-divider">|</span><span class="muted">1100</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  const engDiagramShell = document.getElementById('eng-byte-diagram-shell');
+  const engDiagram = document.getElementById('eng-byte-diagram');
+  const engBaseWidth = 820;
+  const engBaseHeight = 540;
+  const engNotifyHeight = (height) => {
+    if (window.parent) {
+      window.parent.postMessage({ type: 'interactive-sandbox:height', height }, '*');
+    }
+  };
+
+  if (engDiagramShell && engDiagram) {
+    const syncEngDiagramScale = () => {
+      const scale = engDiagramShell.clientWidth / engBaseWidth;
+      const offsetX = Math.max(0, (engDiagramShell.clientWidth - engBaseWidth * scale) / 2);
+      engDiagram.style.transform = `translate(${offsetX}px, 0px) scale(${scale})`;
+      const bodyStyle = getComputedStyle(document.body);
+      const paddingTop = parseFloat(bodyStyle.paddingTop) || 0;
+      const paddingBottom = parseFloat(bodyStyle.paddingBottom) || 0;
+      engNotifyHeight(engBaseHeight * scale + paddingTop + paddingBottom);
+    };
+
+    syncEngDiagramScale();
+    new ResizeObserver(syncEngDiagramScale).observe(engDiagramShell);
+  }
+</script>
 ```
 
-Let’s make it concrete: take this <span class="inline-yellow">yellow</span> as the cover, and this <span class="inline-green">green</span> as the secret.
-If we apply that bitwise logic, this is the flow. Try following it yourself below and watch how the colors merge and separate:
+Or for a deeper understanding, let's see how the process happens at the level of the colors' hex codes:
 
 ```html-live
 <!-- sandbox-height: 480 -->
 <style>
   :root { color-scheme: dark; }
+  html, body { width: 100%; height: auto !important; overflow: visible !important; }
   body {
-    min-height: 100vh; margin: 0; padding: 24px;
+    min-height: 0; margin: 0; padding: 24px 20px;
     background: #0f1012; color: #fff;
     font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
-    display: flex; justify-content: center; align-items: center;
+    display: flex; justify-content: center; align-items: flex-start;
+    box-sizing: border-box;
   }
   .sleek-lab {
     width: 100%; max-width: 900px; position: relative;
-    padding: 32px; border-radius: 32px;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.05);
-    overflow: hidden;
   }
-  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 32px; flex-wrap: wrap; }
+  .top-bar > div:first-child { min-width: 0; }
   .subtitle { font-size: 11px; letter-spacing: 0.2em; color: #58c4dd; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
-  h2 { margin: 0; font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
+  h2 { margin: 0; font-size: clamp(24px, 4vw, 28px); font-weight: 300; letter-spacing: -0.02em; line-height: 1.08; }
   button {
     background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
     padding: 10px 20px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease; flex-shrink: 0;
   }
   button:hover { background: #fff; color: #000; }
   
-  .data-flow { display: flex; flex-direction: column; gap: 24px; }
+  .data-flow { display: flex; flex-direction: column; gap: 20px; }
   .channel-row {
     display: grid; grid-template-columns: 40px repeat(4, 1fr); align-items: center; gap: 16px;
     padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -502,19 +836,18 @@ If we apply that bitwise logic, this is the flow. Try following it yourself belo
   .sleek-lab[data-step="3"] .carrier .h2 { color: var(--color); }
   .sleek-lab[data-step="3"] .reveal .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
   
-  .message-box {
-    margin-top: 32px; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center;
-    min-height: 48px; display: flex; align-items: center; justify-content: center;
-  }
-
   @media (max-width: 760px) {
-    .sleek-lab { padding: 24px 16px; border-radius: 20px; }
-    .channel-row { grid-template-columns: 1fr; gap: 24px; padding-bottom: 32px; position: relative; }
-    .ch-label { position: absolute; top: 0; left: 16px; font-size: 20px; }
-    .byte-group { display: grid; grid-template-columns: 80px 1fr; align-items: center; justify-items: start; gap: 16px; width: 100%; padding-left: 48px; box-sizing: border-box; }
-    .b-label { text-align: left; }
-    .byte { font-size: 28px; }
-    .top-bar { flex-direction: column; align-items: flex-start; gap: 16px; }
+    body { padding: 18px 12px 20px; }
+    .top-bar { justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px; flex-wrap: nowrap; }
+    .subtitle { margin-bottom: 6px; font-size: 10px; }
+    .top-bar h2 { font-size: 20px; }
+    button { padding: 8px 14px; font-size: 11px; }
+    .data-flow { gap: 18px; }
+    .channel-row { grid-template-columns: 24px repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 14px; padding-bottom: 20px; align-items: start; }
+    .ch-label { grid-column: 1; grid-row: 1 / span 2; position: static; align-self: center; padding-top: 0; font-size: 20px; }
+    .byte-group { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+    .b-label { text-align: center; font-size: 9px; }
+    .byte { font-size: 24px; gap: 3px; justify-content: center; }
   }
 </style>
 
@@ -522,7 +855,7 @@ If we apply that bitwise logic, this is the flow. Try following it yourself belo
   <div class="top-bar">
     <div>
       <div class="subtitle">Hide & Extract</div>
-      <h2>Pixel Merge Engine</h2>
+      <h2>Pixel Merge Simulation</h2>
     </div>
     <button id="eng-replay">Replay</button>
   </div>
@@ -550,28 +883,14 @@ If we apply that bitwise logic, this is the flow. Try following it yourself belo
         <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">6</span><span class="h2">0</span></div></div>
      </div>
   </div>
-  
-  <div class="message-box" id="eng-msg"></div>
 </div>
 
 <script>
   const engLab = document.getElementById('eng-lab');
-  const engMsg = document.getElementById('eng-msg');
-  const engSteps = [
-    "Step 1: Keep the strong half (the left 4 bits) of the cover pixel, because that is the part the eye mainly reads as the color.",
-    "Step 2: Take the strong half of the secret pixel so its overall shape survives, and ignore its quiet half.",
-    "Step 3: Merge the strong half from the secret into the quiet space of the cover. Result: a carrier pixel with a barely noticeable change.",
-    "Step 4: To extract the secret, read the quiet half from the carrier pixel and shift it back to the left so it becomes the strong half again."
-  ];
   let engTimers = [];
 
   function setEngStep(step) {
     engLab.dataset.step = String(step);
-    engMsg.style.opacity = 0;
-    setTimeout(() => {
-      engMsg.textContent = engSteps[step];
-      engMsg.style.opacity = 1;
-    }, 200);
   }
 
   function playEng() {
@@ -583,16 +902,25 @@ If we apply that bitwise logic, this is the flow. Try following it yourself belo
     });
   }
 
+  function notifyEngHeight() {
+    requestAnimationFrame(() => {
+      const height = Math.ceil(document.documentElement.scrollHeight);
+      if (window.parent) {
+        window.parent.postMessage({ type: 'interactive-sandbox:height', height }, '*');
+      }
+    });
+  }
+
   document.getElementById('eng-replay').addEventListener('click', playEng);
-  engMsg.style.transition = 'opacity 0.2s';
   setEngStep(0);
   setTimeout(playEng, 400);
+  new ResizeObserver(notifyEngHeight).observe(document.body);
+  window.addEventListener('resize', notifyEngHeight);
+  notifyEngHeight();
 </script>
 ```
 
-The nicest thing about this example is that it is **not dramatic**. The image does not suddenly look broken. It does not scream "<span class="inline-secret">there is a secret here</span>". It just changes a few *small numbers*, and bets that the eye will ignore them.
-
-That is also why we should be careful: steganography by itself is **not always security**. If someone suspects it, they can inspect it. In real security, we often combine it with **encryption**: first make the message itself unreadable, then hide it in a boring place.
+You might tell me: but there is still a difference between the cover color and the color that ended up carrying the secret. And that is true, but the difference stays **very slight**. Remember that an image is made of a huge number of pixels, so this difference is almost negligible when we look at the whole picture. The nicest part is that the image does not become noisy, and it does not scream "<span class="inline-secret">there is a secret here</span>". We only change a few *small numbers*, and bet that the eye will ignore them.
 
 ## Same Old Instinct, New Places
 
@@ -1133,12 +1461,14 @@ And this is the real image that carries it:
 
 ## كيف تخبّي بكسل جوّا بكسل!
 
-كل بكسل مكوّن من قنوات ألوان (أحمر، أخضر، أزرق)، وكل قناة بنعبّر عنها برقم من `0` لـ `255`.
-بالكمبيوتر، هاد الرقم بتخزن على شكل **8 بِت (Bits)**. البِت هو ببساطة خانة ثنائية (يا $0$ يا $1$).
+كيف ما حكينا، كل بكسل مكوّن من ثلاث متغيرات: <span class="inline-red">أحمر</span>، <span class="inline-green">أخضر</span>، <span class="inline-blue">أزرق</span>. وكل متغير بنعبّر عنه برقم من `0` لـ `255`.
+بالكمبيوتر، هاد الرقم بتخزن على شكل **8 بِتات (Bits)**. البِت هو ببساطة خانة ثنائية يعني بتخزن (يا `0` يا `1`).
+
+يعني بكسل `RGB` فيه **3 bytes** بالمجموع: `byte` للأحمر، و`byte` للأخضر، و`byte` للأزرق. وكل `byte` من هدول مكوّن من **8 bits**. وعشان هيك، بالخدعة إحنا ما بناخد `4 bytes` من القناة, لأن القناة كلها أصلًا `byte` واحد. اللي بنعمله هو إننا بناخد **4 bits قوية من كل قناة**.
 
 السؤال هون: هل كل البِتّات إلها نفس الأهمية؟
 
-لنفهم الموضوع، خلينا نرجع للرياضيات شوي. البِتّات بتشتغل بنظام مضاعفات الرقم 2 (أي $2^x$).
+خلينا نتطرق للرياضيات شوي، بس تخفوش مش معقدة. البِتّات بتشتغل بنظام مضاعفات الرقم 2 (أي $2^x$).
 البِت الأول (من اليمين) قيمته $2^0 = 1$، واللي بعده $2^1 = 2$، وهكذا لحد ما نوصل للبِت الثامن اللي قيمته $2^7 = 128$.
 
 $$
@@ -1152,66 +1482,395 @@ $$
 - **النص القوي (Most Significant Bits):** هي الـ 4 بِتّات اللي على اليسار. قيمتهم بتمثل الأرقام الكبيرة ($128, 64, 32, 16$). هاد النص هو اللي بحدد **هوية اللون** بشكل أساسي.
 - **النص الهادي (Least Significant Bits):** هي الـ 4 بِتّات اللي على اليمين. قيمتهم صغيرة جداً ($8, 4, 2, 1$). لو جمعناهم كلهم بيعطونا $15$ فقط من أصل $255$! يعني تأثيرهم على اللون ما بتجاوز الـ $6\%$، وتغييرهم بيعمل فرق دقيق جداً مستحيل العين البشرية تلاحظه.
 
-بمعنى آخر، النص الهادي (الـ 4 بِتّات الضعيفة) ممكن نعتبره **مساحة فارغة** أو "غرفة سرية" نقدر نستغلها!
+بمعنى آخر، النص الهادي (الـ 4 بِتّات الضعيفة) ممكن نعتبره **مساحة فارغة** أو "غرفة سرية" الي بنقدر نستغلها!
 
 ### الخدعة: دمج لونين في بكسل واحد
 
-عشان نخفي <span class="inline-secret">بكسل سري (Secret)</span> داخل <span class="inline-carrier">بكسل غلاف (Cover)</span>، بنعمل التالي:
-1. بنمسح النص الهادي من **بكسل الغلاف** (لأنه تأثيره شبه معدوم).
-2. بناخذ النص القوي من **البكسل السري** (اللي بحمل أهم معلومات اللون السري).
-3. بنحط النص القوي تبع البكسل السري مكان النص الهادي في بكسل الغلاف.
+عشان نخفي <span class="inline-secret-hex">بكسل سري (Secret)</span> `#8FC56C` داخل <span class="inline-cover-hex">بكسل غلاف (Cover)</span> `#FFC359`، بنعمل التالي:
+1. من كل قناة في **بكسل الغلاف**، بنمسح الـ **4 بِتات الهادية** اللي على اليمين.
+2. من كل قناة في **البكسل السري**، بناخذ الـ **4 بِتات القوية** اللي على اليسار.
+3. بنحط هاي الـ **4 بِتات القوية** مكان الـ **4 بِتات الهادية** في الغلاف.
 
-النتيجة بتكون **بكسل حامل (Carrier)** بشبه بكسل الغلاف بنسبة عالية جداً، بس بيحتوي جواته على السر!
+النتيجة بتكون <span class="inline-carrier-hex">بكسل حامل (Carrier)</span> `#F8CC56` بشبه بكسل الغلاف بنسبة عالية جداً، بس بيحتوي جواته على السر!
 
-خلينا نشوفها برسمة توضيحية:
+خلينا نشوفها برسمة توضيحية بتورجي **القنوات الثلاث مع بعض**. نفس الخدعة بتصير داخل كل قناة:
 
-```tikz
-\begin{tikzpicture}[font=\sffamily, every node/.style={align=center}]
-  \node[draw=yellow, text=yellow, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (cover) at (0, 2) {\textbf{بكسل الغلاف}\\ \small \texttt{1111} \textcolor{gray}{\texttt{1111}}};
-  
-  \node[draw=green, text=green, rounded corners=6pt, minimum width=3.8cm, minimum height=1.2cm, thick] (secret) at (0, -2) {\textbf{البكسل السري}\\ \small \texttt{1000} \textcolor{gray}{\texttt{1111}}};
-  
-  \node[draw=orange, text=orange, rounded corners=6pt, minimum width=4.2cm, minimum height=1.4cm, thick] (carrier) at (6, 0) {\textbf{البكسل الحامل}\\ \small \texttt{1111} \textcolor{green}{\texttt{1000}}};
+```html-live
+<!-- sandbox-height: 560 -->
+<!-- sandbox-chrome: none -->
+<style>
+  :root {
+    color-scheme: dark;
+    --cover: #ffc359;
+    --secret: #8fc56c;
+    --carrier: #f8cc56;
+    --ink: #17141a;
+    --muted: rgba(23, 20, 26, 0.54);
+    --panel: rgba(15, 16, 18, 0.92);
+    --row-bg: rgba(255, 255, 255, 0.16);
+    --row-border: rgba(255, 255, 255, 0.14);
+    --red-ink: #a22b1c;
+    --green-ink: #2f6325;
+    --blue-ink: #1e4b83;
+  }
 
-  \draw[->, thick, yellow, shorten >=2pt] (cover.east) .. controls (3, 2) and (3, 0.5) .. (carrier.west) node[midway, above=4pt, sloped] {\small خذ النص القوي};
-  
-  \draw[->, thick, green, dashed, shorten >=2pt] (secret.east) .. controls (3, -2) and (3, -0.5) .. (carrier.west) node[midway, below=4pt, sloped] {\small خبّي النص القوي};
-\end{tikzpicture}
+  html, body {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    background: transparent;
+  }
+
+  body {
+    min-height: 0;
+    margin: 0;
+    padding: 4px 8px 8px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    font-family: "Noto Sans Arabic", "Roboto Flex", system-ui, sans-serif;
+    box-sizing: border-box;
+  }
+
+  .diagram-shell {
+    width: 100%;
+    height: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .diagram {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 820px;
+    height: 540px;
+    transform-origin: top left;
+    box-sizing: border-box;
+  }
+
+  .arrow-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .card {
+    position: absolute;
+    width: 292px;
+    padding: 14px 14px 14px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 10px 28px rgba(0, 0, 0, 0.18);
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .card.cover {
+    top: 28px;
+    left: 8px;
+    background: var(--cover);
+  }
+
+  .card.secret {
+    top: 284px;
+    left: 8px;
+    background: var(--secret);
+  }
+
+  .card.carrier {
+    top: 156px;
+    right: 8px;
+    background: var(--carrier);
+  }
+
+  .title {
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .hex {
+    color: rgba(23, 20, 26, 0.9);
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    font-weight: 900;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .channel-grid {
+    width: 100%;
+    display: grid;
+    gap: 6px;
+  }
+
+  .channel-row {
+    display: grid;
+    grid-template-columns: 18px 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 12px;
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    box-sizing: border-box;
+  }
+
+  .channel-label,
+  .channel-pair,
+  .channel-bits {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  .channel-label {
+    font-size: 13px;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .channel-pair {
+    font-size: 13px;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .channel-bits {
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .channel-bits .bit-divider {
+    display: inline-block;
+    margin: 0 0.22em;
+    color: rgba(23, 20, 26, 0.34);
+  }
+
+  .channel-bits .muted {
+    color: var(--muted);
+  }
+
+  .channel-bits .from-secret-bit {
+    color: var(--green-ink);
+  }
+
+  .channel-row.red .channel-label,
+  .channel-row.red .channel-pair {
+    color: var(--red-ink);
+  }
+
+  .channel-row.green .channel-label,
+  .channel-row.green .channel-pair {
+    color: var(--green-ink);
+  }
+
+  .channel-row.blue .channel-label,
+  .channel-row.blue .channel-pair {
+    color: var(--blue-ink);
+  }
+
+  .arrow-label rect {
+    fill: var(--panel);
+    rx: 15;
+    ry: 15;
+  }
+
+  .arrow-label text {
+    font-family: "Noto Sans Arabic", "Roboto Flex", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    dominant-baseline: middle;
+    text-anchor: middle;
+  }
+
+  .arrow-label.cover text {
+    fill: var(--cover);
+  }
+
+  .arrow-label.secret text {
+    fill: var(--secret);
+  }
+</style>
+
+<div class="diagram-shell" id="ar-byte-diagram-shell">
+<div class="diagram" id="ar-byte-diagram" aria-label="رسم يوضح دمج القنوات الثلاث للبكسل السري داخل بكسل الغلاف">
+  <svg class="arrow-layer" viewBox="0 0 820 540" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <marker id="arrow-cover" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#FFC359"></path>
+      </marker>
+      <marker id="arrow-secret" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#8FC56C"></path>
+      </marker>
+    </defs>
+
+    <path
+      d="M300 118 C 400 118, 438 196, 506 240"
+      fill="none"
+      stroke="#FFC359"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      marker-end="url(#arrow-cover)"
+    />
+    <path
+      d="M300 374 C 400 374, 438 312, 506 276"
+      fill="none"
+      stroke="#8FC56C"
+      stroke-width="3.2"
+      stroke-linecap="round"
+      stroke-dasharray="7 7"
+      marker-end="url(#arrow-secret)"
+    />
+    <g class="arrow-label cover" transform="translate(416 160) rotate(18)">
+      <rect x="-103" y="-17" width="206" height="34"></rect>
+      <text x="0" y="1">خد النص القوي من كل قناة</text>
+    </g>
+    <g class="arrow-label secret" transform="translate(398 356) rotate(-15)">
+      <rect x="-105" y="-17" width="210" height="34"></rect>
+      <text x="0" y="1">خبي النص القوي من كل قناة</text>
+    </g>
+  </svg>
+
+  <div class="card cover">
+    <div class="title">بكسل الغلاف</div>
+    <div class="hex">#FFC359</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">FF</div>
+        <div class="channel-bits">1111<span class="bit-divider">|</span><span class="muted">1111</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">C3</div>
+        <div class="channel-bits">1100<span class="bit-divider">|</span><span class="muted">0011</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">59</div>
+        <div class="channel-bits">0101<span class="bit-divider">|</span><span class="muted">1001</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card carrier">
+    <div class="title">البكسل الحامل</div>
+    <div class="hex">#F8CC56</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">F8</div>
+        <div class="channel-bits">1111<span class="bit-divider">|</span><span class="from-secret-bit">1000</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">CC</div>
+        <div class="channel-bits">1100<span class="bit-divider">|</span><span class="from-secret-bit">1100</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">56</div>
+        <div class="channel-bits">0101<span class="bit-divider">|</span><span class="from-secret-bit">0110</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card secret">
+    <div class="title">البكسل السري</div>
+    <div class="hex">#8FC56C</div>
+    <div class="channel-grid">
+      <div class="channel-row red">
+        <div class="channel-label">R</div>
+        <div class="channel-pair">8F</div>
+        <div class="channel-bits"><span class="from-secret-bit">1000</span><span class="bit-divider">|</span><span class="muted">1111</span></div>
+      </div>
+      <div class="channel-row green">
+        <div class="channel-label">G</div>
+        <div class="channel-pair">C5</div>
+        <div class="channel-bits"><span class="from-secret-bit">1100</span><span class="bit-divider">|</span><span class="muted">0101</span></div>
+      </div>
+      <div class="channel-row blue">
+        <div class="channel-label">B</div>
+        <div class="channel-pair">6C</div>
+        <div class="channel-bits"><span class="from-secret-bit">0110</span><span class="bit-divider">|</span><span class="muted">1100</span></div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+  const arDiagramShell = document.getElementById('ar-byte-diagram-shell');
+  const arDiagram = document.getElementById('ar-byte-diagram');
+  const arBaseWidth = 820;
+  const arBaseHeight = 540;
+  const arNotifyHeight = (height) => {
+    if (window.parent) {
+      window.parent.postMessage({ type: 'interactive-sandbox:height', height }, '*');
+    }
+  };
+
+  if (arDiagramShell && arDiagram) {
+    const syncArDiagramScale = () => {
+      const scale = arDiagramShell.clientWidth / arBaseWidth;
+      const offsetX = Math.max(0, (arDiagramShell.clientWidth - arBaseWidth * scale) / 2);
+      arDiagram.style.transform = `translate(${offsetX}px, 0px) scale(${scale})`;
+      const bodyStyle = getComputedStyle(document.body);
+      const paddingTop = parseFloat(bodyStyle.paddingTop) || 0;
+      const paddingBottom = parseFloat(bodyStyle.paddingBottom) || 0;
+      arNotifyHeight(arBaseHeight * scale + paddingTop + paddingBottom);
+    };
+
+    syncArDiagramScale();
+    new ResizeObserver(syncArDiagramScale).observe(arDiagramShell);
+  }
+</script>
 ```
 
-لنعطي مثال عملي، خذ هاد <span class="inline-yellow">الأصفر</span> كغلاف، وهاد <span class="inline-green">الأخضر</span> كسر.
-إذا طبّقنا المنطق البرمجي باستخدام العمليات الثنائية (Bitwise Operations)، بتكون المعادلة هيك:
-
-جرب تتبّع العملية بنفسك هون، وشوف كيف الألوان بتندمج وتنفصل:
+أو لفهم اعمق خلونا نشوف كيف العملية  بتصير على صعيد ال hex codes تبعون الالوان:
 
 ```html-live
 <!-- sandbox-height: 480 -->
 <style>
   :root { color-scheme: dark; }
+  html, body { width: 100%; height: auto !important; overflow: visible !important; }
   body {
-    min-height: 100vh; margin: 0; padding: 24px;
+    min-height: 0; margin: 0; padding: 24px 20px;
     background: #0f1012; color: #fff;
     font-family: "Inter", "Roboto Flex", system-ui, sans-serif;
-    display: flex; justify-content: center; align-items: center;
+    display: flex; justify-content: center; align-items: flex-start;
+    box-sizing: border-box;
   }
   .sleek-lab {
     width: 100%; max-width: 900px; position: relative;
-    padding: 32px; border-radius: 32px;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.05);
-    overflow: hidden;
   }
-  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+  .top-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 32px; flex-wrap: wrap; }
+  .top-bar > div:first-child { min-width: 0; }
   .subtitle { font-size: 11px; letter-spacing: 0.2em; color: #58c4dd; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
-  h2 { margin: 0; font-size: 28px; font-weight: 300; letter-spacing: -0.02em; }
+  h2 { margin: 0; font-size: clamp(24px, 4vw, 28px); font-weight: 300; letter-spacing: -0.02em; line-height: 1.08; }
   button {
     background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff;
     padding: 10px 20px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease; flex-shrink: 0;
   }
   button:hover { background: #fff; color: #000; }
   
-  .data-flow { display: flex; flex-direction: column; gap: 24px; }
+  .data-flow { display: flex; flex-direction: column; gap: 20px; }
   .channel-row {
     display: grid; grid-template-columns: 40px repeat(4, 1fr); align-items: center; gap: 16px;
     padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -1240,21 +1899,19 @@ $$
   .sleek-lab[data-step="3"] .carrier .h2 { color: var(--color); }
   .sleek-lab[data-step="3"] .reveal .h1 { color: var(--color); font-weight: 700; text-shadow: 0 0 15px var(--color); transform: translateY(-3px); }
   
-  .message-box {
-    margin-top: 32px; font-size: 15px; line-height: 1.6; color: rgba(255,255,255,0.7); text-align: center;
-    min-height: 48px; display: flex; align-items: center; justify-content: center;
-    direction: rtl;
-  }
-
   @media (max-width: 760px) {
-    .sleek-lab { padding: 24px 16px; border-radius: 20px; }
-    .channel-row { grid-template-columns: 1fr; gap: 24px; padding-bottom: 32px; position: relative; }
-    .ch-label { position: absolute; top: 0; left: 16px; font-size: 20px; }
-    .byte-group { display: grid; grid-template-columns: 80px 1fr; align-items: center; justify-items: start; gap: 16px; width: 100%; padding-left: 48px; box-sizing: border-box; }
-    .b-label { text-align: left; }
-    .byte { font-size: 28px; }
-    .top-bar { flex-direction: column; align-items: flex-end; gap: 16px; text-align: right; width: 100%; }
-    .top-bar h2 { font-size: 24px; }
+    body { padding: 18px 12px 20px; }
+    .top-bar { justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px; flex-wrap: nowrap; }
+    .subtitle { margin-bottom: 6px; font-size: 10px; }
+    .top-bar h2 { font-size: 20px; }
+    button { padding: 8px 14px; font-size: 11px; }
+    .data-flow { gap: 18px; }
+    .channel-row { grid-template-columns: 24px repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 14px; padding-bottom: 20px; align-items: start; }
+    .ch-label { grid-column: 1; grid-row: 1 / span 2; position: static; align-self: center; padding-top: 0; font-size: 20px; }
+    .byte-group { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+    .b-label { text-align: center; font-size: 9px; }
+    .byte { font-size: 24px; gap: 3px; justify-content: center; }
+    .top-bar { text-align: right; width: 100%; }
   }
 </style>
 
@@ -1262,7 +1919,7 @@ $$
   <div class="top-bar" dir="rtl">
     <div>
       <div class="subtitle">إخفاء واستخراج</div>
-      <h2>محرك دمج البكسلات</h2>
+      <h2>محاكاة دمج البكسلات</h2>
     </div>
     <button id="ar-replay">إعادة العرض</button>
   </div>
@@ -1290,28 +1947,14 @@ $$
         <div class="byte-group reveal"><div class="b-label">Reveal</div><div class="byte"><span class="h1">6</span><span class="h2">0</span></div></div>
      </div>
   </div>
-  
-  <div class="message-box" id="ar-msg"></div>
 </div>
 
 <script>
   const arLab = document.getElementById('ar-lab');
-  const arMsg = document.getElementById('ar-msg');
-  const arSteps = [
-    'الخطوة الأولى: نحتفظ بالنص القوي (4 بتات يسار) من بكسل الغلاف، لأنه المسؤول عن وضوح اللون للعين.',
-    'الخطوة الثانية: نأخذ النص القوي من البكسل السري (للحفاظ على شكله العام)، ونتجاهل النص الهادي.',
-    'الخطوة الثالثة: ندمج النص القوي من السر داخل المساحة الهادية للغلاف. النتيجة: بكسل حامل للسر بتغيير غير ملحوظ!',
-    'الخطوة الرابعة: لاستخراج السر، نقرأ النص الهادي من البكسل الحامل ونزيحه لليسار ليعود كنص قوي.'
-  ];
   let arTimers = [];
 
   function setArStep(step) {
     arLab.dataset.step = String(step);
-    arMsg.style.opacity = 0;
-    setTimeout(() => {
-      arMsg.textContent = arSteps[step];
-      arMsg.style.opacity = 1;
-    }, 200);
   }
 
   function playAr() {
@@ -1323,15 +1966,24 @@ $$
     });
   }
 
+  function notifyArHeight() {
+    requestAnimationFrame(() => {
+      const height = Math.ceil(document.documentElement.scrollHeight);
+      if (window.parent) {
+        window.parent.postMessage({ type: 'interactive-sandbox:height', height }, '*');
+      }
+    });
+  }
+
   document.getElementById('ar-replay').addEventListener('click', playAr);
-  arMsg.style.transition = 'opacity 0.2s';
   setArStep(0);
   setTimeout(playAr, 400);
+  new ResizeObserver(notifyArHeight).observe(document.body);
+  window.addEventListener('resize', notifyArHeight);
+  notifyArHeight();
 </script>
 ```
-أحلى إشي بالمثال إنه **مش درامي**. الصورة ما بتصير مشوشة. ما بتصرخ "<span class="inline-secret">في سر هون</span>". بس بتغير كم *رقم صغير*، وبتراهن إن العين رح تطنش.
-
-عشان هيك كمان لازم ننتبه: الستيغانوغرافي لحاله **مش دايما أمان**. إذا حدا شك بالموضوع، بقدر يفحص. بالأمان الحقيقي غالبا بنجمعه مع **التشفير**: أول إشي بنخلي الرسالة نفسها غير مقروءة، بعدين بنخبيها بمكان ممل.
+بعرف ممكن تحكولي: بس في فرق بين لون الغلاف واللون يلي صار حامل السر. وهذا صحيح، بس الفرق بيضل **كثير طفيف**. تذكروا انو الصورة مكوّنة من عدد هائل من البكسلات، لهيك هاد الفرق شبه مهمل لما بنتطلع عالصورة. أحلى إشي بالموضوع إن الصورة ما بتصير مشوشة، وما بتصرخ "<span class="inline-secret">في سر هون</span>". إحنا بس بنغير كم *رقم صغير*، وبنراهن إن العين رح تطنّش.
 
 ## نفس الغريزة، أماكن جديدة
 
