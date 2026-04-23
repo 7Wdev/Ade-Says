@@ -254,7 +254,7 @@ function buildHomeSeo(posts) {
       createWebSiteStructuredData(description),
       createPersonStructuredData(),
     ],
-    title: 'Ade Says | Software, Photography, Physics, and Ideas',
+    title: 'Ade Says',
     type: 'website',
   };
 }

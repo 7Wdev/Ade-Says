@@ -1,10 +1,11 @@
-import type { PhotoCatalog } from '../generated/photo-catalogs';
-import type { Post } from './markdown';
+import type { PhotoCatalog } from "../generated/photo-catalogs";
+import type { Post } from "./markdown";
 
-export const SITE_ORIGIN = 'https://ade-says.vercel.app';
-export const SITE_NAME = 'Ade Says';
-export const SITE_AUTHOR_NAME = 'Ade Issawe';
-export const DEFAULT_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+export const SITE_ORIGIN = "https://ade-says.vercel.app";
+export const SITE_NAME = "Ade Says";
+export const SITE_AUTHOR_NAME = "Ade Issawe";
+export const DEFAULT_ROBOTS =
+  "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
 
 type StructuredData = Record<string, unknown>;
 type BreadcrumbItem = {
@@ -23,7 +24,7 @@ export type SeoMetadata = {
   author?: string;
   canonicalPath: string;
   description: string;
-  dir?: 'ltr' | 'rtl';
+  dir?: "ltr" | "rtl";
   image?: {
     alt?: string;
     url: string;
@@ -34,7 +35,7 @@ export type SeoMetadata = {
   robots?: string;
   structuredData?: StructuredData | StructuredData[];
   title: string;
-  type?: 'article' | 'website';
+  type?: "article" | "website";
 };
 
 type PostSeoImageMeta = {
@@ -43,12 +44,14 @@ type PostSeoImageMeta = {
 };
 
 function normalizePath(pathname: string) {
-  if (!pathname || pathname === '/') {
-    return '/';
+  if (!pathname || pathname === "/") {
+    return "/";
   }
 
-  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  return normalizedPath.endsWith('/') ? normalizedPath.slice(0, -1) : normalizedPath;
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return normalizedPath.endsWith("/")
+    ? normalizedPath.slice(0, -1)
+    : normalizedPath;
 }
 
 function normalizeKeyword(keyword: string) {
@@ -63,7 +66,9 @@ export function buildAbsoluteUrl(pathOrUrl: string) {
   return `${SITE_ORIGIN}${normalizePath(pathOrUrl)}`;
 }
 
-export function combineKeywords(...keywordGroups: Array<readonly string[] | undefined>) {
+export function combineKeywords(
+  ...keywordGroups: Array<readonly string[] | undefined>
+) {
   const seenKeywords = new Set<string>();
   const combinedKeywords: string[] = [];
 
@@ -102,23 +107,26 @@ export function resolvePostSeoImage(meta: PostSeoImageMeta | undefined) {
     return `/og/posts/${meta.id}.webp`;
   }
 
-  if (/^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(meta.thumbnail) || meta.thumbnail.startsWith('/')) {
+  if (
+    /^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(meta.thumbnail) ||
+    meta.thumbnail.startsWith("/")
+  ) {
     return meta.thumbnail;
   }
 
   const thumbnailPathname = meta.thumbnail.split(/[?#]/, 1)[0];
   const extensionMatch = /\.[a-z\d]+$/i.exec(thumbnailPathname);
-  const extension = extensionMatch?.[0] ?? '.webp';
+  const extension = extensionMatch?.[0] ?? ".webp";
 
   return `/og/posts/${meta.id}${extension}`;
 }
 
 function createBreadcrumbStructuredData(items: BreadcrumbItem[]) {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
+      "@type": "ListItem",
       item: item.path ? buildAbsoluteUrl(item.path) : undefined,
       name: item.name,
       position: index + 1,
@@ -128,21 +136,21 @@ function createBreadcrumbStructuredData(items: BreadcrumbItem[]) {
 
 function createWebSiteStructuredData(description: string) {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
+    "@context": "https://schema.org",
+    "@type": "WebSite",
     author: {
-      '@type': 'Person',
+      "@type": "Person",
       name: SITE_AUTHOR_NAME,
       url: SITE_ORIGIN,
     },
     description,
-    inLanguage: 'en',
+    inLanguage: "en",
     name: SITE_NAME,
     publisher: {
-      '@type': 'Organization',
+      "@type": "Organization",
       logo: {
-        '@type': 'ImageObject',
-        url: buildAbsoluteUrl('/favicon.svg'),
+        "@type": "ImageObject",
+        url: buildAbsoluteUrl("/favicon.svg"),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,
@@ -153,22 +161,27 @@ function createWebSiteStructuredData(description: string) {
 
 function createPersonStructuredData() {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'Person',
+    "@context": "https://schema.org",
+    "@type": "Person",
     name: SITE_AUTHOR_NAME,
     sameAs: [
-      'https://github.com/7Wdev',
-      'https://www.instagram.com/adeissawe/',
-      'https://www.youtube.com/@AdeTheCoder',
+      "https://github.com/7Wdev",
+      "https://www.instagram.com/adeissawe/",
+      "https://www.youtube.com/@AdeTheCoder",
     ],
     url: SITE_ORIGIN,
   };
 }
 
-function createCollectionPageStructuredData(name: string, description: string, path: string, imagePath?: string) {
+function createCollectionPageStructuredData(
+  name: string,
+  description: string,
+  path: string,
+  imagePath?: string,
+) {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
     about: name,
     description,
     image: imagePath ? buildAbsoluteUrl(imagePath) : undefined,
@@ -178,11 +191,13 @@ function createCollectionPageStructuredData(name: string, description: string, p
 }
 
 function createImageGalleryStructuredData(catalog: PhotoCatalog) {
-  const coverPhoto = catalog.photos.find((photo) => photo.id === catalog.coverPhotoId) ?? catalog.photos[0];
+  const coverPhoto =
+    catalog.photos.find((photo) => photo.id === catalog.coverPhotoId) ??
+    catalog.photos[0];
 
   return {
-    '@context': 'https://schema.org',
-    '@type': 'ImageGallery',
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
     description: catalog.description,
     image: coverPhoto ? buildAbsoluteUrl(coverPhoto.originalSrc) : undefined,
     name: catalog.name,
@@ -191,16 +206,22 @@ function createImageGalleryStructuredData(catalog: PhotoCatalog) {
   };
 }
 
-function createPostStructuredData(post: Post, lang: 'ar' | 'en', title: string, description: string, imagePath?: string) {
+function createPostStructuredData(
+  post: Post,
+  lang: "ar" | "en",
+  title: string,
+  description: string,
+  imagePath?: string,
+) {
   const publishedTime = formatIsoDate(post.meta.date);
-  const alternateHeadline = lang === 'ar' ? post.meta.title : post.meta.titleAr;
+  const alternateHeadline = lang === "ar" ? post.meta.title : post.meta.titleAr;
 
   return {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
     alternativeHeadline: alternateHeadline || undefined,
     author: {
-      '@type': 'Person',
+      "@type": "Person",
       name: post.meta.author || SITE_AUTHOR_NAME,
       url: SITE_ORIGIN,
     },
@@ -211,13 +232,13 @@ function createPostStructuredData(post: Post, lang: 'ar' | 'en', title: string, 
     image: imagePath ? [buildAbsoluteUrl(imagePath)] : undefined,
     inLanguage: lang,
     isAccessibleForFree: true,
-    keywords: post.meta.tags?.join(', ') || undefined,
+    keywords: post.meta.tags?.join(", ") || undefined,
     mainEntityOfPage: buildAbsoluteUrl(`/post/${post.meta.id}`),
     publisher: {
-      '@type': 'Organization',
+      "@type": "Organization",
       logo: {
-        '@type': 'ImageObject',
-        url: buildAbsoluteUrl('/favicon.svg'),
+        "@type": "ImageObject",
+        url: buildAbsoluteUrl("/favicon.svg"),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,
@@ -226,133 +247,172 @@ function createPostStructuredData(post: Post, lang: 'ar' | 'en', title: string, 
 }
 
 export function buildHomeSeo(defaultImagePath?: string): SeoMetadata {
-  const description = 'Personal notebook by Ade Issawe about software, experiments, physics, mathematics, design, photography, and curious ideas.';
+  const description =
+    "Personal notebook by Ade Issawe about software, experiments, physics, mathematics, design, photography, and curious ideas.";
   const keywords = combineKeywords(
-    ['Ade Says', 'Ade Issawe', 'personal blog'],
-    ['software engineering', 'creative coding', 'physics', 'mathematics', 'photography', 'experiments'],
+    ["Ade Says", "Ade Issawe", "personal blog"],
+    [
+      "software engineering",
+      "creative coding",
+      "physics",
+      "mathematics",
+      "photography",
+      "experiments",
+    ],
   );
 
   return {
     author: SITE_AUTHOR_NAME,
-    canonicalPath: '/',
+    canonicalPath: "/",
     description,
-    image: defaultImagePath ? {
-      alt: 'Ade Says featured image',
-      url: defaultImagePath,
-    } : undefined,
+    image: defaultImagePath
+      ? {
+          alt: "Ade Says featured image",
+          url: defaultImagePath,
+        }
+      : undefined,
     keywords,
-    lang: 'en',
-    locale: 'en_US',
+    lang: "en",
+    locale: "en_US",
     structuredData: [
       createWebSiteStructuredData(description),
       createPersonStructuredData(),
     ],
-    title: 'Ade Says | Software, Photography, Physics, and Ideas',
-    type: 'website',
+    title: "Ade Says",
+    type: "website",
   };
 }
 
 export function buildBlogSeo(defaultImagePath?: string): SeoMetadata {
-  const description = 'Browse the full Ade Says archive: software notes, experiments, essays, math, physics, and curious side projects.';
+  const description =
+    "Browse the full Ade Says archive: software notes, experiments, essays, math, physics, and curious side projects.";
   const keywords = combineKeywords(
-    ['Ade Says blog', 'blog archive', 'technical writing'],
-    ['software engineering', 'experiments', 'physics', 'mathematics', 'design'],
+    ["Ade Says blog", "blog archive", "technical writing"],
+    ["software engineering", "experiments", "physics", "mathematics", "design"],
   );
 
   return {
     author: SITE_AUTHOR_NAME,
-    canonicalPath: '/blog',
+    canonicalPath: "/blog",
     description,
-    image: defaultImagePath ? {
-      alt: 'Ade Says blog archive',
-      url: defaultImagePath,
-    } : undefined,
+    image: defaultImagePath
+      ? {
+          alt: "Ade Says blog archive",
+          url: defaultImagePath,
+        }
+      : undefined,
     keywords,
-    lang: 'en',
-    locale: 'en_US',
+    lang: "en",
+    locale: "en_US",
     structuredData: [
-      createCollectionPageStructuredData('Ade Says Blog Archive', description, '/blog', defaultImagePath),
+      createCollectionPageStructuredData(
+        "Ade Says Blog Archive",
+        description,
+        "/blog",
+        defaultImagePath,
+      ),
       createBreadcrumbStructuredData([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
+        { name: "Home", path: "/" },
+        { name: "Blog", path: "/blog" },
       ]),
     ],
-    title: 'Blog Archive | Ade Says',
-    type: 'website',
+    title: "Blog Archive | Ade Says",
+    type: "website",
   };
 }
 
 export function buildPhotographySeo(defaultImagePath?: string): SeoMetadata {
-  const description = 'Photography galleries by Ade Issawe: travel, streets, architecture, and small moments from life.';
+  const description =
+    "Photography galleries by Ade Issawe: travel, streets, architecture, and small moments from life.";
   const keywords = combineKeywords(
-    ['Ade Says photography', 'photography gallery'],
-    ['travel photography', 'street photography', 'urban photography', 'visual journal'],
+    ["Ade Says photography", "photography gallery"],
+    [
+      "travel photography",
+      "street photography",
+      "urban photography",
+      "visual journal",
+    ],
   );
 
   return {
     author: SITE_AUTHOR_NAME,
-    canonicalPath: '/photography',
+    canonicalPath: "/photography",
     description,
-    image: defaultImagePath ? {
-      alt: 'Ade Says photography galleries',
-      url: defaultImagePath,
-    } : undefined,
+    image: defaultImagePath
+      ? {
+          alt: "Ade Says photography galleries",
+          url: defaultImagePath,
+        }
+      : undefined,
     keywords,
-    lang: 'en',
-    locale: 'en_US',
+    lang: "en",
+    locale: "en_US",
     structuredData: [
-      createCollectionPageStructuredData('Ade Says Photography', description, '/photography', defaultImagePath),
+      createCollectionPageStructuredData(
+        "Ade Says Photography",
+        description,
+        "/photography",
+        defaultImagePath,
+      ),
       createBreadcrumbStructuredData([
-        { name: 'Home', path: '/' },
-        { name: 'Photography', path: '/photography' },
+        { name: "Home", path: "/" },
+        { name: "Photography", path: "/photography" },
       ]),
     ],
-    title: 'Photography | Ade Says',
-    type: 'website',
+    title: "Photography | Ade Says",
+    type: "website",
   };
 }
 
 export function buildPhotographyCatalogSeo(catalog: PhotoCatalog): SeoMetadata {
-  const coverPhoto = catalog.photos.find((photo) => photo.id === catalog.coverPhotoId) ?? catalog.photos[0];
+  const coverPhoto =
+    catalog.photos.find((photo) => photo.id === catalog.coverPhotoId) ??
+    catalog.photos[0];
   const keywords = combineKeywords(
     [catalog.name, catalog.locationLabel],
-    ['photography gallery', 'travel photography', 'street photography'],
+    ["photography gallery", "travel photography", "street photography"],
   );
 
   return {
     author: SITE_AUTHOR_NAME,
     canonicalPath: `/photography/${catalog.slug}`,
     description: catalog.description,
-    image: coverPhoto ? {
-      alt: `${catalog.name} gallery cover image`,
-      url: coverPhoto.originalSrc,
-    } : undefined,
+    image: coverPhoto
+      ? {
+          alt: `${catalog.name} gallery cover image`,
+          url: coverPhoto.originalSrc,
+        }
+      : undefined,
     keywords,
-    lang: 'en',
-    locale: 'en_US',
+    lang: "en",
+    locale: "en_US",
     structuredData: [
       createImageGalleryStructuredData(catalog),
       createBreadcrumbStructuredData([
-        { name: 'Home', path: '/' },
-        { name: 'Photography', path: '/photography' },
+        { name: "Home", path: "/" },
+        { name: "Photography", path: "/photography" },
         { name: catalog.name, path: `/photography/${catalog.slug}` },
       ]),
     ],
     title: `${catalog.name} | Photography | Ade Says`,
-    type: 'website',
+    type: "website",
   };
 }
 
-export function buildPostSeo(post: Post, lang: 'ar' | 'en'): SeoMetadata {
-  const title = lang === 'ar' && post.meta.titleAr ? post.meta.titleAr : post.meta.title;
-  const description = lang === 'ar' && post.meta.excerptAr ? post.meta.excerptAr : post.meta.excerpt;
+export function buildPostSeo(post: Post, lang: "ar" | "en"): SeoMetadata {
+  const title =
+    lang === "ar" && post.meta.titleAr ? post.meta.titleAr : post.meta.title;
+  const description =
+    lang === "ar" && post.meta.excerptAr
+      ? post.meta.excerptAr
+      : post.meta.excerpt;
   const imagePath = resolvePostSeoImage(post.meta);
   const publishedTime = formatIsoDate(post.meta.date);
-  const locale = lang === 'ar' ? 'ar' : 'en_US';
+  const locale = lang === "ar" ? "ar" : "en_US";
   const keywords = combineKeywords(
-    [post.meta.title, post.meta.titleAr || ''],
+    [post.meta.title, post.meta.titleAr || ""],
     post.meta.tags,
-    ['Ade Says article'],
+    ["Ade Says article"],
   );
 
   return {
@@ -366,37 +426,43 @@ export function buildPostSeo(post: Post, lang: 'ar' | 'en'): SeoMetadata {
     author: post.meta.author || SITE_AUTHOR_NAME,
     canonicalPath: `/post/${post.meta.id}`,
     description,
-    dir: lang === 'ar' ? 'rtl' : 'ltr',
-    image: imagePath ? {
-      alt: `${title} article cover image`,
-      url: imagePath,
-    } : undefined,
+    dir: lang === "ar" ? "rtl" : "ltr",
+    image: imagePath
+      ? {
+          alt: `${title} article cover image`,
+          url: imagePath,
+        }
+      : undefined,
     keywords,
     lang,
     locale,
     structuredData: [
       createPostStructuredData(post, lang, title, description, imagePath),
       createBreadcrumbStructuredData([
-        { name: 'Home', path: '/' },
-        { name: 'Blog', path: '/blog' },
+        { name: "Home", path: "/" },
+        { name: "Blog", path: "/blog" },
         { name: post.meta.title, path: `/post/${post.meta.id}` },
       ]),
     ],
     title: `${title} | Ade Says`,
-    type: 'article',
+    type: "article",
   };
 }
 
-export function buildNotFoundSeo(title: string, description: string, canonicalPath: string): SeoMetadata {
+export function buildNotFoundSeo(
+  title: string,
+  description: string,
+  canonicalPath: string,
+): SeoMetadata {
   return {
     author: SITE_AUTHOR_NAME,
     canonicalPath,
     description,
     keywords: [title, SITE_NAME],
-    lang: 'en',
-    locale: 'en_US',
-    robots: 'noindex,follow',
+    lang: "en",
+    locale: "en_US",
+    robots: "noindex,follow",
     title: `${title} | ${SITE_NAME}`,
-    type: 'website',
+    type: "website",
   };
 }
