@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import FloatingAudioPlayer, { type NarrationTrackMap } from '../components/FloatingAudioPlayer';
 import PageLoading from '../components/PageLoading';
+import PostDiscussion from '../components/PostDiscussion';
 import { allPosts } from '../utils/markdown';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
@@ -87,15 +88,15 @@ function PostView() {
     post?.meta.thumbnail ? { backgroundImage: `url(${post.meta.thumbnail})` } : undefined
   ), [post]);
 
-  const showEnglish = useCallback(() => setLang('en'), []);
-  const showArabic = useCallback(() => setLang('ar'), []);
   const activeNarrationTrack = narrationTracks[lang];
   const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
   const activeNarrationWord = narrationProgress.key === narrationKey ? narrationProgress.wordIndex : null;
   const shareMenuId = `post-share-menu-${post?.meta.id ?? 'missing'}`;
   const canUseNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const hasNarration = Boolean(activeNarrationTrack?.src);
-  const isAudioFabMode = hasNarration && isAudioPlaying && !isAudioExpanded;
+  const isAudioExpandedVisible = hasNarration && isAudioExpanded;
+  const isAudioFabMode = hasNarration && isAudioPlaying && !isAudioExpandedVisible;
+  const isFabMenuVisible = isFabMenuOpen && !isAudioExpandedVisible && !isAudioFabMode;
   const articleActionsLabel = lang === 'ar'
     ? '\u062e\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u0642\u0627\u0644'
     : 'Article actions';
@@ -117,6 +118,24 @@ function PostView() {
   const copyLinkLabel = lang === 'ar' ? '\u0627\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637' : 'Copy link';
   const nativeShareLabel = lang === 'ar' ? '\u0645\u0634\u0627\u0631\u0643\u0629 \u0645\u0628\u0627\u0634\u0631\u0629' : 'Share...';
   const shareUrl = typeof window === 'undefined' ? '' : window.location.href;
+
+  const handleLanguageChange = useCallback((nextLang: 'en' | 'ar') => {
+    setLang(nextLang);
+    setIsFabMenuOpen(false);
+
+    if (!narrationTracks[nextLang]?.src) {
+      setIsAudioExpanded(false);
+      setIsAudioPlaying(false);
+    }
+  }, [narrationTracks]);
+
+  const showEnglish = useCallback(() => {
+    handleLanguageChange('en');
+  }, [handleLanguageChange]);
+
+  const showArabic = useCallback(() => {
+    handleLanguageChange('ar');
+  }, [handleLanguageChange]);
 
   const handleActiveNarrationWord = useCallback((wordIndex: number | null) => {
     setNarrationProgress({ key: narrationKey, wordIndex });
@@ -180,6 +199,20 @@ function PostView() {
   const handleToggleFabMenu = useCallback(() => {
     setIsFabMenuOpen((open) => !open);
   }, []);
+  const handleAudioExpandedChange = useCallback((nextExpanded: boolean) => {
+    setIsAudioExpanded(nextExpanded);
+
+    if (nextExpanded) {
+      setIsFabMenuOpen(false);
+    }
+  }, []);
+  const handleAudioPlayingChange = useCallback((playing: boolean) => {
+    setIsAudioPlaying(playing);
+
+    if (playing) {
+      setIsFabMenuOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (shareStatus === 'idle') {
@@ -204,17 +237,7 @@ function PostView() {
   }, [shareStatus]);
 
   useEffect(() => {
-    if (hasNarration) {
-      return;
-    }
-
-    setIsAudioExpanded(false);
-    setIsAudioPlaying(false);
-    setIsFabMenuOpen(false);
-  }, [hasNarration]);
-
-  useEffect(() => {
-    if (!isFabMenuOpen) {
+    if (!isFabMenuVisible) {
       return;
     }
 
@@ -242,13 +265,7 @@ function PostView() {
       document.removeEventListener('pointerdown', handlePointerDown, true);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isFabMenuOpen]);
-
-  useEffect(() => {
-    if (isAudioExpanded || isAudioFabMode) {
-      setIsFabMenuOpen(false);
-    }
-  }, [isAudioExpanded, isAudioFabMode]);
+  }, [isFabMenuVisible]);
 
   if (!post) {
     return (
@@ -270,52 +287,46 @@ function PostView() {
       )}
       {createPortal(
         <div
-          className={`article-share-stack${isAudioExpanded ? ' is-hidden' : ''}`}
+          className={`article-share-stack${isAudioExpandedVisible ? ' is-hidden' : ''}`}
           ref={fabStackRef}
         >
           {!isAudioFabMode && (
             <div
-              aria-hidden={!isFabMenuOpen}
+              aria-hidden={!isFabMenuVisible}
               aria-label={articleActionsLabel}
-              className={`article-share-menu${isFabMenuOpen ? ' is-open' : ''}`}
-              data-open={isFabMenuOpen ? 'true' : 'false'}
+              className={`article-share-menu${isFabMenuVisible ? ' is-open' : ''}`}
+              data-open={isFabMenuVisible ? 'true' : 'false'}
               id={shareMenuId}
               role="menu"
             >
               {hasNarration && (
-                <button
-                  className="article-share-menu-item"
+                <m3e-fab-menu-item
+                  className="article-share-menu-item is-narration"
                   onClick={handleOpenAudio}
-                  role="menuitem"
-                  tabIndex={isFabMenuOpen ? 0 : -1}
-                  type="button"
+                  tabIndex={isFabMenuVisible ? 0 : -1}
                 >
-                  <span className="material-symbols-rounded" aria-hidden="true">headphones</span>
+                  <span className="material-symbols-rounded" aria-hidden="true" slot="icon">headphones</span>
                   {audioMenuLabel}
-                </button>
+                </m3e-fab-menu-item>
               )}
               {canUseNativeShare && (
-                <button
-                  className="article-share-menu-item"
+                <m3e-fab-menu-item
+                  className="article-share-menu-item is-share"
                   onClick={handleNativeShare}
-                  role="menuitem"
-                  tabIndex={isFabMenuOpen ? 0 : -1}
-                  type="button"
+                  tabIndex={isFabMenuVisible ? 0 : -1}
                 >
-                  <span className="material-symbols-rounded" aria-hidden="true">ios_share</span>
+                  <span className="material-symbols-rounded" aria-hidden="true" slot="icon">ios_share</span>
                   {nativeShareLabel}
-                </button>
+                </m3e-fab-menu-item>
               )}
-              <button
-                className="article-share-menu-item"
+              <m3e-fab-menu-item
+                className="article-share-menu-item is-copy-link"
                 onClick={handleCopyLink}
-                role="menuitem"
-                tabIndex={isFabMenuOpen ? 0 : -1}
-                type="button"
+                tabIndex={isFabMenuVisible ? 0 : -1}
               >
-                <span className="material-symbols-rounded" aria-hidden="true">link</span>
+                <span className="material-symbols-rounded" aria-hidden="true" slot="icon">link</span>
                 {copyLinkLabel}
-              </button>
+              </m3e-fab-menu-item>
             </div>
           )}
           {isAudioFabMode ? (
@@ -332,9 +343,9 @@ function PostView() {
           ) : (
             <m3e-fab
               aria-controls={shareMenuId}
-              aria-expanded={isFabMenuOpen ? 'true' : 'false'}
+              aria-expanded={isFabMenuVisible ? 'true' : 'false'}
               aria-haspopup="menu"
-              aria-label={isFabMenuOpen ? closeFabAriaLabel : shareFabAriaLabel}
+              aria-label={isFabMenuVisible ? closeFabAriaLabel : shareFabAriaLabel}
               className={`article-share-fab ${shareStatus !== 'idle' ? `is-${shareStatus}` : ''}`}
               lowered
               onClick={handleToggleFabMenu}
@@ -412,14 +423,18 @@ function PostView() {
             </div>
           </nav>
         )}
+        <PostDiscussion
+          lang={lang}
+          postId={post.meta.id}
+        />
       </article>
       <FloatingAudioPlayer
-        expanded={isAudioExpanded}
+        expanded={isAudioExpandedVisible}
         key={narrationKey}
         lang={lang}
         onActiveWordChange={handleActiveNarrationWord}
-        onExpandedChange={setIsAudioExpanded}
-        onPlayingChange={setIsAudioPlaying}
+        onExpandedChange={handleAudioExpandedChange}
+        onPlayingChange={handleAudioPlayingChange}
         showLauncher={false}
         tracks={narrationTracks}
       />
