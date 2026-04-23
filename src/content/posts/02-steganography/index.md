@@ -922,42 +922,42 @@ Or for a deeper understanding, let's see how the process happens at the level of
 
 You might tell me: but there is still a difference between the cover color and the color that ended up carrying the secret. And that is true, but the difference stays **very slight**. Remember that an image is made of a huge number of pixels, so this difference is almost negligible when we look at the whole picture. The nicest part is that the image does not become noisy, and it does not scream "<span class="inline-secret">there is a secret here</span>". We only change a few *small numbers*, and bet that the eye will ignore them.
 
-## Same Old Instinct, New Places
+## Same Instinct, New Shapes
 
-The <span class="inline-carrier">carrier</span> keeps changing. The instinct stays the same.
+As you may have noticed over time, the <span class="inline-carrier">carrier</span> changed, but the instinct stayed the same.
 
 ```html-live
-<!-- sandbox-height: 280 -->
+<!-- sandbox-height: 460 -->
 <style>
+  :root { color-scheme: dark; }
   body {
-    min-height: 100vh;
     margin: 0;
-    padding: 24px;
+    padding: clamp(20px, 4vw, 32px);
     background: #0f1012;
     color: #e0e0e0;
     font-family: "Roboto Flex", system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  }
+  .timeline-shell {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
   }
   .timeline {
-    width: 100%;
-    max-width: 800px;
-    display: flex;
-    gap: 40px;
-    align-items: center;
-    justify-content: space-between;
     position: relative;
+    display: flex;
+    gap: clamp(16px, 3vw, 40px);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-block: 12px 4px;
   }
-  .timeline::before {
-    content: '';
+  .track {
     position: absolute;
-    top: 50%;
-    left: 40px;
-    right: 40px;
     height: 2px;
-    background: rgba(255,255,255,0.1);
+    background: linear-gradient(90deg, rgba(88,196,221,0.14), rgba(255,255,255,0.16), rgba(88,196,221,0.14));
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02);
     z-index: 0;
+    pointer-events: none;
   }
   .node {
     position: relative;
@@ -965,92 +965,272 @@ The <span class="inline-carrier">carrier</span> keeps changing. The instinct sta
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     text-align: center;
-    width: 120px;
+    flex: 1 1 0;
+    min-width: 0;
   }
   .circle {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #0f1012;
     border: 2px solid #58c4dd;
-    position: relative;
+    box-shadow: 0 0 0 6px rgba(15,16,18,0.92);
   }
-  .circle.active {
+  .node.is-active .circle {
     background: #58c4dd;
-    box-shadow: 0 0 15px rgba(88,196,221,0.6);
+    box-shadow:
+      0 0 0 6px rgba(15,16,18,0.92),
+      0 0 20px rgba(88,196,221,0.55);
   }
-  .label { font-weight: 600; color: #fff; font-size: 15px; }
-  .desc { font-size: 12px; color: #888; }
-  
+  .copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .label {
+    font-weight: 700;
+    color: #fff;
+    font-size: clamp(14px, 1.8vw, 16px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .desc {
+    font-size: clamp(12px, 1.4vw, 13px);
+    line-height: 1.45;
+    color: #9197a0;
+    max-width: 12ch;
+    overflow-wrap: anywhere;
+  }
   .packet {
     position: absolute;
-    top: 50%;
-    left: 40px;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    transform: translate(-50%, -50%);
     background: #E8C170;
     box-shadow: 0 0 12px #E8C170;
     z-index: 2;
-    animation: travel 8s ease-in-out infinite;
+    opacity: 0;
+    pointer-events: none;
   }
-
-  @keyframes travel {
-    0%, 15% { left: calc(0% + 60px); opacity: 0; }
-    20% { left: calc(0% + 60px); opacity: 1; }
-    40%, 45% { left: calc(33.33% + 20px); }
-    60%, 65% { left: calc(66.66% - 20px); }
-    85%, 100% { left: calc(100% - 60px); opacity: 1; }
+  .packet::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: inherit;
+    background: rgba(232,193,112,0.3);
+    filter: blur(8px);
+    z-index: -1;
   }
 
   @media (max-width: 760px) {
     .timeline {
       flex-direction: column;
-      align-items: flex-start;
-      gap: 32px;
-    }
-    .timeline::before {
-      top: 40px;
-      bottom: 40px;
-      left: 10px;
-      width: 2px;
-      height: auto;
-      right: auto;
+      gap: 22px;
     }
     .node {
       flex-direction: row;
+      align-items: center;
       text-align: left;
       width: 100%;
-      height: 40px;
-      gap: 24px;
+      gap: 16px;
     }
-    .circle { flex-shrink: 0; }
-    .label { width: 80px; }
-    .packet {
-      top: 40px;
-      left: 10px;
-      animation: travel-v 8s ease-in-out infinite;
-    }
-    @keyframes travel-v {
-      0%, 15% { top: 20px; opacity: 0; }
-      20% { top: 20px; opacity: 1; }
-      40%, 45% { top: calc(33.33% + 5px); }
-      60%, 65% { top: calc(66.66% - 5px); }
-      85%, 100% { top: calc(100% - 20px); opacity: 1; }
-    }
+    .copy { align-items: flex-start; }
+    .desc { max-width: none; }
   }
 </style>
 
-<div class="timeline" dir="ltr">
-  <div class="packet"></div>
-  <div class="node"><div class="circle"></div><div class="label">Wax</div><div class="desc">A blank tablet</div></div>
-  <div class="node"><div class="circle"></div><div class="label">Ink</div><div class="desc">Heat turns visible</div></div>
-  <div class="node"><div class="circle"></div><div class="label">Microdot</div><div class="desc">Shrinks into speck</div></div>
-  <div class="node"><div class="circle"></div><div class="label">Pixels</div><div class="desc">Noise hiding place</div></div>
+<div class="timeline-shell" dir="ltr">
+  <div class="timeline">
+    <div class="track" aria-hidden="true"></div>
+    <div class="packet" aria-hidden="true"></div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">Under the Surface</div>
+        <div class="desc">The message hides beneath the hair</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">Knitting Stitches</div>
+        <div class="desc">Visible cloth, secret code</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">Changing Paper</div>
+        <div class="desc">Heat reveals what looked blank</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">Digital Noise</div>
+        <div class="desc">Pixels become the hiding place</div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  const timelineShell = document.querySelector('.timeline-shell');
+  const timeline = document.querySelector('.timeline');
+  const track = timeline.querySelector('.track');
+  const packet = timeline.querySelector('.packet');
+  const nodes = Array.from(timeline.querySelectorAll('.node'));
+  const circles = nodes.map((node) => node.querySelector('.circle'));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  let points = [];
+  let frameId = 0;
+
+  function getContentHeight() {
+    const bodyStyles = getComputedStyle(document.body);
+    const bodyPadding =
+      parseFloat(bodyStyles.paddingTop || '0') +
+      parseFloat(bodyStyles.paddingBottom || '0');
+    const shellHeight = timelineShell ? timelineShell.getBoundingClientRect().height : 0;
+    const timelineHeight = timeline.getBoundingClientRect().height;
+
+    return Math.ceil(
+      Math.max(
+        shellHeight + bodyPadding,
+        timelineHeight + bodyPadding,
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight
+      )
+    );
+  }
+
+  function notifyHeight() {
+    window.parent.postMessage(
+      {
+        type: 'interactive-sandbox:height',
+        height: getContentHeight(),
+      },
+      '*'
+    );
+  }
+
+  function measure() {
+    const timelineRect = timeline.getBoundingClientRect();
+    points = circles.map((circle) => {
+      const rect = circle.getBoundingClientRect();
+      return {
+        x: rect.left - timelineRect.left + rect.width / 2,
+        y: rect.top - timelineRect.top + rect.height / 2,
+      };
+    });
+
+    if (points.length < 2) {
+      notifyHeight();
+      return;
+    }
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    const isHorizontal = Math.abs(last.x - first.x) >= Math.abs(last.y - first.y);
+
+    if (isHorizontal) {
+      track.style.left = `${Math.min(first.x, last.x)}px`;
+      track.style.top = `${first.y - 1}px`;
+      track.style.width = `${Math.abs(last.x - first.x)}px`;
+      track.style.height = '2px';
+    } else {
+      track.style.left = `${first.x - 1}px`;
+      track.style.top = `${Math.min(first.y, last.y)}px`;
+      track.style.width = '2px';
+      track.style.height = `${Math.abs(last.y - first.y)}px`;
+    }
+
+    notifyHeight();
+  }
+
+  function setPacket(point, opacity) {
+    packet.style.left = `${point.x}px`;
+    packet.style.top = `${point.y}px`;
+    packet.style.opacity = String(opacity);
+  }
+
+  function setActive(progress) {
+    const activeIndex = Math.round(progress * (points.length - 1));
+    nodes.forEach((node, index) => {
+      node.classList.toggle('is-active', index === activeIndex);
+    });
+  }
+
+  function animate(now) {
+    if (!points.length) {
+      frameId = requestAnimationFrame(animate);
+      return;
+    }
+
+    if (reducedMotion.matches) {
+      setPacket(points[0], 1);
+      setActive(0);
+      return;
+    }
+
+    const cycle = 7600;
+    const phase = (now % cycle) / cycle;
+    let travel = 0;
+    let opacity = 1;
+
+    if (phase < 0.1) {
+      travel = 0;
+      opacity = phase / 0.1;
+    } else if (phase < 0.82) {
+      travel = (phase - 0.1) / 0.72;
+      opacity = 1;
+    } else {
+      travel = 1;
+      opacity = 1 - (phase - 0.82) / 0.18;
+    }
+
+    travel = Math.max(0, Math.min(1, travel));
+    opacity = Math.max(0, Math.min(1, opacity));
+
+    const segmentCount = points.length - 1;
+    const scaled = travel * segmentCount;
+    const startIndex = Math.min(segmentCount - 1, Math.floor(scaled));
+    const localProgress = scaled - startIndex;
+    const start = points[startIndex];
+    const end = points[Math.min(segmentCount, startIndex + 1)];
+    const easedLocal = ease(localProgress);
+
+    setPacket(
+      {
+        x: lerp(start.x, end.x, easedLocal),
+        y: lerp(start.y, end.y, easedLocal),
+      },
+      opacity
+    );
+    setActive(travel);
+    frameId = requestAnimationFrame(animate);
+  }
+
+  const resizeObserver = new ResizeObserver(measure);
+  resizeObserver.observe(document.body);
+  resizeObserver.observe(timeline);
+  if (timelineShell) {
+    resizeObserver.observe(timelineShell);
+  }
+  nodes.forEach((node) => resizeObserver.observe(node));
+  window.addEventListener('resize', measure);
+  window.addEventListener('load', measure);
+  document.fonts?.ready.then(measure);
+
+  measure();
+  frameId = requestAnimationFrame(animate);
+</script>
 ```
 
 The digital version feels modern, but it is really an ancient habit wearing new clothes. Find a surface. Find the part people are trained not to question. Hide there.
@@ -1985,42 +2165,42 @@ $$
 ```
 بعرف ممكن تحكولي: بس في فرق بين لون الغلاف واللون يلي صار حامل السر. وهذا صحيح، بس الفرق بيضل **كثير طفيف**. تذكروا انو الصورة مكوّنة من عدد هائل من البكسلات، لهيك هاد الفرق شبه مهمل لما بنتطلع عالصورة. أحلى إشي بالموضوع إن الصورة ما بتصير مشوشة، وما بتصرخ "<span class="inline-secret">في سر هون</span>". إحنا بس بنغير كم *رقم صغير*، وبنراهن إن العين رح تطنّش.
 
-## نفس الغريزة، أماكن جديدة
+## نفس الغريزة، أشكال جديدة
 
-<span class="inline-carrier">الحامل</span> بتغير. الغريزة بتضل.
+كيف ما لاحظتم عبر الزمن <span class="inline-carrier">الحامل</span> تغير ولكن الغريزة نفسها.
 
 ```html-live
-<!-- sandbox-height: 280 -->
+<!-- sandbox-height: 460 -->
 <style>
+  :root { color-scheme: dark; }
   body {
-    min-height: 100vh;
     margin: 0;
-    padding: 24px;
+    padding: clamp(20px, 4vw, 32px);
     background: #0f1012;
     color: #e0e0e0;
-    font-family: "Roboto Flex", system-ui, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-family: "Noto Sans Arabic", "Roboto Flex", system-ui, sans-serif;
+  }
+  .timeline-shell {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
   }
   .timeline {
-    width: 100%;
-    max-width: 800px;
-    display: flex;
-    gap: 40px;
-    align-items: center;
-    justify-content: space-between;
     position: relative;
+    display: flex;
+    gap: clamp(16px, 3vw, 40px);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding-block: 12px 4px;
   }
-  .timeline::before {
-    content: '';
+  .track {
     position: absolute;
-    top: 50%;
-    left: 40px;
-    right: 40px;
     height: 2px;
-    background: rgba(255,255,255,0.1);
+    background: linear-gradient(90deg, rgba(88,196,221,0.14), rgba(255,255,255,0.16), rgba(88,196,221,0.14));
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.02);
     z-index: 0;
+    pointer-events: none;
   }
   .node {
     position: relative;
@@ -2028,95 +2208,275 @@ $$
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     text-align: center;
-    width: 120px;
+    flex: 1 1 0;
+    min-width: 0;
   }
   .circle {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: #0f1012;
     border: 2px solid #58c4dd;
-    position: relative;
+    box-shadow: 0 0 0 6px rgba(15,16,18,0.92);
   }
-  .circle.active {
+  .node.is-active .circle {
     background: #58c4dd;
-    box-shadow: 0 0 15px rgba(88,196,221,0.6);
+    box-shadow:
+      0 0 0 6px rgba(15,16,18,0.92),
+      0 0 20px rgba(88,196,221,0.55);
   }
-  .label { font-weight: 600; color: #fff; font-size: 15px; }
-  .desc { font-size: 12px; color: #888; }
-  
+  .copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .label {
+    font-weight: 700;
+    color: #fff;
+    font-size: clamp(14px, 1.8vw, 17px);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+  .desc {
+    font-size: clamp(12px, 1.4vw, 13px);
+    line-height: 1.45;
+    color: #9197a0;
+    max-width: 13ch;
+    overflow-wrap: anywhere;
+  }
   .packet {
     position: absolute;
-    top: 50%;
-    left: 40px;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    transform: translate(-50%, -50%);
     background: #E8C170;
     box-shadow: 0 0 12px #E8C170;
     z-index: 2;
-    animation: travel 8s ease-in-out infinite;
+    opacity: 0;
+    pointer-events: none;
   }
-
-  @keyframes travel {
-    0%, 15% { left: calc(0% + 60px); opacity: 0; }
-    20% { left: calc(0% + 60px); opacity: 1; }
-    40%, 45% { left: calc(33.33% + 20px); }
-    60%, 65% { left: calc(66.66% - 20px); }
-    85%, 100% { left: calc(100% - 60px); opacity: 1; }
+  .packet::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: inherit;
+    background: rgba(232,193,112,0.3);
+    filter: blur(8px);
+    z-index: -1;
   }
 
   @media (max-width: 760px) {
     .timeline {
       flex-direction: column;
-      align-items: flex-start;
-      gap: 32px;
-    }
-    .timeline::before {
-      top: 40px;
-      bottom: 40px;
-      left: 10px;
-      width: 2px;
-      height: auto;
-      right: auto;
+      gap: 22px;
     }
     .node {
-      flex-direction: row;
-      text-align: left;
+      flex-direction: row-reverse;
+      text-align: right;
+      align-items: center;
       width: 100%;
-      height: 40px;
-      gap: 24px;
+      gap: 16px;
     }
-    .circle { flex-shrink: 0; }
-    .label { width: 80px; }
-    .packet {
-      top: 40px;
-      left: 10px;
-      animation: travel-v 8s ease-in-out infinite;
-    }
-    @keyframes travel-v {
-      0%, 15% { top: 20px; opacity: 0; }
-      20% { top: 20px; opacity: 1; }
-      40%, 45% { top: calc(33.33% + 5px); }
-      60%, 65% { top: calc(66.66% - 5px); }
-      85%, 100% { top: calc(100% - 20px); opacity: 1; }
-    }
+    .copy { align-items: flex-end; }
+    .desc { max-width: none; }
   }
 </style>
 
-<div class="timeline" dir="rtl">
-  <div class="packet"></div>
-  <div class="node"><div class="circle"></div><div class="label">شمع</div><div class="desc">لوح فاضي</div></div>
-  <div class="node"><div class="circle"></div><div class="label">حبر</div><div class="desc">الحرارة للإظهار</div></div>
-  <div class="node"><div class="circle"></div><div class="label">نقطة</div><div class="desc">تُصغر لنقطة</div></div>
-  <div class="node"><div class="circle"></div><div class="label">بكسلات</div><div class="desc">تختبئ بالضجيج</div></div>
+<div class="timeline-shell" dir="rtl">
+  <div class="timeline">
+    <div class="track" aria-hidden="true"></div>
+    <div class="packet" aria-hidden="true"></div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">تحت السطح</div>
+        <div class="desc">الرسالة مختبّية تحت الشعر</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">غرز الصوف</div>
+        <div class="desc">شكل ظاهر بس شيفرة مخفية</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">الورق المتغيّر</div>
+        <div class="desc">الحرارة بتفضح السر</div>
+      </div>
+    </div>
+    <div class="node">
+      <div class="circle"></div>
+      <div class="copy">
+        <div class="label">الضجيج الرقمي</div>
+        <div class="desc">البكسلات صارت مخبأ للسر</div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  const timelineShell = document.querySelector('.timeline-shell');
+  const timeline = document.querySelector('.timeline');
+  const track = timeline.querySelector('.track');
+  const packet = timeline.querySelector('.packet');
+  const nodes = Array.from(timeline.querySelectorAll('.node'));
+  const circles = nodes.map((node) => node.querySelector('.circle'));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const ease = (t) => 0.5 - Math.cos(Math.PI * t) / 2;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  let points = [];
+  let frameId = 0;
+
+  function getContentHeight() {
+    const bodyStyles = getComputedStyle(document.body);
+    const bodyPadding =
+      parseFloat(bodyStyles.paddingTop || '0') +
+      parseFloat(bodyStyles.paddingBottom || '0');
+    const shellHeight = timelineShell ? timelineShell.getBoundingClientRect().height : 0;
+    const timelineHeight = timeline.getBoundingClientRect().height;
+
+    return Math.ceil(
+      Math.max(
+        shellHeight + bodyPadding,
+        timelineHeight + bodyPadding,
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight
+      )
+    );
+  }
+
+  function notifyHeight() {
+    window.parent.postMessage(
+      {
+        type: 'interactive-sandbox:height',
+        height: getContentHeight(),
+      },
+      '*'
+    );
+  }
+
+  function measure() {
+    const timelineRect = timeline.getBoundingClientRect();
+    points = circles.map((circle) => {
+      const rect = circle.getBoundingClientRect();
+      return {
+        x: rect.left - timelineRect.left + rect.width / 2,
+        y: rect.top - timelineRect.top + rect.height / 2,
+      };
+    });
+
+    if (points.length < 2) {
+      notifyHeight();
+      return;
+    }
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    const isHorizontal = Math.abs(last.x - first.x) >= Math.abs(last.y - first.y);
+
+    if (isHorizontal) {
+      track.style.left = `${Math.min(first.x, last.x)}px`;
+      track.style.top = `${first.y - 1}px`;
+      track.style.width = `${Math.abs(last.x - first.x)}px`;
+      track.style.height = '2px';
+    } else {
+      track.style.left = `${first.x - 1}px`;
+      track.style.top = `${Math.min(first.y, last.y)}px`;
+      track.style.width = '2px';
+      track.style.height = `${Math.abs(last.y - first.y)}px`;
+    }
+
+    notifyHeight();
+  }
+
+  function setPacket(point, opacity) {
+    packet.style.left = `${point.x}px`;
+    packet.style.top = `${point.y}px`;
+    packet.style.opacity = String(opacity);
+  }
+
+  function setActive(progress) {
+    const activeIndex = Math.round(progress * (points.length - 1));
+    nodes.forEach((node, index) => {
+      node.classList.toggle('is-active', index === activeIndex);
+    });
+  }
+
+  function animate(now) {
+    if (!points.length) {
+      frameId = requestAnimationFrame(animate);
+      return;
+    }
+
+    if (reducedMotion.matches) {
+      setPacket(points[0], 1);
+      setActive(0);
+      return;
+    }
+
+    const cycle = 7600;
+    const phase = (now % cycle) / cycle;
+    let travel = 0;
+    let opacity = 1;
+
+    if (phase < 0.1) {
+      travel = 0;
+      opacity = phase / 0.1;
+    } else if (phase < 0.82) {
+      travel = (phase - 0.1) / 0.72;
+      opacity = 1;
+    } else {
+      travel = 1;
+      opacity = 1 - (phase - 0.82) / 0.18;
+    }
+
+    travel = Math.max(0, Math.min(1, travel));
+    opacity = Math.max(0, Math.min(1, opacity));
+
+    const segmentCount = points.length - 1;
+    const scaled = travel * segmentCount;
+    const startIndex = Math.min(segmentCount - 1, Math.floor(scaled));
+    const localProgress = scaled - startIndex;
+    const start = points[startIndex];
+    const end = points[Math.min(segmentCount, startIndex + 1)];
+    const easedLocal = ease(localProgress);
+
+    setPacket(
+      {
+        x: lerp(start.x, end.x, easedLocal),
+        y: lerp(start.y, end.y, easedLocal),
+      },
+      opacity
+    );
+    setActive(travel);
+    frameId = requestAnimationFrame(animate);
+  }
+
+  const resizeObserver = new ResizeObserver(measure);
+  resizeObserver.observe(document.body);
+  resizeObserver.observe(timeline);
+  if (timelineShell) {
+    resizeObserver.observe(timelineShell);
+  }
+  nodes.forEach((node) => resizeObserver.observe(node));
+  window.addEventListener('resize', measure);
+  window.addEventListener('load', measure);
+  document.fonts?.ready.then(measure);
+
+  measure();
+  frameId = requestAnimationFrame(animate);
+</script>
 ```
 
-النسخة الرقمية شكلها حديث، بس هي فعليا عادة قديمة لابسة لبس جديد. دور على سطح. دور على الجزء اللي الناس متعودة ما تسأل عنه. وخبي هناك.
+النسخة الرقمية شكلها حديث، بس هي فعليا عادة قديمة لابسة لبس جديد. دور على سطح. دور على الجزء اللي الناس متعودة ما تسأل عنه. وخبّي هناك.
 
 ## تجربتي الصغيرة
 
