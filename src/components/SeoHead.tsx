@@ -68,12 +68,7 @@ function SeoHead({ meta }: { meta: SeoMetadata }) {
 
     document.title = meta.title;
     document.documentElement.lang = meta.lang ?? 'en';
-
-    if (meta.dir) {
-      document.documentElement.dir = meta.dir;
-    } else {
-      document.documentElement.removeAttribute('dir');
-    }
+    document.documentElement.removeAttribute('dir');
 
     upsertMetaTag('author', 'name', 'author', meta.author ?? undefined);
     upsertMetaTag('description', 'name', 'description', meta.description);
