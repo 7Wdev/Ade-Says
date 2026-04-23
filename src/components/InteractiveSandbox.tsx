@@ -1,5 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
+import {
+  createTooltipSuppressionInlineScript,
+  tooltipSuppressionStyleText,
+} from '../utils/tooltipSuppression';
+
 interface InteractiveSandboxProps {
   code: string;
 }
@@ -53,12 +58,35 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         scrollbar-width: none;
         -ms-overflow-style: none;
       }
+      ::-moz-selection {
+        background: #ffe135;
+        color: #100f13;
+      }
+      ::selection {
+        background: #ffe135;
+        color: #100f13;
+      }
+      a,
+      button,
+      img,
+      input,
+      textarea,
+      select,
+      label,
+      summary,
+      canvas,
+      svg,
+      [role="button"] {
+        -webkit-tap-highlight-color: transparent;
+      }
       html::-webkit-scrollbar, body::-webkit-scrollbar {
         width: 0;
         height: 0;
         display: none;
       }
+      ${tooltipSuppressionStyleText}
     </style>
+    <script>${createTooltipSuppressionInlineScript()}</script>
   </head>
   <body>
     ${code}
@@ -129,7 +157,7 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         sandbox="allow-scripts"
         scrolling="no"
         style={sandboxStyle}
-        title="Interactive code sandbox"
+        aria-label="Interactive code sandbox"
         onLoad={handleLoad}
       />
     </div>

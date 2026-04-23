@@ -133,7 +133,7 @@ export const markdownComponents = {
       const color = codeString.trim().toUpperCase();
 
       return (
-        <span className="article-hex-chip" title={`Color ${color}`}>
+        <span className="article-hex-chip">
           <span className="article-hex-chip-code">{color}</span>
           <span
             aria-hidden="true"

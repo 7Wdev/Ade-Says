@@ -33,8 +33,12 @@ export type NarrationTrack = {
 export type NarrationTrackMap = Partial<Record<NarrationLang, NarrationTrack>>;
 
 type FloatingAudioPlayerProps = {
+  expanded?: boolean;
   lang: NarrationLang;
   onActiveWordChange: (wordIndex: number | null) => void;
+  onExpandedChange?: (expanded: boolean) => void;
+  onPlayingChange?: (playing: boolean) => void;
+  showLauncher?: boolean;
   tracks: NarrationTrackMap;
 };
 
@@ -97,7 +101,15 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainingSeconds}`;
 }
 
-function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudioPlayerProps) {
+function FloatingAudioPlayer({
+  expanded,
+  lang,
+  onActiveWordChange,
+  onExpandedChange,
+  onPlayingChange,
+  showLauncher = true,
+  tracks,
+}: FloatingAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeWordRef = useRef<number | null>(null);
   const committedSeekTimeRef = useRef(0);
@@ -112,7 +124,7 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalIsExpanded, setInternalIsExpanded] = useState(false);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [transcriptData, setTranscriptData] = useState<{
     src: string;
@@ -155,8 +167,16 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   );
   const progress = effectiveDuration > 0 ? Math.min((currentTime / effectiveDuration) * 100, 100) : 0;
   const progressStyle = { '--audio-progress': `${progress}%` } as CSSProperties;
-  const expandPlayer = useCallback(() => setIsExpanded(true), []);
-  const collapsePlayer = useCallback(() => setIsExpanded(false), []);
+  const isExpanded = expanded ?? internalIsExpanded;
+  const setExpanded = useCallback((nextExpanded: boolean) => {
+    if (expanded === undefined) {
+      setInternalIsExpanded(nextExpanded);
+    }
+
+    onExpandedChange?.(nextExpanded);
+  }, [expanded, onExpandedChange]);
+  const expandPlayer = useCallback(() => setExpanded(true), [setExpanded]);
+  const collapsePlayer = useCallback(() => setExpanded(false), [setExpanded]);
 
   const readAudioDuration = useCallback(() => {
     const audio = audioRef.current;
@@ -205,6 +225,28 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
   useEffect(() => {
     audioRef.current?.load();
   }, [activeSrc]);
+
+  useEffect(() => {
+    if (activeSrc) {
+      return;
+    }
+
+    setIsPlaying(false);
+
+    if (expanded === undefined) {
+      setInternalIsExpanded(false);
+    }
+
+    onExpandedChange?.(false);
+  }, [activeSrc, expanded, onExpandedChange]);
+
+  useEffect(() => {
+    onPlayingChange?.(isPlaying);
+  }, [isPlaying, onPlayingChange]);
+
+  useEffect(() => () => {
+    onPlayingChange?.(false);
+  }, [onPlayingChange]);
 
   useEffect(() => {
     if (!activeSrc) {
@@ -638,16 +680,18 @@ function FloatingAudioPlayer({ lang, onActiveWordChange, tracks }: FloatingAudio
         {error && <p className="audio-error" role="status">{error}</p>}
       </section>
 
-      <button
-        aria-label="Open narration player"
-        className={`audio-fab ${isExpanded ? 'is-hidden' : 'is-visible'} ${isPlaying ? 'is-playing' : ''}`}
-        onClick={expandPlayer}
-        type="button"
-      >
-        <span className="material-symbols-rounded" aria-hidden="true">
-          {isPlaying ? 'graphic_eq' : 'headphones'}
-        </span>
-      </button>
+      {showLauncher && (
+        <button
+          aria-label="Open narration player"
+          className={`audio-fab ${isExpanded ? 'is-hidden' : 'is-visible'} ${isPlaying ? 'is-playing' : ''}`}
+          onClick={expandPlayer}
+          type="button"
+        >
+          <span className="material-symbols-rounded" aria-hidden="true">
+            {isPlaying ? 'graphic_eq' : 'headphones'}
+          </span>
+        </button>
+      )}
     </>
   );
 }
