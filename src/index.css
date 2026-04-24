@@ -103,12 +103,20 @@ m3e-tooltip {
 }
 
 .material-symbols-rounded {
+  font-family: "Material Symbols Rounded" !important;
   font-variation-settings:
     "FILL" 1,
     "wght" 400,
     "GRAD" 0,
     "opsz" 24;
+  font-style: normal;
+  font-weight: normal;
+  letter-spacing: normal;
+  text-transform: none;
   vertical-align: middle;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
 }
 
 /* Base App Layout */
@@ -2600,6 +2608,10 @@ body.photo-viewer-open .app-container {
   font-family: "Noto Sans Arabic", var(--md-sys-typescale-body-font) !important;
 }
 
+[dir="rtl"] .material-symbols-rounded {
+  font-family: "Material Symbols Rounded" !important;
+}
+
 /* Keep the excerpt italic */
 [dir="rtl"] .article-excerpt {
   font-style: italic !important;
@@ -2631,8 +2643,15 @@ body.photo-viewer-open .app-container {
 }
 
 .virtual-article {
+  --article-bookmark-inline-rail: 0rem;
   position: relative;
   overflow: visible;
+  padding-inline-end: var(--article-bookmark-inline-rail);
+}
+
+.article-content[dir="rtl"] .virtual-article {
+  padding-inline-start: 0;
+  padding-inline-end: var(--article-bookmark-inline-rail);
 }
 
 .lazy-article-block {
@@ -2779,12 +2798,12 @@ body.photo-viewer-open .app-container {
 }
 
 .narration-word[data-bookmark-state] {
-  --article-bookmark-plate-inset: auto 0 -0.1em 0;
+  --article-bookmark-plate-inset: auto -0.02em -0.09em -0.02em;
   text-shadow: none;
 }
 
 [dir="rtl"] .narration-word[data-bookmark-state] {
-  --article-bookmark-plate-inset: auto 0 -0.1em 0;
+  --article-bookmark-plate-inset: auto -0.02em 0.2em -0.02em;
   line-height: 1.26;
 }
 
@@ -2796,12 +2815,13 @@ body.photo-viewer-open .app-container {
 
 .narration-word[data-bookmark-state]::before {
   inset: var(--article-bookmark-plate-inset);
-  height: 3px;
+  height: max(3px, 0.12em);
   z-index: -1;
-  border-radius: 2px;
+  border-radius: 999px;
   background: var(--mag-accent-orange);
+  box-shadow: 0 4px 14px rgba(255, 155, 69, 0.28);
   transform-origin: left center;
-  transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
   will-change: opacity, transform;
 }
 
@@ -2810,160 +2830,134 @@ body.photo-viewer-open .app-container {
 }
 
 .narration-word[data-bookmark-state="entering"]::before {
-  animation: articleBookmarkPlateIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: articleBookmarkPlateIn 0.46s cubic-bezier(0.18, 1, 0.22, 1) both;
 }
 
 .narration-word[data-bookmark-state="active"]::before {
   opacity: 1;
-  transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
 }
 
 .narration-word[data-bookmark-state="removing"]::before {
-  animation: articleBookmarkPlateOut 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: articleBookmarkPlateOut 0.34s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .narration-word[data-bookmark-focus="true"]::before {
-  animation: articleBookmarkPlateFocus 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: articleBookmarkPlateFocus 0.68s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .article-bookmark-line-marker {
-  --article-bookmark-marker-edge-offset: max(
-    -1.35rem,
-    calc(2px - var(--app-container-inline-padding, 24px))
-  );
-  --article-bookmark-marker-rest-rotate: -5deg;
-  --article-bookmark-marker-enter-x: 0.62rem;
-  --article-bookmark-marker-enter-x-strong: 0.33rem;
-  --article-bookmark-marker-enter-x-soft: 0.05rem;
-  --article-bookmark-marker-settle-x: -0.05rem;
-  --article-bookmark-marker-rebound-x: 0.022rem;
-  --article-bookmark-marker-tiny-x: -0.008rem;
-  --article-bookmark-marker-exit-x: 0.5rem;
-  --article-bookmark-marker-exit-x-small: 0.08rem;
-  --article-bookmark-marker-exit-x-mid: 0.29rem;
-  --article-bookmark-marker-enter-rotate: 18deg;
-  --article-bookmark-marker-soft-rotate: 10deg;
-  --article-bookmark-marker-overshoot-rotate: -11deg;
-  --article-bookmark-marker-settle-rotate: -3.25deg;
-  --article-bookmark-marker-rebound-rotate: -5.9deg;
-  --article-bookmark-marker-tiny-rotate: -4.6deg;
-  --article-bookmark-marker-exit-small-rotate: -6.75deg;
-  --article-bookmark-marker-exit-mid-rotate: 8deg;
+  --article-bookmark-marker-size: 1.48rem;
+  --article-bookmark-marker-edge-offset: -2.35rem;
+  --article-bookmark-marker-rest-rotate: 3deg;
+  --article-bookmark-marker-enter-x: 0.48rem;
+  --article-bookmark-marker-settle-x: -0.04rem;
+  --article-bookmark-marker-exit-x: 0.42rem;
+  --article-bookmark-marker-enter-rotate: 13deg;
+  --article-bookmark-marker-settle-rotate: -2deg;
+  --article-bookmark-marker-exit-rotate: 10deg;
   --article-bookmark-marker-rest-transform: translate3d(0, -50%, 0)
     rotate(var(--article-bookmark-marker-rest-rotate)) scale(1);
   position: absolute;
   top: var(--article-bookmark-marker-top);
   right: var(--article-bookmark-marker-edge-offset);
   z-index: 2;
-  width: 0.9rem;
-  height: 1.26rem;
-  background: var(--mag-accent-orange);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+  display: inline-grid;
+  width: var(--article-bookmark-marker-size);
+  height: var(--article-bookmark-marker-size);
+  place-items: center;
+  color: var(--mag-accent-orange);
+  filter: drop-shadow(0 8px 18px rgba(255, 155, 69, 0.26))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.28));
+  line-height: 1;
   pointer-events: none;
   transform: var(--article-bookmark-marker-rest-transform);
-  transform-origin: 50% 16%;
+  transform-origin: 50% 18%;
   backface-visibility: hidden;
-  will-change: opacity, transform;
+  will-change: opacity, filter, transform;
+}
+
+.article-bookmark-line-marker .material-symbols-rounded {
+  font-size: var(--article-bookmark-marker-size);
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 500,
+    "GRAD" 0,
+    "opsz" 24;
+  line-height: 1;
 }
 
 .article-bookmark-line-marker.is-left {
-  --article-bookmark-marker-rest-rotate: 5deg;
-  --article-bookmark-marker-enter-x: -0.62rem;
-  --article-bookmark-marker-enter-x-strong: -0.33rem;
-  --article-bookmark-marker-enter-x-soft: -0.05rem;
-  --article-bookmark-marker-settle-x: 0.05rem;
-  --article-bookmark-marker-rebound-x: -0.022rem;
-  --article-bookmark-marker-tiny-x: 0.008rem;
-  --article-bookmark-marker-exit-x: -0.5rem;
-  --article-bookmark-marker-exit-x-small: -0.08rem;
-  --article-bookmark-marker-exit-x-mid: -0.29rem;
-  --article-bookmark-marker-enter-rotate: -18deg;
-  --article-bookmark-marker-soft-rotate: -10deg;
-  --article-bookmark-marker-overshoot-rotate: 11deg;
-  --article-bookmark-marker-settle-rotate: 3.25deg;
-  --article-bookmark-marker-rebound-rotate: 5.9deg;
-  --article-bookmark-marker-tiny-rotate: 4.6deg;
-  --article-bookmark-marker-exit-small-rotate: 6.75deg;
-  --article-bookmark-marker-exit-mid-rotate: -8deg;
+  --article-bookmark-marker-rest-rotate: -3deg;
+  --article-bookmark-marker-enter-x: -0.48rem;
+  --article-bookmark-marker-settle-x: 0.04rem;
+  --article-bookmark-marker-exit-x: -0.42rem;
+  --article-bookmark-marker-enter-rotate: -13deg;
+  --article-bookmark-marker-settle-rotate: 2deg;
+  --article-bookmark-marker-exit-rotate: -10deg;
   right: auto;
   left: var(--article-bookmark-marker-edge-offset);
 }
 
 .article-bookmark-line-marker.is-active {
-  animation: articleBookmarkLineMarkerIn 0.74s linear both;
+  animation: articleBookmarkLineMarkerIn 0.58s cubic-bezier(0.18, 1, 0.22, 1)
+    both;
 }
 
 .article-bookmark-line-marker.is-removing {
-  animation: articleBookmarkLineMarkerOut 0.46s linear both;
+  animation: articleBookmarkLineMarkerOut 0.32s cubic-bezier(0.4, 0, 0.2, 1)
+    both;
 }
 
 @keyframes articleBookmarkPlateIn {
   0% {
     opacity: 0;
-    transform: translate3d(0, 0, 0) scaleX(0) scaleY(0.92);
+    transform: translate3d(0, 0.09em, 0) scaleX(0.08) scaleY(0.72);
   }
-  64% {
+  58% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scaleX(1.04) scaleY(1);
+    transform: translate3d(0, 0.01em, 0) scaleX(1.02) scaleY(1.08);
   }
   to {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
   }
 }
 
 @keyframes articleBookmarkPlateOut {
   0% {
     opacity: 1;
-    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
   }
-  42% {
-    opacity: 0.72;
-    transform: translate3d(0, 0, 0) scaleX(1.01) scaleY(1.02);
+  45% {
+    opacity: 0.68;
+    transform: translate3d(0, 0.05em, 0) scaleX(0.82) scaleY(0.9);
   }
   100% {
     opacity: 0;
-    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    transform: translate3d(0, 0.08em, 0) scaleX(0.18) scaleY(0.72);
   }
 }
 
 @keyframes articleBookmarkLineMarkerIn {
   0% {
     opacity: 0;
-    transform: translate3d(var(--article-bookmark-marker-enter-x), -86%, 0)
-      rotate(var(--article-bookmark-marker-enter-rotate)) scale(0.58);
+    filter: drop-shadow(0 10px 22px rgba(255, 155, 69, 0))
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0)) blur(2px);
+    transform: translate3d(var(--article-bookmark-marker-enter-x), -42%, 0)
+      rotate(var(--article-bookmark-marker-enter-rotate)) scale(0.68);
   }
-  14% {
-    opacity: 0.78;
-    transform: translate3d(
-        var(--article-bookmark-marker-enter-x-strong),
-        -68%,
-        0
-      )
-      rotate(var(--article-bookmark-marker-soft-rotate)) scale(0.78);
-  }
-  28% {
+  56% {
     opacity: 1;
-    transform: translate3d(var(--article-bookmark-marker-enter-x-soft), -47%, 0)
-      rotate(var(--article-bookmark-marker-overshoot-rotate)) scale(1.04);
-  }
-  44% {
-    opacity: 1;
-    transform: translate3d(var(--article-bookmark-marker-settle-x), -53%, 0)
-      rotate(var(--article-bookmark-marker-settle-rotate)) scale(0.985);
-  }
-  62% {
-    opacity: 1;
-    transform: translate3d(var(--article-bookmark-marker-rebound-x), -49%, 0)
-      rotate(var(--article-bookmark-marker-rebound-rotate)) scale(1.008);
-  }
-  78% {
-    opacity: 1;
-    transform: translate3d(var(--article-bookmark-marker-tiny-x), -50.5%, 0)
-      rotate(var(--article-bookmark-marker-tiny-rotate)) scale(0.998);
+    filter: drop-shadow(0 9px 20px rgba(255, 155, 69, 0.3))
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) blur(0);
+    transform: translate3d(var(--article-bookmark-marker-settle-x), -52%, 0)
+      rotate(var(--article-bookmark-marker-settle-rotate)) scale(1.08);
   }
   100% {
     opacity: 1;
+    filter: drop-shadow(0 8px 18px rgba(255, 155, 69, 0.26))
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0.28)) blur(0);
     transform: var(--article-bookmark-marker-rest-transform);
   }
 }
@@ -2973,32 +2967,29 @@ body.photo-viewer-open .app-container {
     opacity: 1;
     transform: var(--article-bookmark-marker-rest-transform);
   }
-  28% {
-    opacity: 1;
-    transform: translate3d(var(--article-bookmark-marker-exit-x-small), -49%, 0)
-      rotate(var(--article-bookmark-marker-exit-small-rotate)) scale(1.03);
-  }
-  62% {
-    opacity: 0.64;
-    transform: translate3d(var(--article-bookmark-marker-exit-x-mid), -64%, 0)
-      rotate(var(--article-bookmark-marker-exit-mid-rotate)) scale(0.82);
+  34% {
+    opacity: 0.86;
+    transform: translate3d(0, -50%, 0)
+      rotate(var(--article-bookmark-marker-settle-rotate)) scale(0.96);
   }
   100% {
     opacity: 0;
-    transform: translate3d(var(--article-bookmark-marker-exit-x), -84%, 0)
-      rotate(var(--article-bookmark-marker-enter-rotate)) scale(0.54);
+    filter: drop-shadow(0 8px 18px rgba(255, 155, 69, 0))
+      drop-shadow(0 2px 4px rgba(0, 0, 0, 0)) blur(1px);
+    transform: translate3d(var(--article-bookmark-marker-exit-x), -46%, 0)
+      rotate(var(--article-bookmark-marker-exit-rotate)) scale(0.68);
   }
 }
 
 @keyframes articleBookmarkPlateFocus {
   0% {
-    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
   }
   42% {
-    transform: translate3d(0, 0, 0) scaleX(1.08) scaleY(1.08);
+    transform: translate3d(0, -0.01em, 0) scaleX(1.08) scaleY(1.14);
   }
   100% {
-    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+    transform: translate3d(0, 0.01em, 0) scaleX(1) scaleY(1);
   }
 }
 
@@ -4215,6 +4206,15 @@ body.photo-viewer-open .app-container {
     font-size: 24px;
   }
 
+  .virtual-article {
+    --article-bookmark-inline-rail: 1.75rem;
+  }
+
+  .article-bookmark-line-marker {
+    --article-bookmark-marker-edge-offset: 0.08rem;
+    --article-bookmark-marker-size: 1.42rem;
+  }
+
   .article-content .katex-display {
     padding: 12px 0;
   }
@@ -4463,6 +4463,15 @@ body.photo-viewer-open .app-container {
     font-size: 17px;
   }
 
+  .virtual-article {
+    --article-bookmark-inline-rail: 1.55rem;
+  }
+
+  .article-bookmark-line-marker {
+    --article-bookmark-marker-edge-offset: 0.04rem;
+    --article-bookmark-marker-size: 1.32rem;
+  }
+
   .article-content h1 {
     font-size: 34px;
     margin: 48px 0 20px;
@@ -4608,6 +4617,15 @@ body.photo-viewer-open .app-container {
   .article-content {
     font-size: 16px;
     line-height: 1.75;
+  }
+
+  .virtual-article {
+    --article-bookmark-inline-rail: 1.42rem;
+  }
+
+  .article-bookmark-line-marker {
+    --article-bookmark-marker-edge-offset: 0.02rem;
+    --article-bookmark-marker-size: 1.25rem;
   }
 
   .article-content h1 {
