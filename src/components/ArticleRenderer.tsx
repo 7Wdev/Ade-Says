@@ -547,6 +547,11 @@ function applyBookmarkStyles(
     const wordIndex = getArticleWordIndex(word);
     const currentState = word.getAttribute('data-bookmark-state');
 
+    if (wordIndex === null) {
+      word.removeAttribute('data-bookmark-state');
+      continue;
+    }
+
     if (wordIndex === activeIndex) {
       if (currentState === 'active' || currentState === 'entering') {
         continue;
