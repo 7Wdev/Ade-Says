@@ -7,6 +7,7 @@ import {
   lazy,
   Suspense,
   type HTMLAttributes,
+  type ImgHTMLAttributes,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -17,6 +18,46 @@ import { isNarrationWordToken, splitNarrationTextTokens } from '../utils/narrati
 const TikZRenderer = lazy(() => import('./TikZRenderer'));
 const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
 const hexColorPattern = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
+const javascriptKeywords = new Set([
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'default',
+  'do',
+  'else',
+  'export',
+  'extends',
+  'finally',
+  'for',
+  'from',
+  'function',
+  'if',
+  'import',
+  'in',
+  'let',
+  'new',
+  'of',
+  'return',
+  'switch',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+]);
+
+const codeLanguageLabels: Record<string, string> = {
+  js: 'JavaScript',
+  javascript: 'JavaScript',
+  ts: 'TypeScript',
+  typescript: 'TypeScript',
+};
+
+const jsTokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^\\`])*`|'(?:\\.|[^\\'])*'|"(?:\\.|[^\\"])*"|\b(?:true|false|null|undefined|NaN|Infinity)\b|\b[A-Za-z_$][\w$]*\b|\b\d+(?:\.\d+)?\b|[&|^~!?=<>+\-*/%]+|[{}()[\].,;:])/g;
 
 export type NarrationRenderState = {
   enabled: boolean;
@@ -33,6 +74,10 @@ const dynamicBlockFallback = (
 
 type NarratedElementProps = HTMLAttributes<HTMLElement> & {
   children?: ReactNode;
+  node?: unknown;
+};
+
+type MarkdownImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   node?: unknown;
 };
 
@@ -96,12 +141,121 @@ function createNarratedElement(tagName: NarratedTagName, narration: NarrationRen
   };
 }
 
+function getLanguageFromClassName(className: unknown) {
+  const value = Array.isArray(className) ? className.join(' ') : String(className ?? '');
+  const match = /language-(\w[\w-]*)/.exec(value);
+
+  return match ? match[1] : '';
+}
+
+function getLanguageLabel(language: string) {
+  return codeLanguageLabels[language] ?? language.toUpperCase();
+}
+
+function getLanguageBadge(language: string) {
+  if (language === 'js' || language === 'javascript') {
+    return 'JS';
+  }
+
+  if (language === 'ts' || language === 'typescript') {
+    return 'TS';
+  }
+
+  return '</>';
+}
+
+function getJavaScriptTokenClass(token: string) {
+  if (token.startsWith('//') || token.startsWith('/*')) {
+    return 'comment';
+  }
+
+  if (token.startsWith('"') || token.startsWith("'") || token.startsWith('`')) {
+    return 'string';
+  }
+
+  if (/^(?:true|false|null|undefined|NaN|Infinity)$/.test(token)) {
+    return 'constant';
+  }
+
+  if (/^\d/.test(token)) {
+    return 'number';
+  }
+
+  if (javascriptKeywords.has(token)) {
+    return 'keyword';
+  }
+
+  if (/^[&|^~!?=<>+\-*/%]+$/.test(token)) {
+    return 'operator';
+  }
+
+  if (/^[{}()[\].,;:]$/.test(token)) {
+    return 'punctuation';
+  }
+
+  return '';
+}
+
+function highlightJavaScript(code: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let tokenIndex = 0;
+
+  for (const match of code.matchAll(jsTokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+
+    if (index > lastIndex) {
+      nodes.push(code.slice(lastIndex, index));
+    }
+
+    const tokenClass = getJavaScriptTokenClass(token);
+    nodes.push(tokenClass
+      ? (
+        <span className={`syntax-token syntax-${tokenClass}`} key={`token-${tokenIndex}`}>
+          {token}
+        </span>
+      )
+      : token);
+
+    lastIndex = index + token.length;
+    tokenIndex += 1;
+  }
+
+  if (lastIndex < code.length) {
+    nodes.push(code.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function highlightCode(language: string, code: string) {
+  if (language === 'js' || language === 'javascript') {
+    return highlightJavaScript(code);
+  }
+
+  return code;
+}
+
+function MarkdownImage({ alt = '', node, ...props }: MarkdownImageProps) {
+  void node;
+
+  return (
+    <img
+      {...props}
+      alt={alt}
+      decoding={props.decoding ?? 'async'}
+      loading={props.loading ?? 'lazy'}
+    />
+  );
+}
+
 export const markdownComponents = {
+  img: MarkdownImage,
   code({ className, children, node, ...props }) {
     void node;
 
-    const match = /language-(\w[\w-]*)/.exec(className || '');
-    const language = match ? match[1] : '';
+    const language = getLanguageFromClassName(className);
     const codeString = String(children).replace(/\n$/, '');
     const isBlock = Boolean((node?.position && codeString.includes('\n')) || language);
 
@@ -124,7 +278,7 @@ export const markdownComponents = {
     if (isBlock && language) {
       return (
         <code className={className} {...props}>
-          {children}
+          {highlightCode(language, codeString)}
         </code>
       );
     }
@@ -160,9 +314,23 @@ export const markdownComponents = {
     ) {
       const codeNode = node.children[0];
       if (codeNode.properties && codeNode.properties.className) {
-        const classStr = String(codeNode.properties.className);
-        if (classStr.includes('language-html-live') || classStr.includes('language-tikz')) {
+        const language = getLanguageFromClassName(codeNode.properties.className);
+        if (language === 'html-live' || language === 'tikz') {
           return <>{children}</>;
+        }
+
+        if (language) {
+          return (
+            <div className="article-code-frame" data-language={language}>
+              <div className="article-code-header">
+                <span className="article-code-badge" aria-hidden="true">
+                  {getLanguageBadge(language)}
+                </span>
+                <span>{getLanguageLabel(language)}</span>
+              </div>
+              <pre {...props}>{children}</pre>
+            </div>
+          );
         }
       }
     }

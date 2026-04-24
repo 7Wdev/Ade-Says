@@ -2606,8 +2606,7 @@ body.photo-viewer-open .app-container {
 }
 
 .lazy-article-block {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 320px;
+  width: 100%;
 }
 
 .article-inline-loading,
@@ -2935,8 +2934,57 @@ body.photo-viewer-open .app-container {
 }
 
 /* --- Code Blocks --- */
+.article-content .article-code-frame {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 32px 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: rgba(10, 10, 14, 0.88);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.24),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.article-content .article-code-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(230, 224, 233, 0.78);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  direction: ltr;
+}
+
+.article-content .article-code-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  border: 1px solid rgba(255, 225, 53, 0.28);
+  border-radius: 6px;
+  background: rgba(255, 225, 53, 0.12);
+  color: var(--mag-accent-yellow);
+  font-family:
+    "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace !important;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .article-content pre {
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 32px 0;
   padding: 24px 28px;
   background: rgba(10, 10, 14, 0.85);
@@ -2947,6 +2995,14 @@ body.photo-viewer-open .app-container {
     inset 0 2px 8px rgba(0, 0, 0, 0.3),
     0 4px 16px rgba(0, 0, 0, 0.2);
   -webkit-overflow-scrolling: touch;
+}
+
+.article-content .article-code-frame pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .article-content pre code {
@@ -2960,6 +3016,41 @@ body.photo-viewer-open .app-container {
   white-space: inherit;
   word-break: normal;
   overflow-wrap: normal;
+}
+
+.article-content pre code .syntax-token {
+  font: inherit;
+}
+
+.article-content pre code .syntax-keyword {
+  color: #80d8ff;
+  font-weight: 900;
+}
+
+.article-content pre code .syntax-string {
+  color: #9bd77f;
+}
+
+.article-content pre code .syntax-number,
+.article-content pre code .syntax-constant {
+  color: #ffb86c;
+}
+
+.article-content pre code .syntax-operator {
+  color: #f58fb0;
+}
+
+.article-content pre code .syntax-punctuation {
+  color: rgba(230, 224, 233, 0.72);
+}
+
+.article-content pre code .syntax-comment {
+  color: rgba(230, 224, 233, 0.48);
+  font-style: italic;
+}
+
+[dir="rtl"] .article-content .article-code-frame {
+  direction: ltr;
 }
 
 /* --- Tables --- */
@@ -3005,6 +3096,33 @@ body.photo-viewer-open .app-container {
   border-radius: var(--md-sys-shape-corner-large);
   margin: 32px 0;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.article-content .stego-photo-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin: 32px 0 40px;
+}
+
+.article-content .stego-photo-pair figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.article-content .stego-photo-pair img {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.article-content .stego-photo-pair figcaption {
+  margin-top: 10px;
+  color: rgba(230, 224, 233, 0.72);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0;
 }
 
 .article-page-nav {
@@ -4091,6 +4209,11 @@ body.photo-viewer-open .app-container {
     margin: 32px 0 14px;
   }
 
+  .article-content .stego-photo-pair {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
   .post-discussion-shell {
     margin-top: 48px;
     padding-top: 24px;
@@ -4102,12 +4225,26 @@ body.photo-viewer-open .app-container {
 
   .article-content pre {
     padding: 18px 16px;
-    margin: 24px -12px;
+    margin: 24px 0;
     border-radius: 12px;
+  }
+
+  .article-content .article-code-frame {
+    margin: 24px 0;
+    border-radius: 12px;
+  }
+
+  .article-content .article-code-frame pre {
+    margin: 0;
   }
 
   .article-content pre code {
     font-size: 14px;
+  }
+
+  .article-content .article-code-frame pre code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .article-content .katex-display {

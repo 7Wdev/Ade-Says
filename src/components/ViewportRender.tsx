@@ -1,6 +1,7 @@
 import {
   memo,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -8,6 +9,7 @@ import {
 } from 'react';
 
 type ViewportRenderProps = {
+  cacheKey?: string;
   children: ReactNode;
   className?: string;
   initialRender?: boolean;
@@ -17,7 +19,26 @@ type ViewportRenderProps = {
   unmountWhenOutside?: boolean;
 };
 
+const measuredHeightCache = new Map<string, number>();
+const HEIGHT_CACHE_BUCKET_SIZE = 160;
+
+function getWidthBucket(width: number) {
+  if (!Number.isFinite(width) || width <= 0) {
+    return 'unknown';
+  }
+
+  return String(Math.max(
+    HEIGHT_CACHE_BUCKET_SIZE,
+    Math.round(width / HEIGHT_CACHE_BUCKET_SIZE) * HEIGHT_CACHE_BUCKET_SIZE,
+  ));
+}
+
+function getHeightCacheKey(cacheKey: string | undefined, widthBucket: string) {
+  return cacheKey ? `${cacheKey}:${widthBucket}` : undefined;
+}
+
 function ViewportRender({
+  cacheKey,
   children,
   className,
   initialRender = false,
@@ -31,8 +52,42 @@ function ViewportRender({
   const shouldRenderInitially = initialRender || !canObserveViewport;
   const [isIntersecting, setIsIntersecting] = useState(shouldRenderInitially);
   const [hasRendered, setHasRendered] = useState(shouldRenderInitially);
+  const [widthBucket, setWidthBucket] = useState('unknown');
+  const resolvedCacheKey = getHeightCacheKey(cacheKey, widthBucket);
   const [measuredHeight, setMeasuredHeight] = useState<number>();
   const shouldRender = isIntersecting || (hasRendered && !unmountWhenOutside);
+
+  useLayoutEffect(() => {
+    const node = rootRef.current;
+    if (!node) return;
+
+    const updateWidthBucket = () => {
+      const nextWidthBucket = getWidthBucket(node.getBoundingClientRect().width);
+      setWidthBucket((currentWidthBucket) => (
+        currentWidthBucket === nextWidthBucket ? currentWidthBucket : nextWidthBucket
+      ));
+    };
+
+    updateWidthBucket();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateWidthBucket);
+      return () => window.removeEventListener('resize', updateWidthBucket);
+    }
+
+    const resizeObserver = new ResizeObserver(updateWidthBucket);
+    resizeObserver.observe(node);
+    window.addEventListener('resize', updateWidthBucket);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateWidthBucket);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMeasuredHeight(resolvedCacheKey ? measuredHeightCache.get(resolvedCacheKey) : undefined);
+  }, [resolvedCacheKey]);
 
   useEffect(() => {
     const node = rootRef.current;
@@ -65,6 +120,10 @@ function ViewportRender({
         setMeasuredHeight((currentHeight) => (
           Math.abs((currentHeight ?? 0) - height) > 1 ? height : currentHeight
         ));
+
+        if (resolvedCacheKey) {
+          measuredHeightCache.set(resolvedCacheKey, height);
+        }
       }
     };
 
@@ -78,7 +137,7 @@ function ViewportRender({
     resizeObserver.observe(node);
 
     return () => resizeObserver.disconnect();
-  }, [shouldRender]);
+  }, [resolvedCacheKey, shouldRender]);
 
   const placeholderStyle: CSSProperties | undefined = shouldRender
     ? undefined

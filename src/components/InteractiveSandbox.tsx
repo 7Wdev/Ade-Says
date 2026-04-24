@@ -11,6 +11,11 @@ interface InteractiveSandboxProps {
 
 function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const heightSettleTimerRef = useRef<number | null>(null);
+  const heightMaxWaitTimerRef = useRef<number | null>(null);
+  const pendingHeightRef = useRef<number | null>(null);
+  const measuredHeightRef = useRef<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
   const sandboxChromeNone = useMemo(() => (
@@ -94,10 +99,44 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
 </html>`, [code]);
   const handleLoad = useCallback(() => setLoaded(true), []);
 
+  const clearHeightTimers = useCallback(() => {
+    if (heightSettleTimerRef.current !== null) {
+      window.clearTimeout(heightSettleTimerRef.current);
+      heightSettleTimerRef.current = null;
+    }
+
+    if (heightMaxWaitTimerRef.current !== null) {
+      window.clearTimeout(heightMaxWaitTimerRef.current);
+      heightMaxWaitTimerRef.current = null;
+    }
+  }, []);
+
+  const commitPendingHeight = useCallback(() => {
+    const nextHeight = pendingHeightRef.current;
+
+    clearHeightTimers();
+
+    if (nextHeight === null) {
+      return;
+    }
+
+    pendingHeightRef.current = null;
+
+    if (Math.abs((measuredHeightRef.current ?? 0) - nextHeight) <= 1) {
+      return;
+    }
+
+    measuredHeightRef.current = nextHeight;
+    setMeasuredHeight(nextHeight);
+  }, [clearHeightTimers]);
+
   useEffect(() => {
     setLoaded(false);
+    measuredHeightRef.current = null;
+    pendingHeightRef.current = null;
+    clearHeightTimers();
     setMeasuredHeight(null);
-  }, [html]);
+  }, [clearHeightTimers, html]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -128,15 +167,54 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         return;
       }
 
-      setMeasuredHeight(Math.min(2000, Math.max(160, Math.ceil(nextHeight))));
+      pendingHeightRef.current = Math.min(2000, Math.max(160, Math.ceil(nextHeight)));
+
+      if (heightSettleTimerRef.current !== null) {
+        window.clearTimeout(heightSettleTimerRef.current);
+      }
+
+      heightSettleTimerRef.current = window.setTimeout(commitPendingHeight, 140);
+
+      if (heightMaxWaitTimerRef.current === null) {
+        heightMaxWaitTimerRef.current = window.setTimeout(commitPendingHeight, 420);
+      }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [commitPendingHeight]);
+
+  useEffect(() => () => {
+    clearHeightTimers();
+  }, [clearHeightTimers]);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    let previousWidth = wrapper.getBoundingClientRect().width;
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const nextWidth = entry.contentRect.width;
+
+      if (Math.abs(nextWidth - previousWidth) < 2) {
+        return;
+      }
+
+      previousWidth = nextWidth;
+      pendingHeightRef.current = null;
+      clearHeightTimers();
+    });
+
+    resizeObserver.observe(wrapper);
+
+    return () => resizeObserver.disconnect();
+  }, [clearHeightTimers]);
 
   return (
     <div
+      ref={wrapperRef}
       className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}`}
       style={sandboxStyle}
     >
@@ -154,6 +232,7 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
       <iframe
         ref={iframeRef}
         className={`interactive-sandbox ${loaded ? 'sandbox-ready' : ''}${sandboxChromeNone ? ' sandbox-no-chrome' : ''}`}
+        loading="lazy"
         sandbox="allow-scripts"
         scrolling="no"
         style={sandboxStyle}

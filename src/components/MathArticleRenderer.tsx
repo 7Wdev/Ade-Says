@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
@@ -31,16 +31,20 @@ function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticle
     });
   }, [narration?.enabled, content, wordOffset]);
 
-  const narrationState: NarrationRenderState | undefined = narration?.enabled
-    ? { enabled: true }
-    : undefined;
+  const markdownComponents = useMemo(() => {
+    const narrationState: NarrationRenderState | undefined = narration?.enabled
+      ? { enabled: true }
+      : undefined;
+
+    return createMarkdownComponents(narrationState);
+  }, [narration?.enabled]);
 
   return (
     <div style={{ display: 'contents' }} ref={rootRef}>
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
-        components={createMarkdownComponents(narrationState)}
+        components={markdownComponents}
       >
         {content}
       </ReactMarkdown>

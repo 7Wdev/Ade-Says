@@ -93,6 +93,10 @@ function PostView() {
   const activeNarrationTrack = narrationTracks[lang];
   const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
   const activeNarrationWord = narrationProgress.key === narrationKey ? narrationProgress.wordIndex : null;
+  const articleNarration = useMemo(() => ({
+    activeWordIndex: activeNarrationWord,
+    enabled: Boolean(activeNarrationTrack?.src),
+  }), [activeNarrationTrack?.src, activeNarrationWord]);
   const shareMenuId = `post-share-menu-${post?.meta.id ?? 'missing'}`;
   const canUseNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const hasNarration = Boolean(activeNarrationTrack?.src);
@@ -413,10 +417,7 @@ function PostView() {
           <Suspense fallback={<PageLoading label="Loading article" />}>
             <ArticleRenderer
               content={activeContent}
-              narration={{
-                activeWordIndex: activeNarrationWord,
-                enabled: Boolean(activeNarrationTrack?.src),
-              }}
+              narration={articleNarration}
             />
           </Suspense>
         </div>

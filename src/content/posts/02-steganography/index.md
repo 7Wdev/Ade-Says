@@ -927,7 +927,7 @@ You might tell me: but there is still a difference between the cover color and t
 As you may have noticed over time, the <span class="inline-carrier">carrier</span> changed, but the instinct stayed the same.
 
 ```html-live
-<!-- sandbox-height: 460 -->
+<!-- sandbox-height: 260 -->
 <style>
   :root { color-scheme: dark; }
   body {
@@ -1100,14 +1100,7 @@ As you may have noticed over time, the <span class="inline-carrier">carrier</spa
     const shellHeight = timelineShell ? timelineShell.getBoundingClientRect().height : 0;
     const timelineHeight = timeline.getBoundingClientRect().height;
 
-    return Math.ceil(
-      Math.max(
-        shellHeight + bodyPadding,
-        timelineHeight + bodyPadding,
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
-      )
-    );
+    return Math.ceil(Math.max(shellHeight, timelineHeight) + bodyPadding);
   }
 
   function notifyHeight() {
@@ -1237,17 +1230,42 @@ The digital version feels modern, but it is really an ancient habit wearing new 
 
 ## My Tiny Experiment
 
-For the ending, I made a **real carrier image**. I took a normal photograph from my own gallery, then made a small black-and-white <span class="inline-secret">hidden image</span>. I embedded that hidden image in the <span class="inline-quiet">least significant bit</span> of the carrier photo's color channels.
+For the finale, I wanted the trick to stop being theoretical. So I took an ordinary street photo from my gallery: people walking, a clock tower, a yellow delivery truck, nothing suspicious. Then I made a black-and-white image that says <span class="inline-secret">SECRET</span>. This is the image I hid:
 
-The <span class="inline-carrier">carrier</span> still looks like a normal street photo. The hidden image is **not pasted on top of it**. It is distributed across the pixels as tiny *one-bit decisions*.
+![A black-and-white image with the word SECRET before it is hidden](./assets/hidden-source.png)
 
-This is the <span class="inline-secret">hidden layer</span> after extracting those lowest bits:
+The next step was to make that loud image disappear into the street photo. Not by pasting it on top, but by burying it inside the photo's smallest color decisions.
 
-![The hidden image revealed from the least significant bits](./assets/hidden-revealed.png)
+The move is almost ridiculously small. Each pixel in the secret image becomes one tiny decision: should the last bit of this color channel be `0` or `1`? The visible color can only shift by one value out of 255, so the eye keeps seeing the same street. But the pixels are now carrying a second story under the surface.
 
-And this is the real image that carries it:
+This is the core of the code I used to hide the image inside the image:
 
-![A street photograph with a hidden image embedded in its least significant bits](./assets/carrier-lsb.png)
+```js
+for (let i = 0; i < coverPixels.data.length; i += 4) {
+  const secretBit = secretPixels.data[i] > 127 ? 1 : 0;
+
+  coverPixels.data[i] = (coverPixels.data[i] & 0xfe) | secretBit;
+  coverPixels.data[i + 1] = (coverPixels.data[i + 1] & 0xfe) | secretBit;
+  coverPixels.data[i + 2] = (coverPixels.data[i + 2] & 0xfe) | secretBit;
+}
+```
+
+The photo on the left is the innocent <span class="inline-cover-hex">cover</span>. The photo on the right is the <span class="inline-carrier">carrier</span> after the SECRET image has been hidden in its least significant bits. They look the same, which is exactly the point.
+
+<div class="stego-photo-pair" aria-label="Cover photo compared with carrier photo">
+  <figure>
+    <img src="./assets/cover.png" alt="The original cover street photograph before the secret image is embedded">
+    <figcaption>Cover photo</figcaption>
+  </figure>
+  <figure>
+    <img src="./assets/carrier-lsb.png" alt="The carrier street photograph after the SECRET image is embedded in the least significant bits">
+    <figcaption>Carrier photo</figcaption>
+  </figure>
+</div>
+
+### Challenge: reveal it yourself
+
+The carrier photo above is not just a screenshot for the article. It really carries the hidden image. It would be really fun and challenging to write the inverse script: read every pixel, take the least significant bit from one color channel with `pixel.r & 1`, and paint a new image white when the bit is `1` and black when it is `0`, exactly reversing the technique we explained. If you did it right, the word should come back.
 
 ===AR===
 
@@ -2170,7 +2188,7 @@ $$
 كيف ما لاحظتم عبر الزمن <span class="inline-carrier">الحامل</span> تغير ولكن الغريزة نفسها.
 
 ```html-live
-<!-- sandbox-height: 460 -->
+<!-- sandbox-height: 260 -->
 <style>
   :root { color-scheme: dark; }
   body {
@@ -2343,14 +2361,7 @@ $$
     const shellHeight = timelineShell ? timelineShell.getBoundingClientRect().height : 0;
     const timelineHeight = timeline.getBoundingClientRect().height;
 
-    return Math.ceil(
-      Math.max(
-        shellHeight + bodyPadding,
-        timelineHeight + bodyPadding,
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
-      )
-    );
+    return Math.ceil(Math.max(shellHeight, timelineHeight) + bodyPadding);
   }
 
   function notifyHeight() {
@@ -2480,17 +2491,39 @@ $$
 
 ## تجربتي الصغيرة
 
-بالنهاية عملت **صورة حقيقية حاملة للسر**. أخذت صورة عادية من معرضي، وعملت صورة صغيرة أبيض وأسود <span class="inline-secret">مخفية</span>. بعدين خبيتها داخل <span class="inline-quiet">أقل bit مهم</span> بقنوات الألوان تبعات الصورة.
+بالخاتمة حبيت الخدعة تطلع من الكلام وتصير صورة حقيقية. أخذت صورة شارع عادية من معرضي: ناس ماشية، برج ساعة، شاحنة صفراء، ولا أي إشي بثير الشك. بعدين عملت صورة أبيض وأسود مكتوب فيها <span class="inline-secret">SECRET</span>. هاي هي الصورة اللي خبيتها:
 
-<span class="inline-carrier">الصورة الحاملة</span> بعدها بتبين صورة شارع عادية. الصورة المخفية **مش ملصوقة فوقها**. هي موزعة على البكسلات كقرارات صغيرة من *bit واحد*.
+![صورة أبيض وأسود مكتوب فيها SECRET قبل إخفائها](./assets/hidden-source.png)
 
-هاي <span class="inline-secret">الطبقة المخفية</span> بعد ما استخرجنا أقل bits:
+الخطوة اللي بعدها كانت إني أخلي هاي الصورة الواضحة تختفي جوّا صورة الشارع. مش ألصقها فوقها، بل أدفنها داخل أصغر قرارات اللون بالصورة.
 
-![الصورة المخفية بعد استخراج أقل bits من الصورة](./assets/hidden-revealed.png)
+الفكرة صغيرة لدرجة إنها بتحسها خدعة سحرية. كل بكسل في صورة السر بصير قرار واحد: آخر bit بقناة اللون يكون `0` أو `1`. اللون المرئي بتغير بدرجة واحدة بس من أصل 255، فالعين بتضل شايفة نفس الشارع. بس البكسلات، بهدوء تام، صارت شايلة قصة ثانية تحت السطح.
 
-وهاي الصورة الحقيقية اللي شايلتها جواتها:
+هاي أهم قطعة كود استخدمتها عشان أخبي الصورة جوّا الصورة:
 
-![صورة شارع فيها صورة مخفية داخل أقل bits من الألوان](./assets/carrier-lsb.png)
+```js
+for (let i = 0; i < coverPixels.data.length; i += 4) {
+  const secretBit = secretPixels.data[i] > 127 ? 1 : 0;
 
+  coverPixels.data[i] = (coverPixels.data[i] & 0xfe) | secretBit;
+  coverPixels.data[i + 1] = (coverPixels.data[i + 1] & 0xfe) | secretBit;
+  coverPixels.data[i + 2] = (coverPixels.data[i + 2] & 0xfe) | secretBit;
+}
+```
 
+الصورة على اليسار هي <span class="inline-cover-hex">الغلاف</span> البريء. الصورة على اليمين هي <span class="inline-carrier">الصورة الحاملة</span> بعد ما صورة SECRET اختفت داخل أقل bits. نفس المشهد تقريباً، بس الثانية شايلة السر.
 
+<div class="stego-photo-pair" aria-label="مقارنة بين صورة الغلاف والصورة الحاملة">
+  <figure>
+    <img src="./assets/cover.png" alt="صورة الشارع الأصلية قبل إخفاء صورة السر داخلها">
+    <figcaption>صورة الغلاف</figcaption>
+  </figure>
+  <figure>
+    <img src="./assets/carrier-lsb.png" alt="صورة الشارع الحاملة بعد إخفاء صورة SECRET داخل أقل bits">
+    <figcaption>الصورة الحاملة</figcaption>
+  </figure>
+</div>
+
+### التحدي: اكشفها بنفسك
+
+الصورة الحاملة اللي فوق مش مجرد لقطة توضيحية للمقال. هي فعلاً شايلة الصورة المخفية. رح يكون ممتع وفيه تحدي إنك تكتب السكربت العكسي: اقرأ كل بكسل، خذ أقل bit من قناة لون واحدة باستخدام `pixel.r & 1`، وارسم صورة جديدة: أبيض إذا كان الـ bit يساوي `1`، وأسود إذا كان `0`، وهيك بتعكس بالضبط التقنية اللي شرحناها. إذا عملتها صح، الكلمة لازم ترجع تظهر.
