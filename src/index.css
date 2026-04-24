@@ -1430,7 +1430,7 @@ body.photo-viewer-open .app-container {
   color: #fff;
 }
 
-.blog-result-card[class*='mag-color-'] {
+.blog-result-card[class*="mag-color-"] {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -2454,6 +2454,11 @@ body.photo-viewer-open .app-container {
   touch-action: manipulation;
 }
 
+.article-share-stack[data-lang="ar"] .article-share-menu-item {
+  font-family: var(--md-sys-typescale-arabic-font) !important;
+  font-style: normal;
+}
+
 .article-share-menu-item.is-narration {
   --_fab-menu-item-container-color: var(--mag-accent-yellow);
   --_fab-menu-item-color: #100f13;
@@ -2813,11 +2818,6 @@ body.photo-viewer-open .app-container {
   transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
 }
 
-.narration-word[data-bookmark-state="entering"],
-.narration-word[data-bookmark-state="active"] {
-  /* color: #100f13; */
-}
-
 .narration-word[data-bookmark-state="removing"]::before {
   animation: articleBookmarkPlateOut 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
@@ -2849,10 +2849,8 @@ body.photo-viewer-open .app-container {
   --article-bookmark-marker-tiny-rotate: -4.6deg;
   --article-bookmark-marker-exit-small-rotate: -6.75deg;
   --article-bookmark-marker-exit-mid-rotate: 8deg;
-  --article-bookmark-marker-rest-transform:
-    translate3d(0, -50%, 0)
-    rotate(var(--article-bookmark-marker-rest-rotate))
-    scale(1);
+  --article-bookmark-marker-rest-transform: translate3d(0, -50%, 0)
+    rotate(var(--article-bookmark-marker-rest-rotate)) scale(1);
   position: absolute;
   top: var(--article-bookmark-marker-top);
   right: var(--article-bookmark-marker-edge-offset);
@@ -2932,45 +2930,37 @@ body.photo-viewer-open .app-container {
 @keyframes articleBookmarkLineMarkerIn {
   0% {
     opacity: 0;
-    transform:
-      translate3d(var(--article-bookmark-marker-enter-x), -86%, 0)
-      rotate(var(--article-bookmark-marker-enter-rotate))
-      scale(0.58);
+    transform: translate3d(var(--article-bookmark-marker-enter-x), -86%, 0)
+      rotate(var(--article-bookmark-marker-enter-rotate)) scale(0.58);
   }
   14% {
     opacity: 0.78;
-    transform:
-      translate3d(var(--article-bookmark-marker-enter-x-strong), -68%, 0)
-      rotate(var(--article-bookmark-marker-soft-rotate))
-      scale(0.78);
+    transform: translate3d(
+        var(--article-bookmark-marker-enter-x-strong),
+        -68%,
+        0
+      )
+      rotate(var(--article-bookmark-marker-soft-rotate)) scale(0.78);
   }
   28% {
     opacity: 1;
-    transform:
-      translate3d(var(--article-bookmark-marker-enter-x-soft), -47%, 0)
-      rotate(var(--article-bookmark-marker-overshoot-rotate))
-      scale(1.04);
+    transform: translate3d(var(--article-bookmark-marker-enter-x-soft), -47%, 0)
+      rotate(var(--article-bookmark-marker-overshoot-rotate)) scale(1.04);
   }
   44% {
     opacity: 1;
-    transform:
-      translate3d(var(--article-bookmark-marker-settle-x), -53%, 0)
-      rotate(var(--article-bookmark-marker-settle-rotate))
-      scale(0.985);
+    transform: translate3d(var(--article-bookmark-marker-settle-x), -53%, 0)
+      rotate(var(--article-bookmark-marker-settle-rotate)) scale(0.985);
   }
   62% {
     opacity: 1;
-    transform:
-      translate3d(var(--article-bookmark-marker-rebound-x), -49%, 0)
-      rotate(var(--article-bookmark-marker-rebound-rotate))
-      scale(1.008);
+    transform: translate3d(var(--article-bookmark-marker-rebound-x), -49%, 0)
+      rotate(var(--article-bookmark-marker-rebound-rotate)) scale(1.008);
   }
   78% {
     opacity: 1;
-    transform:
-      translate3d(var(--article-bookmark-marker-tiny-x), -50.5%, 0)
-      rotate(var(--article-bookmark-marker-tiny-rotate))
-      scale(0.998);
+    transform: translate3d(var(--article-bookmark-marker-tiny-x), -50.5%, 0)
+      rotate(var(--article-bookmark-marker-tiny-rotate)) scale(0.998);
   }
   100% {
     opacity: 1;
@@ -2985,24 +2975,18 @@ body.photo-viewer-open .app-container {
   }
   28% {
     opacity: 1;
-    transform:
-      translate3d(var(--article-bookmark-marker-exit-x-small), -49%, 0)
-      rotate(var(--article-bookmark-marker-exit-small-rotate))
-      scale(1.03);
+    transform: translate3d(var(--article-bookmark-marker-exit-x-small), -49%, 0)
+      rotate(var(--article-bookmark-marker-exit-small-rotate)) scale(1.03);
   }
   62% {
     opacity: 0.64;
-    transform:
-      translate3d(var(--article-bookmark-marker-exit-x-mid), -64%, 0)
-      rotate(var(--article-bookmark-marker-exit-mid-rotate))
-      scale(0.82);
+    transform: translate3d(var(--article-bookmark-marker-exit-x-mid), -64%, 0)
+      rotate(var(--article-bookmark-marker-exit-mid-rotate)) scale(0.82);
   }
   100% {
     opacity: 0;
-    transform:
-      translate3d(var(--article-bookmark-marker-exit-x), -84%, 0)
-      rotate(var(--article-bookmark-marker-enter-rotate))
-      scale(0.54);
+    transform: translate3d(var(--article-bookmark-marker-exit-x), -84%, 0)
+      rotate(var(--article-bookmark-marker-enter-rotate)) scale(0.54);
   }
 }
 
@@ -3505,7 +3489,11 @@ body.photo-viewer-open .app-container {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.03)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.03)
+    ),
     rgba(20, 18, 24, 0.9);
 }
 

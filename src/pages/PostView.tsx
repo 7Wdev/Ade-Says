@@ -413,6 +413,7 @@ function PostView() {
       {createPortal(
         <div
           className={`article-share-stack${isAudioExpandedVisible ? ' is-hidden' : ''}`}
+          data-lang={lang}
           ref={fabStackRef}
         >
           {!isAudioFabMode && (
