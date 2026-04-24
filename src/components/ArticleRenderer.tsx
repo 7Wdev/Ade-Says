@@ -503,11 +503,35 @@ function getArticleWord(root: HTMLElement, wordIndex: number) {
 }
 
 function getArticleWordFromEventTarget(root: HTMLElement, target: EventTarget | null) {
-  if (!(target instanceof Element)) {
+  if (target instanceof Element) {
+    const word = target.closest<HTMLElement>('[data-article-word-index]');
+
+    return word && root.contains(word) ? word : null;
+  }
+
+  if (target instanceof Node) {
+    const element = target.parentElement;
+
+    if (!element) {
+      return null;
+    }
+
+    const word = element.closest<HTMLElement>('[data-article-word-index]');
+
+    return word && root.contains(word) ? word : null;
+  }
+
+  return null;
+}
+
+function getArticleWordFromPoint(root: HTMLElement, clientX: number, clientY: number) {
+  const element = document.elementFromPoint(clientX, clientY);
+
+  if (!element) {
     return null;
   }
 
-  const word = target.closest<HTMLElement>('[data-article-word-index]');
+  const word = element.closest<HTMLElement>('[data-article-word-index]');
 
   return word && root.contains(word) ? word : null;
 }
@@ -927,7 +951,8 @@ function ArticleRenderer({ bookmark, content, narration }: ArticleRendererProps)
 
     normalizeArticleWordIndexes(root);
 
-    const word = getArticleWordFromEventTarget(root, event.target);
+    const word = getArticleWordFromEventTarget(root, event.target)
+      ?? getArticleWordFromPoint(root, event.clientX, event.clientY);
     if (!word) {
       touchTapStateRef.current = {
         count: 0,
@@ -985,7 +1010,8 @@ function ArticleRenderer({ bookmark, content, narration }: ArticleRendererProps)
 
     normalizeArticleWordIndexes(root);
 
-    const word = getArticleWordFromEventTarget(root, event.target);
+    const word = getArticleWordFromEventTarget(root, event.target)
+      ?? getArticleWordFromPoint(root, event.clientX, event.clientY);
     if (!word) {
       return;
     }

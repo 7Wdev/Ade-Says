@@ -1,4 +1,14 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useParams } from 'react-router-dom';
 
@@ -109,6 +119,7 @@ function PostView() {
     key: '',
     wordIndex: null as number | null,
   });
+  const [bookmarkGuideMode, setBookmarkGuideMode] = useState<'click' | 'tap'>('tap');
   const fabStackRef = useRef<HTMLDivElement | null>(null);
   const shareResetTimeoutRef = useRef<number | null>(null);
 
@@ -202,6 +213,16 @@ function PostView() {
     : 'Close article actions';
   const audioMenuLabel = lang === 'ar' ? '\u0641\u062a\u062d \u0627\u0644\u0646\u0637\u0642 \u0627\u0644\u0635\u0648\u062a\u064a' : 'Open narration';
   const bookmarkMenuLabel = lang === 'ar' ? '\u0627\u0630\u0647\u0628 \u0644\u0644\u0639\u0644\u0627\u0645\u0629' : 'Go to bookmark';
+  const bookmarkGuideLabel = lang === 'ar'
+    ? (bookmarkGuideMode === 'tap'
+      ? '\u0627\u0636\u063a\u0637 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0623\u064a \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629'
+      : '\u0627\u0646\u0642\u0631 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0623\u064a \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629')
+    : (bookmarkGuideMode === 'tap'
+      ? 'Triple-tap any word to bookmark it'
+      : 'Triple-click any word to bookmark it');
+  const bookmarkGuideDemoWord = lang === 'ar'
+    ? '\u0643\u0644\u0645\u0629'
+    : 'word';
   const copyLinkLabel = lang === 'ar' ? '\u0627\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637' : 'Copy link';
   const nativeShareLabel = lang === 'ar' ? '\u0645\u0634\u0627\u0631\u0643\u0629 \u0645\u0628\u0627\u0634\u0631\u0629' : 'Share...';
   const shareUrl = typeof window === 'undefined' ? '' : window.location.href;
@@ -316,6 +337,23 @@ function PostView() {
   }, [bookmarks]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    const updateBookmarkGuideMode = () => {
+      const prefersTap = mediaQuery.matches || navigator.maxTouchPoints > 0;
+      setBookmarkGuideMode(prefersTap ? 'tap' : 'click');
+    };
+
+    updateBookmarkGuideMode();
+    mediaQuery.addEventListener?.('change', updateBookmarkGuideMode);
+
+    return () => mediaQuery.removeEventListener?.('change', updateBookmarkGuideMode);
+  }, []);
+
+  useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === ARTICLE_BOOKMARK_STORAGE_KEY) {
         setBookmarks(readArticleBookmarks());
@@ -408,6 +446,31 @@ function PostView() {
           className="post-banner"
           style={bannerStyle}
         />,
+        document.body
+      )}
+      {createPortal(
+        <div
+          className="article-bookmark-toast"
+          dir={lang === 'ar' ? 'rtl' : 'ltr'}
+          key={post.meta.id}
+          role="note"
+        >
+          <span aria-hidden="true" className="article-bookmark-toast-gesture">
+            <span className="article-bookmark-toast-rings">
+              <span className="article-bookmark-toast-ring" />
+              <span className="article-bookmark-toast-ring" />
+              <span className="article-bookmark-toast-ring" />
+            </span>
+            <span className="article-bookmark-toast-hand material-symbols-rounded">
+              {bookmarkGuideMode === 'tap' ? 'touch_app' : 'mouse'}
+            </span>
+          </span>
+          <span className="article-bookmark-toast-label">{bookmarkGuideLabel}</span>
+          <span aria-hidden="true" className="article-bookmark-toast-preview">
+            <span className="article-bookmark-toast-word">{bookmarkGuideDemoWord}</span>
+            <span className="article-bookmark-toast-icon material-symbols-rounded">bookmark</span>
+          </span>
+        </div>,
         document.body
       )}
       {createPortal(

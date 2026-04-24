@@ -249,6 +249,50 @@ body.photo-viewer-open .app-container {
   }
 }
 
+@keyframes articleBookmarkToastCycle {
+  0% {
+    opacity: 0;
+    transform: translate3d(var(--article-bookmark-toast-shift-x), 10px, 0)
+      rotate(0deg) scale(0.94);
+  }
+  10%,
+  84% {
+    opacity: 1;
+    transform: translate3d(var(--article-bookmark-toast-shift-x), 0, 0)
+      rotate(0deg) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translate3d(var(--article-bookmark-toast-shift-x), 1px, 0)
+      rotate(1.8deg) scale(0.98);
+  }
+  95% {
+    opacity: 1;
+    transform: translate3d(var(--article-bookmark-toast-shift-x), 3px, 0)
+      rotate(-2.2deg) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--article-bookmark-toast-shift-x), 0, 11px, 0)
+      rotate(2.6deg) scale(0.72);
+  }
+}
+
+@keyframes articleBookmarkToastTap {
+  0% {
+    opacity: 0;
+    transform: scale(0.42);
+  }
+  28% {
+    opacity: 0.72;
+    transform: scale(0.88);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
 @keyframes homeEnter {
   from {
     opacity: 0;
@@ -2316,6 +2360,15 @@ body.photo-viewer-open .app-container {
   gap: 8px;
 }
 
+.article-share-stack,
+.article-bookmark-toast {
+  --article-share-control-height: 3.5rem;
+  --article-share-control-shape: 1rem;
+  --article-share-control-surface: #fff;
+  --article-share-control-ink: #100f13;
+  --article-share-control-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
+}
+
 .article-share-stack {
   position: fixed;
   right: 24px;
@@ -2342,26 +2395,28 @@ body.photo-viewer-open .app-container {
   transition:
     transform 0.24s cubic-bezier(0.2, 0, 0, 1),
     filter 0.2s ease;
+  --m3e-fab-small-container-height: var(--article-share-control-height);
+  --m3e-fab-small-container-shape: var(--article-share-control-shape);
   --m3e-fab-small-leading-space: 1.1rem;
   --m3e-fab-small-trailing-space: 1.1rem;
   --m3e-fab-menu-close-button-container-height: 3.25rem;
   --m3e-fab-menu-close-button-leading-space: 1rem;
   --m3e-fab-menu-close-button-trailing-space: 1rem;
   --m3e-fab-menu-close-button-icon-size: 1.25rem;
-  --m3e-fab-menu-close-button-container-shape: 999px;
-  --m3e-surface-fab-container-color: #fff;
-  --m3e-surface-fab-icon-color: #100f13;
-  --m3e-surface-fab-hover-icon-color: #100f13;
-  --m3e-surface-fab-focus-icon-color: #100f13;
-  --m3e-surface-fab-pressed-icon-color: #100f13;
-  --m3e-surface-fab-hover-state-layer-color: #100f13;
-  --m3e-surface-fab-focus-state-layer-color: #100f13;
-  --m3e-surface-fab-pressed-state-layer-color: #100f13;
+  --m3e-fab-menu-close-button-container-shape: var(--article-share-control-shape);
+  --m3e-surface-fab-container-color: var(--article-share-control-surface);
+  --m3e-surface-fab-icon-color: var(--article-share-control-ink);
+  --m3e-surface-fab-hover-icon-color: var(--article-share-control-ink);
+  --m3e-surface-fab-focus-icon-color: var(--article-share-control-ink);
+  --m3e-surface-fab-pressed-icon-color: var(--article-share-control-ink);
+  --m3e-surface-fab-hover-state-layer-color: var(--article-share-control-ink);
+  --m3e-surface-fab-focus-state-layer-color: var(--article-share-control-ink);
+  --m3e-surface-fab-pressed-state-layer-color: var(--article-share-control-ink);
   --m3e-surface-fab-hover-state-layer-opacity: 0.08;
   --m3e-surface-fab-focus-state-layer-opacity: 0.12;
   --m3e-surface-fab-pressed-state-layer-opacity: 0.14;
-  --m3e-surface-fab-lowered-container-color: #fff;
-  --m3e-surface-fab-lowered-container-elevation: 0 16px 44px rgba(0, 0, 0, 0.42);
+  --m3e-surface-fab-lowered-container-color: var(--article-share-control-surface);
+  --m3e-surface-fab-lowered-container-elevation: var(--article-share-control-shadow);
 }
 
 .article-share-fab.is-audio-mode {
@@ -2635,6 +2690,124 @@ body.photo-viewer-open .app-container {
 
 .article-content[dir="rtl"] {
   --article-list-indent: 28px;
+}
+
+.article-bookmark-toast {
+  --article-bookmark-toast-shift-x: -50%;
+  position: fixed;
+  bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+  left: 50%;
+  z-index: 176;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  box-sizing: border-box;
+  height: var(--article-share-control-height);
+  width: min(calc(100vw - 40px), 34rem);
+  padding: 0 1rem;
+  border: 1px solid rgba(16, 15, 19, 0.08);
+  border-radius: var(--article-share-control-shape);
+  background: var(--article-share-control-surface);
+  box-shadow: var(--article-share-control-shadow);
+  backdrop-filter: blur(12px);
+  color: var(--article-share-control-ink);
+  animation: articleBookmarkToastCycle 4.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  pointer-events: none;
+}
+
+.article-bookmark-toast[dir="rtl"] {
+  flex-direction: row-reverse;
+}
+
+.article-bookmark-toast-gesture {
+  position: relative;
+  display: inline-grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.article-bookmark-toast-rings {
+  position: absolute;
+  inset: 0;
+}
+
+.article-bookmark-toast-ring {
+  position: absolute;
+  inset: 0.14rem;
+  border: 1px solid rgba(255, 155, 69, 0.56);
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0.42);
+  animation: articleBookmarkToastTap 1.32s ease-out infinite;
+}
+
+.article-bookmark-toast-ring:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.article-bookmark-toast-ring:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+.article-bookmark-toast-hand {
+  position: relative;
+  z-index: 1;
+  font-size: 1.08rem;
+  color: rgba(255, 155, 69, 0.94);
+}
+
+.article-bookmark-toast-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(0.72rem, 0.22vw + 0.78rem, 0.84rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--article-share-control-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-bookmark-toast-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+  flex: 0 0 auto;
+  height: calc(var(--article-share-control-height) - 1rem);
+  padding: 0 0.58rem;
+  border-radius: 999px;
+  background: rgba(255, 155, 69, 0.12);
+  white-space: nowrap;
+}
+
+.article-bookmark-toast-word {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--article-share-control-ink);
+  font-size: clamp(0.76rem, 0.2vw + 0.88rem, 0.95rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.article-bookmark-toast-word::after {
+  content: "";
+  position: absolute;
+  right: -0.04em;
+  bottom: -0.32em;
+  left: -0.04em;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 155, 69, 0.84);
+}
+
+.article-bookmark-toast-icon {
+  color: rgba(255, 155, 69, 0.92);
+  font-size: 1.08rem;
+  transform: translateY(-0.01em);
 }
 
 .virtual-article,
@@ -4206,6 +4379,10 @@ body.photo-viewer-open .app-container {
     font-size: 24px;
   }
 
+  .article-bookmark-toast {
+    width: min(calc(100vw - 40px), 32rem);
+  }
+
   .virtual-article {
     --article-bookmark-inline-rail: 1.75rem;
   }
@@ -4440,13 +4617,17 @@ body.photo-viewer-open .app-container {
     justify-content: flex-start;
   }
 
+  .article-share-stack,
+  .article-bookmark-toast {
+    --article-share-control-height: 3.25rem;
+  }
+
   .article-share-stack {
     right: 12px;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .article-share-fab {
-    --m3e-fab-small-container-height: 3.25rem;
     --m3e-fab-small-icon-size: 1.4rem;
   }
 
@@ -4461,6 +4642,24 @@ body.photo-viewer-open .app-container {
 
   .article-content {
     font-size: 17px;
+  }
+
+  .article-bookmark-toast {
+    --article-bookmark-toast-shift-x: 0%;
+    right: 84px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    left: 12px;
+    width: auto;
+    gap: 0.78rem;
+    padding: 0 0.84rem;
+  }
+
+  .article-bookmark-toast-label {
+    font-size: 0.74rem;
+  }
+
+  .article-bookmark-toast-word {
+    font-size: 0.82rem;
   }
 
   .virtual-article {
@@ -4619,6 +4818,29 @@ body.photo-viewer-open .app-container {
     line-height: 1.75;
   }
 
+  .article-bookmark-toast {
+    right: 76px;
+    gap: 0.62rem;
+    padding: 0 0.74rem;
+  }
+
+  .article-bookmark-toast-gesture {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+
+  .article-bookmark-toast-label {
+    font-size: 0.7rem;
+  }
+
+  .article-bookmark-toast-preview {
+    gap: 0.42rem;
+  }
+
+  .article-bookmark-toast-word {
+    font-size: 0.78rem;
+  }
+
   .virtual-article {
     --article-bookmark-inline-rail: 1.42rem;
   }
@@ -4694,5 +4916,13 @@ body.photo-viewer-open .app-container {
 
   .gallery-photo-motion {
     transform: none !important;
+  }
+
+  .article-bookmark-toast {
+    animation: articleBookmarkToastCycle 4.6s linear both !important;
+  }
+
+  .article-bookmark-toast-ring {
+    animation: none !important;
   }
 }
