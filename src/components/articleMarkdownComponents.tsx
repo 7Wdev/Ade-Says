@@ -6,6 +6,7 @@ import {
   isValidElement,
   lazy,
   Suspense,
+  type CSSProperties,
   type HTMLAttributes,
   type ImgHTMLAttributes,
   type ReactElement,
@@ -63,15 +64,6 @@ export type NarrationRenderState = {
   enabled: boolean;
 };
 
-const dynamicBlockFallback = (
-  <div className="tikz-wrapper">
-    <div className="tikz-loading" role="status" aria-live="polite">
-      <m3e-loading-indicator variant="contained" aria-label="Loading article block" />
-      <span>Loading block</span>
-    </div>
-  </div>
-);
-
 type NarratedElementProps = HTMLAttributes<HTMLElement> & {
   children?: ReactNode;
   node?: unknown;
@@ -82,6 +74,54 @@ type MarkdownImageProps = ImgHTMLAttributes<HTMLImageElement> & {
 };
 
 type NarratedTagName = 'p' | 'li' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'blockquote';
+
+function getDeclaredSandboxHeight(code: string) {
+  const match = /<!--\s*sandbox-height:\s*(\d+)\s*-->/i.exec(code);
+  const parsedHeight = match ? Number(match[1]) : 0;
+
+  if (!Number.isFinite(parsedHeight) || parsedHeight <= 0) {
+    return 320;
+  }
+
+  return Math.min(760, Math.max(260, parsedHeight));
+}
+
+function TikzFallback() {
+  return (
+    <div className="tikz-wrapper">
+      <div className="tikz-loading" role="status" aria-live="polite">
+        <m3e-loading-indicator variant="contained" aria-label="Loading article block" />
+        <span>Loading block</span>
+      </div>
+    </div>
+  );
+}
+
+function SandboxFallback({ code }: { code: string }) {
+  const resolvedHeight = getDeclaredSandboxHeight(code);
+  const sandboxStyle: CSSProperties = {
+    height: `${resolvedHeight}px`,
+    minHeight: `${resolvedHeight}px`,
+  };
+  const sandboxChromeNone = new RegExp(String.raw`<!--\s*sandbox-chrome:\s*none\s*-->`, 'i').test(code);
+
+  return (
+    <div
+      className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}`}
+      style={sandboxStyle}
+    >
+      <div
+        className={`sandbox-loading${sandboxChromeNone ? ' sandbox-loading-no-chrome' : ''}`}
+        style={sandboxStyle}
+        role="status"
+        aria-live="polite"
+      >
+        <m3e-loading-indicator variant="contained" aria-label="Loading interactive demo" />
+        <span>Preparing sandbox...</span>
+      </div>
+    </div>
+  );
+}
 
 function wrapNarrationText(text: string) {
   return splitNarrationTextTokens(text).map((token, tokenIndex) => {
@@ -261,7 +301,7 @@ export const markdownComponents = {
 
     if (language === 'tikz') {
       return (
-        <Suspense fallback={dynamicBlockFallback}>
+        <Suspense fallback={<TikzFallback />}>
           <TikZRenderer content={codeString} />
         </Suspense>
       );
@@ -269,7 +309,7 @@ export const markdownComponents = {
 
     if (language === 'html-live') {
       return (
-        <Suspense fallback={dynamicBlockFallback}>
+        <Suspense fallback={<SandboxFallback code={codeString} />}>
           <InteractiveSandbox code={codeString} />
         </Suspense>
       );
@@ -338,21 +378,21 @@ export const markdownComponents = {
   },
 } as Components;
 
-export function createMarkdownComponents(narration?: NarrationRenderState): Components {
-  if (!narration?.enabled) {
+export function createMarkdownComponents(wordRendering?: NarrationRenderState): Components {
+  if (!wordRendering?.enabled) {
     return markdownComponents;
   }
 
   return {
     ...markdownComponents,
-    p: createNarratedElement('p', narration),
-    li: createNarratedElement('li', narration),
-    h1: createNarratedElement('h1', narration),
-    h2: createNarratedElement('h2', narration),
-    h3: createNarratedElement('h3', narration),
-    h4: createNarratedElement('h4', narration),
-    h5: createNarratedElement('h5', narration),
-    h6: createNarratedElement('h6', narration),
-    blockquote: createNarratedElement('blockquote', narration),
+    p: createNarratedElement('p', wordRendering),
+    li: createNarratedElement('li', wordRendering),
+    h1: createNarratedElement('h1', wordRendering),
+    h2: createNarratedElement('h2', wordRendering),
+    h3: createNarratedElement('h3', wordRendering),
+    h4: createNarratedElement('h4', wordRendering),
+    h5: createNarratedElement('h5', wordRendering),
+    h6: createNarratedElement('h6', wordRendering),
+    blockquote: createNarratedElement('blockquote', wordRendering),
   };
 }

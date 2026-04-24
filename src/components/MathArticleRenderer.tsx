@@ -13,31 +13,40 @@ interface MathArticleRendererProps {
     activeWordIndex: number | null;
     enabled: boolean;
   };
+  wordRenderingEnabled?: boolean;
   wordOffset?: number;
 }
 
 const remarkPlugins = [remarkMath];
 const rehypePlugins = [rehypeKatex, rehypeRaw];
 
-function MathArticleRenderer({ content, narration, wordOffset = 0 }: MathArticleRendererProps) {
+function MathArticleRenderer({
+  content,
+  narration,
+  wordOffset = 0,
+  wordRenderingEnabled = Boolean(narration?.enabled),
+}: MathArticleRendererProps) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!narration?.enabled || !rootRef.current) return;
+    if (!wordRenderingEnabled || !rootRef.current) return;
 
     const words = rootRef.current.querySelectorAll('.narration-word');
     words.forEach((word, index) => {
-      word.setAttribute('data-narration-word-index', String(wordOffset + index));
+      const wordIndex = String(wordOffset + index);
+
+      word.setAttribute('data-article-word-index', wordIndex);
+      word.setAttribute('data-narration-word-index', wordIndex);
     });
-  }, [narration?.enabled, content, wordOffset]);
+  }, [content, wordOffset, wordRenderingEnabled]);
 
   const markdownComponents = useMemo(() => {
-    const narrationState: NarrationRenderState | undefined = narration?.enabled
+    const wordRenderingState: NarrationRenderState | undefined = wordRenderingEnabled
       ? { enabled: true }
       : undefined;
 
-    return createMarkdownComponents(narrationState);
-  }, [narration?.enabled]);
+    return createMarkdownComponents(wordRenderingState);
+  }, [wordRenderingEnabled]);
 
   return (
     <div style={{ display: 'contents' }} ref={rootRef}>
@@ -56,6 +65,7 @@ export default memo(MathArticleRenderer, (prevProps, nextProps) => {
   return (
     prevProps.content === nextProps.content &&
     prevProps.wordOffset === nextProps.wordOffset &&
-    prevProps.narration?.enabled === nextProps.narration?.enabled
+    prevProps.narration?.enabled === nextProps.narration?.enabled &&
+    prevProps.wordRenderingEnabled === nextProps.wordRenderingEnabled
   );
 });

@@ -2461,6 +2461,25 @@ body.photo-viewer-open .app-container {
   --_fab-menu-ripple-color: #100f13;
 }
 
+.article-share-menu-item.is-bookmark {
+  --_fab-menu-item-container-color: var(--mag-accent-orange);
+  --_fab-menu-item-color: #100f13;
+  --_fab-menu-background-hover-color: #100f13;
+  --_fab-menu-background-focus-color: #100f13;
+  --_fab-menu-ripple-color: #100f13;
+}
+
+.article-share-menu-item.is-bookmark.is-disabled {
+  --_fab-menu-item-container-color: #5f432c;
+  --_fab-menu-item-color: rgba(255, 238, 216, 0.82);
+  --_fab-menu-background-hover-color: rgba(255, 238, 216, 0.82);
+  --_fab-menu-background-focus-color: rgba(255, 238, 216, 0.82);
+  --_fab-menu-ripple-color: rgba(255, 238, 216, 0.82);
+  filter: none;
+  opacity: 1;
+  pointer-events: none;
+}
+
 .article-share-menu-item.is-share {
   --_fab-menu-item-container-color: var(--md-sys-color-primary);
   --_fab-menu-item-color: var(--md-sys-color-on-primary);
@@ -2605,6 +2624,11 @@ body.photo-viewer-open .app-container {
   min-width: 0;
 }
 
+.virtual-article {
+  position: relative;
+  overflow: visible;
+}
+
 .lazy-article-block {
   width: 100%;
 }
@@ -2716,13 +2740,22 @@ body.photo-viewer-open .app-container {
 }
 
 .narration-word {
+  position: relative;
+  z-index: 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
   border-radius: 4px;
   margin: 0 -2px;
   padding: 0 2px;
   transition:
     background-color 0.16s ease,
-    color 0.16s ease,
+    color 0.32s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.16s ease;
+}
+
+.narration-word[data-article-word-index] {
+  cursor: text;
+  touch-action: manipulation;
 }
 
 .narration-word-played {
@@ -2737,6 +2770,250 @@ body.photo-viewer-open .app-container {
 
 [dir="rtl"] .narration-word {
   unicode-bidi: plaintext;
+}
+
+.narration-word[data-bookmark-state] {
+  --article-bookmark-plate-inset: -0.12em -0.22em -0.14em;
+  text-shadow: none;
+}
+
+[dir="rtl"] .narration-word[data-bookmark-state] {
+  --article-bookmark-plate-inset: -0.015em -0.14em -0.055em;
+  line-height: 1.26;
+}
+
+.narration-word[data-bookmark-state]::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.narration-word[data-bookmark-state]::before {
+  inset: var(--article-bookmark-plate-inset);
+  z-index: -1;
+  border-radius: 7px;
+  background: var(--mag-accent-orange);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(16, 15, 19, 0.16),
+    0 0 0 1px rgba(80, 42, 18, 0.34);
+  transform-origin: left center;
+  transform: translate3d(0, 0, 0);
+  will-change: opacity, transform;
+}
+
+[dir="rtl"] .narration-word[data-bookmark-state]::before {
+  transform-origin: right center;
+}
+
+.narration-word[data-bookmark-state="entering"]::before {
+  animation: articleBookmarkPlateIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.narration-word[data-bookmark-state="active"]::before {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+}
+
+.narration-word[data-bookmark-state="entering"],
+.narration-word[data-bookmark-state="active"] {
+  color: #100f13;
+}
+
+.narration-word[data-bookmark-state="removing"]::before {
+  animation: articleBookmarkPlateOut 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.narration-word[data-bookmark-focus="true"]::before {
+  animation: articleBookmarkPlateFocus 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.article-bookmark-line-marker {
+  --article-bookmark-marker-rest-rotate: -5deg;
+  --article-bookmark-marker-enter-x: 0.62rem;
+  --article-bookmark-marker-enter-x-strong: 0.33rem;
+  --article-bookmark-marker-enter-x-soft: 0.05rem;
+  --article-bookmark-marker-settle-x: -0.05rem;
+  --article-bookmark-marker-rebound-x: 0.022rem;
+  --article-bookmark-marker-tiny-x: -0.008rem;
+  --article-bookmark-marker-exit-x: 0.5rem;
+  --article-bookmark-marker-exit-x-small: 0.08rem;
+  --article-bookmark-marker-exit-x-mid: 0.29rem;
+  --article-bookmark-marker-enter-rotate: 18deg;
+  --article-bookmark-marker-soft-rotate: 10deg;
+  --article-bookmark-marker-overshoot-rotate: -11deg;
+  --article-bookmark-marker-settle-rotate: -3.25deg;
+  --article-bookmark-marker-rebound-rotate: -5.9deg;
+  --article-bookmark-marker-tiny-rotate: -4.6deg;
+  --article-bookmark-marker-exit-small-rotate: -6.75deg;
+  --article-bookmark-marker-exit-mid-rotate: 8deg;
+  --article-bookmark-marker-rest-transform:
+    translate3d(0, -50%, 0)
+    rotate(var(--article-bookmark-marker-rest-rotate))
+    scale(1);
+  position: absolute;
+  top: var(--article-bookmark-marker-top);
+  right: -1.35rem;
+  z-index: 2;
+  width: 0.9rem;
+  height: 1.26rem;
+  background: var(--mag-accent-orange);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+  pointer-events: none;
+  transform: var(--article-bookmark-marker-rest-transform);
+  transform-origin: 50% 16%;
+  backface-visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.article-bookmark-line-marker.is-left {
+  --article-bookmark-marker-rest-rotate: 5deg;
+  --article-bookmark-marker-enter-x: -0.62rem;
+  --article-bookmark-marker-enter-x-strong: -0.33rem;
+  --article-bookmark-marker-enter-x-soft: -0.05rem;
+  --article-bookmark-marker-settle-x: 0.05rem;
+  --article-bookmark-marker-rebound-x: -0.022rem;
+  --article-bookmark-marker-tiny-x: 0.008rem;
+  --article-bookmark-marker-exit-x: -0.5rem;
+  --article-bookmark-marker-exit-x-small: -0.08rem;
+  --article-bookmark-marker-exit-x-mid: -0.29rem;
+  --article-bookmark-marker-enter-rotate: -18deg;
+  --article-bookmark-marker-soft-rotate: -10deg;
+  --article-bookmark-marker-overshoot-rotate: 11deg;
+  --article-bookmark-marker-settle-rotate: 3.25deg;
+  --article-bookmark-marker-rebound-rotate: 5.9deg;
+  --article-bookmark-marker-tiny-rotate: 4.6deg;
+  --article-bookmark-marker-exit-small-rotate: 6.75deg;
+  --article-bookmark-marker-exit-mid-rotate: -8deg;
+  right: auto;
+  left: -1.35rem;
+}
+
+.article-bookmark-line-marker.is-active {
+  animation: articleBookmarkLineMarkerIn 0.74s linear both;
+}
+
+.article-bookmark-line-marker.is-removing {
+  animation: articleBookmarkLineMarkerOut 0.46s linear both;
+}
+
+@keyframes articleBookmarkPlateIn {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleX(0) scaleY(0.92);
+  }
+  64% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleX(1.04) scaleY(1);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes articleBookmarkPlateOut {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
+  42% {
+    opacity: 0.72;
+    transform: translate3d(0, 0, 0) scaleX(1.01) scaleY(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes articleBookmarkLineMarkerIn {
+  0% {
+    opacity: 0;
+    transform:
+      translate3d(var(--article-bookmark-marker-enter-x), -86%, 0)
+      rotate(var(--article-bookmark-marker-enter-rotate))
+      scale(0.58);
+  }
+  14% {
+    opacity: 0.78;
+    transform:
+      translate3d(var(--article-bookmark-marker-enter-x-strong), -68%, 0)
+      rotate(var(--article-bookmark-marker-soft-rotate))
+      scale(0.78);
+  }
+  28% {
+    opacity: 1;
+    transform:
+      translate3d(var(--article-bookmark-marker-enter-x-soft), -47%, 0)
+      rotate(var(--article-bookmark-marker-overshoot-rotate))
+      scale(1.04);
+  }
+  44% {
+    opacity: 1;
+    transform:
+      translate3d(var(--article-bookmark-marker-settle-x), -53%, 0)
+      rotate(var(--article-bookmark-marker-settle-rotate))
+      scale(0.985);
+  }
+  62% {
+    opacity: 1;
+    transform:
+      translate3d(var(--article-bookmark-marker-rebound-x), -49%, 0)
+      rotate(var(--article-bookmark-marker-rebound-rotate))
+      scale(1.008);
+  }
+  78% {
+    opacity: 1;
+    transform:
+      translate3d(var(--article-bookmark-marker-tiny-x), -50.5%, 0)
+      rotate(var(--article-bookmark-marker-tiny-rotate))
+      scale(0.998);
+  }
+  100% {
+    opacity: 1;
+    transform: var(--article-bookmark-marker-rest-transform);
+  }
+}
+
+@keyframes articleBookmarkLineMarkerOut {
+  0% {
+    opacity: 1;
+    transform: var(--article-bookmark-marker-rest-transform);
+  }
+  28% {
+    opacity: 1;
+    transform:
+      translate3d(var(--article-bookmark-marker-exit-x-small), -49%, 0)
+      rotate(var(--article-bookmark-marker-exit-small-rotate))
+      scale(1.03);
+  }
+  62% {
+    opacity: 0.64;
+    transform:
+      translate3d(var(--article-bookmark-marker-exit-x-mid), -64%, 0)
+      rotate(var(--article-bookmark-marker-exit-mid-rotate))
+      scale(0.82);
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate3d(var(--article-bookmark-marker-exit-x), -84%, 0)
+      rotate(var(--article-bookmark-marker-enter-rotate))
+      scale(0.54);
+  }
+}
+
+@keyframes articleBookmarkPlateFocus {
+  0% {
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
+  42% {
+    transform: translate3d(0, 0, 0) scaleX(1.08) scaleY(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scaleX(1) scaleY(1);
+  }
 }
 
 .article-content strong {

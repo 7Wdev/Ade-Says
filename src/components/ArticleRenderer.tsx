@@ -1,4 +1,17 @@
-import { lazy, memo, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 
@@ -7,6 +20,11 @@ import ViewportRender from './ViewportRender';
 import { countNarrationWords } from '../utils/narration';
 
 interface ArticleRendererProps {
+  bookmark?: {
+    activeWordIndex: number | null;
+    onToggle: (wordIndex: number) => void;
+    scrollRequest: number;
+  };
   content: string;
   narration?: {
     activeWordIndex: number | null;
@@ -22,6 +40,12 @@ const ARTICLE_CHUNK_TARGET_CHARS = 2200;
 const ARTICLE_CHUNK_TARGET_HEIGHT = 900;
 const ARTICLE_INITIAL_RENDER_HEIGHT = 1800;
 const ARTICLE_ROOT_MARGIN = '2400px 0px';
+const ARTICLE_IDLE_RENDER_TIMEOUT = 700;
+const ARTICLE_IDLE_RENDER_FALLBACK_DELAY = 90;
+const ARTICLE_ESTIMATED_CONTENT_WIDTH = 820;
+const ARTICLE_ESTIMATED_PHOTO_PAIR_GAP = 18;
+const ARTICLE_TOUCH_TRIPLE_TAP_DELAY = 520;
+const ARTICLE_TOUCH_CLICK_SUPPRESSION = 700;
 
 type ArticleChunk = {
   content: string;
@@ -41,10 +65,43 @@ type MarkdownBlockProps = {
   content: string;
   hasMath: boolean;
   narration?: ArticleRendererProps['narration'];
+  wordRenderingEnabled: boolean;
   wordOffset: number;
 };
 
 type ArticleWidthClass = 'compact' | 'regular' | 'wide';
+
+type ArticleIdleDeadline = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
+type ArticleIdleWindow = Window & {
+  cancelIdleCallback?: (handle: number) => void;
+  requestIdleCallback?: (
+    callback: (deadline: ArticleIdleDeadline) => void,
+    options?: { timeout: number },
+  ) => number;
+};
+
+type ArticleIdleRenderState = {
+  count: number;
+  key: string;
+};
+
+type ArticleTapState = {
+  count: number;
+  lastTapTime: number;
+  wordIndex: number | null;
+};
+
+type ArticleBookmarkLineMarkerState = {
+  side: 'left' | 'right';
+  state: 'active' | 'removing';
+  top: number;
+};
+
+type ArticleBookmarkWordState = 'active' | 'entering' | 'removing';
 
 function createChunkId(index: number, content: string, estimatedHeight: number) {
   let hash = 0;
@@ -80,6 +137,31 @@ function getInitialArticleWidthClass(): ArticleWidthClass {
   return getArticleWidthClass(window.innerWidth);
 }
 
+function scheduleArticleIdleRender(callback: (deadline: ArticleIdleDeadline) => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  const idleWindow = window as ArticleIdleWindow;
+
+  if (idleWindow.requestIdleCallback && idleWindow.cancelIdleCallback) {
+    const handle = idleWindow.requestIdleCallback(callback, { timeout: ARTICLE_IDLE_RENDER_TIMEOUT });
+
+    return () => {
+      idleWindow.cancelIdleCallback?.(handle);
+    };
+  }
+
+  const handle = window.setTimeout(() => {
+    callback({
+      didTimeout: true,
+      timeRemaining: () => 0,
+    });
+  }, ARTICLE_IDLE_RENDER_FALLBACK_DELAY);
+
+  return () => window.clearTimeout(handle);
+}
+
 function estimateParagraphHeight(content: string) {
   const text = content
     .replace(/<[^>]+>/g, '')
@@ -90,6 +172,28 @@ function estimateParagraphHeight(content: string) {
   return 24 + lines * 32;
 }
 
+function getNumericHtmlAttribute(markup: string, attribute: string) {
+  const match = new RegExp(`\\s${attribute}\\s*=\\s*["']?(\\d+(?:\\.\\d+)?)`, 'i').exec(markup);
+  const value = match ? Number(match[1]) : 0;
+
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function estimateImageRenderedHeight(markup: string, renderedWidth: number) {
+  const intrinsicWidth = getNumericHtmlAttribute(markup, 'width');
+  const intrinsicHeight = getNumericHtmlAttribute(markup, 'height');
+
+  if (!intrinsicWidth || !intrinsicHeight) {
+    return 430;
+  }
+
+  return Math.round(renderedWidth * (intrinsicHeight / intrinsicWidth));
+}
+
+function estimateImageOuterHeight(markup: string, renderedWidth = ARTICLE_ESTIMATED_CONTENT_WIDTH) {
+  return estimateImageRenderedHeight(markup, renderedWidth) + 64;
+}
+
 function estimateCodeFenceHeight(content: string) {
   const lines = content.split(/\r?\n/);
   const language = getFenceLanguage(lines[0] ?? '');
@@ -98,25 +202,31 @@ function estimateCodeFenceHeight(content: string) {
   if (language === 'html-live') {
     const parsedHeight = sandboxHeight ? Number(sandboxHeight) : 320;
 
-    return Math.min(2100, Math.max(260, parsedHeight)) + 72;
+    return Math.min(760, Math.max(260, parsedHeight)) + 72;
   }
 
   if (language === 'tikz') {
     return 320;
   }
 
-  return 92 + Math.max(1, lines.length - 2) * 25;
+  return 154 + Math.max(1, lines.length - 2) * 25;
 }
 
-function estimateRawHtmlHeight(content: string) {
-  const imageCount = (content.match(/<img\b/gi) ?? []).length;
+function estimateRawHtmlHeight(content: string, contentWidth = ARTICLE_ESTIMATED_CONTENT_WIDTH) {
+  const imageTags = Array.from(content.matchAll(/<img\b[^>]*>/gi), (match) => match[0]);
 
   if (/class=["'][^"']*\bstego-photo-pair\b/i.test(content)) {
-    return 430;
+    const columnWidth = (contentWidth - ARTICLE_ESTIMATED_PHOTO_PAIR_GAP) / 2;
+    const imageHeight = Math.max(
+      220,
+      ...imageTags.map((tag) => estimateImageRenderedHeight(tag, columnWidth)),
+    );
+
+    return imageHeight + 100;
   }
 
-  if (imageCount > 0) {
-    return imageCount * 430;
+  if (imageTags.length > 0) {
+    return imageTags.reduce((total, tag) => total + estimateImageOuterHeight(tag, contentWidth), 0);
   }
 
   return estimateParagraphHeight(content);
@@ -135,11 +245,11 @@ function estimateMarkdownAtom(content: string) {
   }
 
   if (/^#{1,2}\s+/.test(trimmed)) {
-    return 92;
+    return /^#\s+/.test(trimmed) ? 144 : 120;
   }
 
   if (/^#{3,6}\s+/.test(trimmed)) {
-    return 72;
+    return 92;
   }
 
   if (/^\$\$/.test(trimmed) || /\\begin\{/.test(trimmed)) {
@@ -147,7 +257,7 @@ function estimateMarkdownAtom(content: string) {
   }
 
   if (/^!\[[^\]]*]\([^)]+\)\s*$/.test(trimmed)) {
-    return 500;
+    return 540;
   }
 
   if (/^<\w+/i.test(trimmed)) {
@@ -329,6 +439,12 @@ function getResponsiveChunkHeight(chunk: ArticleChunk, widthClass: ArticleWidthC
     return widthClass === 'compact' ? 850 : 480;
   }
 
+  if (/<img\b/i.test(chunk.content)) {
+    const contentWidth = widthClass === 'compact' ? 360 : 620;
+
+    return estimateRawHtmlHeight(chunk.content, contentWidth);
+  }
+
   if (fenceLanguage && fenceLanguage !== 'html-live' && fenceLanguage !== 'tikz') {
     return Math.max(chunk.estimatedHeight, estimateWrappedCodeHeight(chunk.content, widthClass));
   }
@@ -350,11 +466,106 @@ function getResponsiveChunkHeight(chunk: ArticleChunk, widthClass: ArticleWidthC
   return chunk.estimatedHeight;
 }
 
+function getChunkIndexForWord(wordIndex: number | null, wordOffsets: number[], wordCounts: number[]) {
+  if (wordIndex === null) {
+    return -1;
+  }
+
+  for (let index = 0; index < wordOffsets.length; index += 1) {
+    const startIndex = wordOffsets[index];
+    const endIndex = startIndex + wordCounts[index];
+
+    if (wordIndex >= startIndex && wordIndex < endIndex) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function getArticleWord(root: HTMLElement, wordIndex: number) {
+  return root.querySelector<HTMLElement>(`[data-article-word-index="${wordIndex}"]`);
+}
+
+function getArticleWordFromEventTarget(root: HTMLElement, target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  const word = target.closest<HTMLElement>('[data-article-word-index]');
+
+  return word && root.contains(word) ? word : null;
+}
+
+function getArticleWordIndex(word: HTMLElement) {
+  const index = Number(word.getAttribute('data-article-word-index'));
+
+  return Number.isInteger(index) && index >= 0 ? index : null;
+}
+
+function getBookmarkLineMarkerPlacement(root: HTMLElement, word: HTMLElement) {
+  const wordRect = word.getClientRects()[0] ?? word.getBoundingClientRect();
+
+  if (!wordRect.width || !wordRect.height) {
+    return null;
+  }
+
+  const rootRect = root.getBoundingClientRect();
+  const direction = window.getComputedStyle(root).direction;
+
+  return {
+    side: direction === 'rtl' ? 'right' : 'left',
+    top: wordRect.top - rootRect.top + (wordRect.height / 2),
+  } satisfies Pick<ArticleBookmarkLineMarkerState, 'side' | 'top'>;
+}
+
+function setBookmarkWordState(
+  word: HTMLElement,
+  state: ArticleBookmarkWordState,
+  scheduleCleanup: (word: HTMLElement) => void,
+) {
+  if (word.getAttribute('data-bookmark-state') === state) {
+    return;
+  }
+
+  word.setAttribute('data-bookmark-state', state);
+
+  if (state === 'removing') {
+    scheduleCleanup(word);
+  }
+}
+
+function applyBookmarkStyles(
+  root: HTMLElement,
+  activeIndex: number | null,
+  scheduleCleanup: (word: HTMLElement) => void,
+  shouldAnimateEntry: (wordIndex: number) => boolean,
+) {
+  const words = root.querySelectorAll<HTMLElement>('[data-article-word-index]');
+
+  for (const word of words) {
+    const wordIndex = getArticleWordIndex(word);
+    const currentState = word.getAttribute('data-bookmark-state');
+
+    if (wordIndex === activeIndex) {
+      if (currentState === 'active' || currentState === 'entering') {
+        continue;
+      }
+
+      setBookmarkWordState(word, shouldAnimateEntry(wordIndex) ? 'entering' : 'active', scheduleCleanup);
+    } else if (currentState === 'active' || currentState === 'entering') {
+      setBookmarkWordState(word, 'removing', scheduleCleanup);
+    } else if (currentState !== 'removing') {
+      word.removeAttribute('data-bookmark-state');
+    }
+  }
+}
+
 const ArticleBlockSkeleton = memo(function ArticleBlockSkeleton({ estimatedHeight }: { estimatedHeight: number }) {
   return (
     <div
       className="article-block-skeleton"
-      style={{ minHeight: Math.max(180, estimatedHeight) }}
+      style={{ margin: 0, minHeight: Math.max(180, estimatedHeight) }}
       aria-hidden="true"
     >
       <span className="article-skeleton-line article-skeleton-title" />
@@ -365,25 +576,32 @@ const ArticleBlockSkeleton = memo(function ArticleBlockSkeleton({ estimatedHeigh
   );
 });
 
-const PlainMarkdownBlock = memo(function PlainMarkdownBlock({ content, narration, wordOffset }: Pick<MarkdownBlockProps, 'content' | 'narration' | 'wordOffset'>) {
+const PlainMarkdownBlock = memo(function PlainMarkdownBlock({
+  content,
+  wordOffset,
+  wordRenderingEnabled,
+}: Pick<MarkdownBlockProps, 'content' | 'wordOffset' | 'wordRenderingEnabled'>) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!narration?.enabled || !rootRef.current) return;
+    if (!wordRenderingEnabled || !rootRef.current) return;
 
     const words = rootRef.current.querySelectorAll('.narration-word');
     words.forEach((word, index) => {
-      word.setAttribute('data-narration-word-index', String(wordOffset + index));
+      const wordIndex = String(wordOffset + index);
+
+      word.setAttribute('data-article-word-index', wordIndex);
+      word.setAttribute('data-narration-word-index', wordIndex);
     });
-  }, [narration?.enabled, content, wordOffset]);
+  }, [content, wordOffset, wordRenderingEnabled]);
 
   const markdownComponents = useMemo(() => {
-    const narrationState: NarrationRenderState | undefined = narration?.enabled
+    const wordRenderingState: NarrationRenderState | undefined = wordRenderingEnabled
       ? { enabled: true }
       : undefined;
 
-    return createMarkdownComponents(narrationState);
-  }, [narration?.enabled]);
+    return createMarkdownComponents(wordRenderingState);
+  }, [wordRenderingEnabled]);
 
   return (
     <div style={{ display: 'contents' }} ref={rootRef}>
@@ -397,22 +615,40 @@ const PlainMarkdownBlock = memo(function PlainMarkdownBlock({ content, narration
   );
 });
 
-const MarkdownBlock = memo(function MarkdownBlock({ content, hasMath, narration, wordOffset }: MarkdownBlockProps) {
+const MarkdownBlock = memo(function MarkdownBlock({
+  content,
+  hasMath,
+  narration,
+  wordOffset,
+  wordRenderingEnabled,
+}: MarkdownBlockProps) {
   if (hasMath) {
     return (
       <Suspense fallback={<div className="article-inline-loading" role="status">Loading article</div>}>
-        <MathArticleRenderer content={content} narration={narration} wordOffset={wordOffset} />
+        <MathArticleRenderer
+          content={content}
+          narration={narration}
+          wordOffset={wordOffset}
+          wordRenderingEnabled={wordRenderingEnabled}
+        />
       </Suspense>
     );
   }
 
-  return <PlainMarkdownBlock content={content} narration={narration} wordOffset={wordOffset} />;
+  return (
+    <PlainMarkdownBlock
+      content={content}
+      wordOffset={wordOffset}
+      wordRenderingEnabled={wordRenderingEnabled}
+    />
+  );
 }, (prevProps, nextProps) => {
   return (
     prevProps.content === nextProps.content &&
     prevProps.hasMath === nextProps.hasMath &&
     prevProps.wordOffset === nextProps.wordOffset &&
-    prevProps.narration?.enabled === nextProps.narration?.enabled
+    prevProps.narration?.enabled === nextProps.narration?.enabled &&
+    prevProps.wordRenderingEnabled === nextProps.wordRenderingEnabled
   );
 });
 
@@ -472,21 +708,48 @@ function applyNarrationIncrementally(root: HTMLElement, previousIndex: number | 
   setNarrationWordClass(getNarrationWord(root, activeIndex), 'narration-word narration-word-active');
 }
 
-function ArticleRenderer({ content, narration }: ArticleRendererProps) {
+function ArticleRenderer({ bookmark, content, narration }: ArticleRendererProps) {
   const chunks = useMemo(() => createArticleChunks(content), [content]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [articleWidthClass, setArticleWidthClass] = useState<ArticleWidthClass>(getInitialArticleWidthClass);
   const initialRenderCount = useMemo(() => getInitialRenderCount(chunks, articleWidthClass), [articleWidthClass, chunks]);
+  const articleRenderKey = useMemo(() => (
+    `${chunks.length}:${chunks[0]?.id ?? ''}:${chunks[chunks.length - 1]?.id ?? ''}`
+  ), [chunks]);
+  const [idleRenderState, setIdleRenderState] = useState<ArticleIdleRenderState>(() => ({
+    count: initialRenderCount,
+    key: articleRenderKey,
+  }));
+  const idleRenderCount = idleRenderState.key === articleRenderKey
+    ? Math.max(idleRenderState.count, initialRenderCount)
+    : initialRenderCount;
+  const wordRenderingEnabled = Boolean(narration?.enabled || bookmark);
+  const wordCounts = useMemo(() => chunks.map((chunk) => countNarrationWords(chunk.content)), [chunks]);
   const wordOffsets = useMemo(() => {
-    const wordCounts = chunks.map((chunk) => countNarrationWords(chunk.content));
-
     return wordCounts.map((_, index) => (
       wordCounts.slice(0, index).reduce((total, wordCount) => total + wordCount, 0)
     ));
-  }, [chunks]);
+  }, [wordCounts]);
+  const bookmarkedWordIndex = bookmark?.activeWordIndex ?? null;
+  const scrollTargetChunkIndex = bookmark?.scrollRequest
+    ? getChunkIndexForWord(bookmarkedWordIndex, wordOffsets, wordCounts)
+    : -1;
+  const renderedVirtualCount = scrollTargetChunkIndex >= 0
+    ? Math.max(idleRenderCount, scrollTargetChunkIndex + 1)
+    : idleRenderCount;
   const shouldVirtualize = chunks.length > 1;
   const previousActiveWordRef = useRef<number | null>(null);
   const activeWordRef = useRef<number | null>(null);
+  const bookmarkCleanupTimersRef = useRef<number[]>([]);
+  const bookmarkMarkerRemovalTimerRef = useRef<number | null>(null);
+  const pendingBookmarkEntryWordRef = useRef<number | null>(null);
+  const touchTapStateRef = useRef<ArticleTapState>({
+    count: 0,
+    lastTapTime: 0,
+    wordIndex: null,
+  });
+  const suppressClickUntilRef = useRef(0);
+  const [bookmarkMarker, setBookmarkMarker] = useState<ArticleBookmarkLineMarkerState | null>(null);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -519,7 +782,393 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
   useEffect(() => {
     previousActiveWordRef.current = null;
     activeWordRef.current = null;
+    pendingBookmarkEntryWordRef.current = null;
+    touchTapStateRef.current = {
+      count: 0,
+      lastTapTime: 0,
+      wordIndex: null,
+    };
+    suppressClickUntilRef.current = 0;
   }, [content]);
+
+  useEffect(() => () => {
+    for (const timer of bookmarkCleanupTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+
+    bookmarkCleanupTimersRef.current = [];
+
+    if (bookmarkMarkerRemovalTimerRef.current !== null) {
+      window.clearTimeout(bookmarkMarkerRemovalTimerRef.current);
+      bookmarkMarkerRemovalTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleBookmarkCleanup = useCallback((word: HTMLElement) => {
+    const timer = window.setTimeout(() => {
+      if (word.getAttribute('data-bookmark-state') === 'removing') {
+        word.removeAttribute('data-bookmark-state');
+      }
+
+      bookmarkCleanupTimersRef.current = bookmarkCleanupTimersRef.current.filter((item) => item !== timer);
+    }, 600);
+
+    bookmarkCleanupTimersRef.current.push(timer);
+  }, []);
+
+  const clearBookmarkMarkerRemoval = useCallback(() => {
+    if (bookmarkMarkerRemovalTimerRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(bookmarkMarkerRemovalTimerRef.current);
+    bookmarkMarkerRemovalTimerRef.current = null;
+  }, []);
+
+  const scheduleBookmarkMarkerRemoval = useCallback(() => {
+    clearBookmarkMarkerRemoval();
+    setBookmarkMarker((currentMarker) => (
+      currentMarker ? { ...currentMarker, state: 'removing' } : null
+    ));
+
+    bookmarkMarkerRemovalTimerRef.current = window.setTimeout(() => {
+      setBookmarkMarker(null);
+      bookmarkMarkerRemovalTimerRef.current = null;
+    }, 520);
+  }, [clearBookmarkMarkerRemoval]);
+
+  const toggleBookmarkedWord = useCallback((word: HTMLElement) => {
+    if (!bookmark) {
+      return false;
+    }
+
+    const wordIndex = getArticleWordIndex(word);
+    if (wordIndex === null) {
+      return false;
+    }
+
+    pendingBookmarkEntryWordRef.current = bookmark.activeWordIndex === wordIndex ? null : wordIndex;
+    window.getSelection()?.removeAllRanges();
+    bookmark.onToggle(wordIndex);
+
+    return true;
+  }, [bookmark]);
+
+  const shouldAnimateBookmarkEntry = useCallback((wordIndex: number) => {
+    if (pendingBookmarkEntryWordRef.current !== wordIndex) {
+      return false;
+    }
+
+    pendingBookmarkEntryWordRef.current = null;
+    return true;
+  }, []);
+
+  const handleArticlePointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!bookmark || event.pointerType === 'mouse') {
+      return;
+    }
+
+    const root = rootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const word = getArticleWordFromEventTarget(root, event.target);
+    if (!word) {
+      touchTapStateRef.current = {
+        count: 0,
+        lastTapTime: 0,
+        wordIndex: null,
+      };
+      return;
+    }
+
+    const wordIndex = getArticleWordIndex(word);
+    if (wordIndex === null) {
+      return;
+    }
+
+    const now = event.timeStamp;
+    const previousTapState = touchTapStateRef.current;
+    const isSameSequence = (
+      previousTapState.wordIndex === wordIndex &&
+      now - previousTapState.lastTapTime <= ARTICLE_TOUCH_TRIPLE_TAP_DELAY
+    );
+    const nextCount = isSameSequence ? previousTapState.count + 1 : 1;
+
+    touchTapStateRef.current = {
+      count: nextCount,
+      lastTapTime: now,
+      wordIndex,
+    };
+
+    if (nextCount >= 3) {
+      event.preventDefault();
+      event.stopPropagation();
+      touchTapStateRef.current = {
+        count: 0,
+        lastTapTime: 0,
+        wordIndex: null,
+      };
+      suppressClickUntilRef.current = Date.now() + ARTICLE_TOUCH_CLICK_SUPPRESSION;
+      toggleBookmarkedWord(word);
+    }
+  }, [bookmark, toggleBookmarkedWord]);
+
+  const handleArticleClick = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    if (Date.now() < suppressClickUntilRef.current) {
+      return;
+    }
+
+    if (event.detail !== 3 || !bookmark) {
+      return;
+    }
+
+    const root = rootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const word = getArticleWordFromEventTarget(root, event.target);
+    if (!word) {
+      return;
+    }
+
+    if (!toggleBookmarkedWord(word)) {
+      return;
+    }
+
+    event.preventDefault();
+  }, [bookmark, toggleBookmarkedWord]);
+
+  useEffect(() => {
+    if (!wordRenderingEnabled || !bookmark) {
+      return undefined;
+    }
+
+    const root = rootRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    applyBookmarkStyles(root, bookmarkedWordIndex, scheduleBookmarkCleanup, shouldAnimateBookmarkEntry);
+
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.addedNodes.length > 0)) {
+        applyBookmarkStyles(root, bookmarkedWordIndex, scheduleBookmarkCleanup, shouldAnimateBookmarkEntry);
+      }
+    });
+
+    observer.observe(root, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [bookmark, bookmarkedWordIndex, scheduleBookmarkCleanup, shouldAnimateBookmarkEntry, wordRenderingEnabled]);
+
+  useLayoutEffect(() => {
+    if (!wordRenderingEnabled || !bookmark) {
+      const removalFrame = window.requestAnimationFrame(scheduleBookmarkMarkerRemoval);
+
+      return () => window.cancelAnimationFrame(removalFrame);
+    }
+
+    if (bookmarkedWordIndex === null) {
+      const removalFrame = window.requestAnimationFrame(scheduleBookmarkMarkerRemoval);
+
+      return () => window.cancelAnimationFrame(removalFrame);
+    }
+
+    const root = rootRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    let frame = 0;
+    let observer: MutationObserver | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let cancelled = false;
+
+    const updateBookmarkMarker = () => {
+      frame = 0;
+
+      if (cancelled) {
+        return;
+      }
+
+      const word = getArticleWord(root, bookmarkedWordIndex);
+      const placement = word ? getBookmarkLineMarkerPlacement(root, word) : null;
+
+      if (!placement) {
+        return;
+      }
+
+      clearBookmarkMarkerRemoval();
+      setBookmarkMarker((currentMarker) => {
+        if (
+          currentMarker?.state === 'active' &&
+          currentMarker.side === placement.side &&
+          Math.abs(currentMarker.top - placement.top) < 0.5
+        ) {
+          return currentMarker;
+        }
+
+        return {
+          ...placement,
+          state: 'active',
+        };
+      });
+    };
+
+    const requestBookmarkMarkerUpdate = () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+
+      frame = window.requestAnimationFrame(updateBookmarkMarker);
+    };
+
+    requestBookmarkMarkerUpdate();
+
+    observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
+        requestBookmarkMarkerUpdate();
+      }
+    });
+    observer.observe(root, { childList: true, subtree: true });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(requestBookmarkMarkerUpdate);
+      resizeObserver.observe(root);
+    }
+
+    window.addEventListener('resize', requestBookmarkMarkerUpdate);
+    document.fonts?.ready.then(() => {
+      if (!cancelled) {
+        requestBookmarkMarkerUpdate();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+
+      observer?.disconnect();
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', requestBookmarkMarkerUpdate);
+    };
+  }, [
+    bookmark,
+    bookmarkedWordIndex,
+    clearBookmarkMarkerRemoval,
+    renderedVirtualCount,
+    scheduleBookmarkMarkerRemoval,
+    wordRenderingEnabled,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!bookmark?.scrollRequest || bookmarkedWordIndex === null) {
+      return undefined;
+    }
+
+    const root = rootRef.current;
+    if (!root) {
+      return undefined;
+    }
+
+    let focusTimer = 0;
+    let observer: MutationObserver | null = null;
+    let observerTimer = 0;
+    const scrollToBookmark = () => {
+      const word = getArticleWord(root, bookmarkedWordIndex);
+
+      if (!word) {
+        return false;
+      }
+
+      observer?.disconnect();
+      observer = null;
+      word.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      });
+      word.setAttribute('data-bookmark-focus', 'true');
+
+      focusTimer = window.setTimeout(() => {
+        word.removeAttribute('data-bookmark-focus');
+      }, 1100);
+
+      return true;
+    };
+    const frame = window.requestAnimationFrame(() => {
+      if (scrollToBookmark()) {
+        return;
+      }
+
+      observer = new MutationObserver(() => {
+        scrollToBookmark();
+      });
+      observer.observe(root, { childList: true, subtree: true });
+
+      observerTimer = window.setTimeout(() => {
+        observer?.disconnect();
+        observer = null;
+      }, 1600);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+
+      if (focusTimer) {
+        window.clearTimeout(focusTimer);
+      }
+
+      if (observerTimer) {
+        window.clearTimeout(observerTimer);
+      }
+    };
+  }, [bookmark?.scrollRequest, bookmarkedWordIndex, renderedVirtualCount]);
+
+  useEffect(() => {
+    if (!shouldVirtualize || idleRenderCount >= chunks.length) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    const cancelIdleRender = scheduleArticleIdleRender((deadline) => {
+      if (cancelled) {
+        return;
+      }
+
+      setIdleRenderState((currentState) => {
+        const currentCount = currentState.key === articleRenderKey
+          ? Math.max(currentState.count, initialRenderCount)
+          : initialRenderCount;
+
+        if (currentCount >= chunks.length) {
+          return currentState.key === articleRenderKey
+            ? currentState
+            : { count: currentCount, key: articleRenderKey };
+        }
+
+        const increment = deadline.didTimeout || deadline.timeRemaining() > 18 ? 2 : 1;
+        const nextCount = Math.min(chunks.length, currentCount + increment);
+
+        return {
+          count: nextCount,
+          key: articleRenderKey,
+        };
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelIdleRender();
+    };
+  }, [articleRenderKey, chunks.length, idleRenderCount, initialRenderCount, shouldVirtualize]);
 
   useEffect(() => {
     if (!narration?.enabled) return;
@@ -553,9 +1202,25 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
   }, [narration?.enabled]);
 
 
+  const bookmarkMarkerNode = bookmarkMarker ? (
+    <span
+      aria-hidden="true"
+      className={`article-bookmark-line-marker is-${bookmarkMarker.side} is-${bookmarkMarker.state}`}
+      style={{
+        '--article-bookmark-marker-top': `${bookmarkMarker.top}px`,
+      } as CSSProperties}
+    />
+  ) : null;
+
   if (shouldVirtualize) {
     return (
-      <div className="virtual-article" ref={rootRef}>
+      <div
+        className="virtual-article"
+        onClick={handleArticleClick}
+        onPointerUp={handleArticlePointerUp}
+        ref={rootRef}
+      >
+        {bookmarkMarkerNode}
         {chunks.map((chunk, index) => {
           const estimatedHeight = getResponsiveChunkHeight(chunk, articleWidthClass);
 
@@ -566,6 +1231,7 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
                   content={chunk.content}
                   hasMath={chunk.hasMath}
                   narration={narration}
+                  wordRenderingEnabled={wordRenderingEnabled}
                   wordOffset={wordOffsets[index]}
                 />
               </div>
@@ -576,6 +1242,7 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
             <ViewportRender
               cacheKey={chunk.id}
               className="lazy-article-block"
+              initialRender={index < renderedVirtualCount}
               key={chunk.id}
               minHeight={estimatedHeight}
               placeholder={<ArticleBlockSkeleton estimatedHeight={estimatedHeight} />}
@@ -586,6 +1253,7 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
                 content={chunk.content}
                 hasMath={chunk.hasMath}
                 narration={narration}
+                wordRenderingEnabled={wordRenderingEnabled}
                 wordOffset={wordOffsets[index]}
               />
             </ViewportRender>
@@ -596,8 +1264,20 @@ function ArticleRenderer({ content, narration }: ArticleRendererProps) {
   }
 
   return (
-    <div ref={rootRef} className="virtual-article">
-      <MarkdownBlock content={content} hasMath={chunks[0]?.hasMath ?? false} narration={narration} wordOffset={0} />
+    <div
+      className="virtual-article"
+      onClick={handleArticleClick}
+      onPointerUp={handleArticlePointerUp}
+      ref={rootRef}
+    >
+      {bookmarkMarkerNode}
+      <MarkdownBlock
+        content={content}
+        hasMath={chunks[0]?.hasMath ?? false}
+        narration={narration}
+        wordRenderingEnabled={wordRenderingEnabled}
+        wordOffset={0}
+      />
     </div>
   );
 }

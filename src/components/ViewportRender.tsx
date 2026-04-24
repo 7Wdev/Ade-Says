@@ -54,8 +54,18 @@ function ViewportRender({
   const [hasRendered, setHasRendered] = useState(shouldRenderInitially);
   const [widthBucket, setWidthBucket] = useState('unknown');
   const resolvedCacheKey = getHeightCacheKey(cacheKey, widthBucket);
-  const [measuredHeight, setMeasuredHeight] = useState<number>();
-  const shouldRender = isIntersecting || (hasRendered && !unmountWhenOutside);
+  const [measuredHeightState, setMeasuredHeightState] = useState<{
+    cacheKey: string | undefined;
+    height: number | undefined;
+  }>({
+    cacheKey: undefined,
+    height: undefined,
+  });
+  const measuredHeight = measuredHeightState.cacheKey === resolvedCacheKey
+    ? measuredHeightState.height
+    : undefined;
+  const cachedHeight = resolvedCacheKey ? measuredHeightCache.get(resolvedCacheKey) : undefined;
+  const shouldRender = initialRender || isIntersecting || (hasRendered && !unmountWhenOutside);
 
   useLayoutEffect(() => {
     const node = rootRef.current;
@@ -86,10 +96,6 @@ function ViewportRender({
   }, []);
 
   useEffect(() => {
-    setMeasuredHeight(resolvedCacheKey ? measuredHeightCache.get(resolvedCacheKey) : undefined);
-  }, [resolvedCacheKey]);
-
-  useEffect(() => {
     const node = rootRef.current;
     if (!node) return;
 
@@ -117,9 +123,19 @@ function ViewportRender({
       const height = node.getBoundingClientRect().height;
 
       if (height > 0) {
-        setMeasuredHeight((currentHeight) => (
-          Math.abs((currentHeight ?? 0) - height) > 1 ? height : currentHeight
-        ));
+        setMeasuredHeightState((currentState) => {
+          if (
+            currentState.cacheKey === resolvedCacheKey &&
+            Math.abs((currentState.height ?? 0) - height) <= 1
+          ) {
+            return currentState;
+          }
+
+          return {
+            cacheKey: resolvedCacheKey,
+            height,
+          };
+        });
 
         if (resolvedCacheKey) {
           measuredHeightCache.set(resolvedCacheKey, height);
@@ -141,7 +157,7 @@ function ViewportRender({
 
   const placeholderStyle: CSSProperties | undefined = shouldRender
     ? undefined
-    : { minHeight: measuredHeight ?? minHeight };
+    : { minHeight: measuredHeight ?? cachedHeight ?? minHeight };
 
   return (
     <div ref={rootRef} className={className} style={placeholderStyle}>

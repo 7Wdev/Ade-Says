@@ -1,3 +1,5 @@
+import { articleImageMetadata } from '../generated/article-image-metadata';
+
 export interface PostMeta {
   id: string;
   title: string;
@@ -41,6 +43,14 @@ type ArticleMarkdownFile = {
   filename: string;
   path: string;
   rawContent: string;
+};
+
+type ArticleAssetResolution = {
+  dimensions?: {
+    height: number;
+    width: number;
+  };
+  url?: string;
 };
 
 const rawPostFiles = import.meta.glob('../content/posts/**/*.md', {
@@ -119,16 +129,103 @@ function isExternalOrRootPath(value: string) {
   return /^(?:[a-z][a-z\d+.-]*:|\/|#)/i.test(value);
 }
 
-function resolveArticleAsset(value: string | undefined, markdownPath: string) {
+function resolveArticleAssetInfo(value: string | undefined, markdownPath: string): ArticleAssetResolution {
   if (!value || isExternalOrRootPath(value)) {
-    return value;
+    return { url: value };
   }
 
   const normalizedMarkdownPath = markdownPath.replace(/\\/g, '/');
   const articleDirectory = normalizedMarkdownPath.slice(0, normalizedMarkdownPath.lastIndexOf('/') + 1);
   const assetPath = normalizeVirtualPath(`${articleDirectory}${value}`);
 
-  return postAssetUrls[assetPath] ?? value;
+  return {
+    dimensions: articleImageMetadata[assetPath],
+    url: postAssetUrls[assetPath] ?? value,
+  };
+}
+
+function resolveArticleAsset(value: string | undefined, markdownPath: string) {
+  return resolveArticleAssetInfo(value, markdownPath).url;
+}
+
+function escapeHtmlAttribute(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function normalizeMarkdownImageTitle(rawTitle: string | undefined) {
+  if (!rawTitle) {
+    return '';
+  }
+
+  const trimmedTitle = rawTitle.trim();
+  const firstCharacter = trimmedTitle[0];
+  const lastCharacter = trimmedTitle[trimmedTitle.length - 1];
+
+  if (
+    (firstCharacter === '"' && lastCharacter === '"') ||
+    (firstCharacter === "'" && lastCharacter === "'") ||
+    (firstCharacter === '(' && lastCharacter === ')')
+  ) {
+    return trimmedTitle.slice(1, -1);
+  }
+
+  return trimmedTitle;
+}
+
+function formatMarkdownImageReference(
+  alt: string,
+  rawUrl: string,
+  title: string | undefined,
+  markdownPath: string,
+  wasAngleWrapped: boolean,
+) {
+  const asset = resolveArticleAssetInfo(rawUrl, markdownPath);
+  const resolvedUrl = asset.url ?? rawUrl;
+  const normalizedTitle = normalizeMarkdownImageTitle(title);
+
+  if (!asset.dimensions) {
+    const formattedUrl = wasAngleWrapped ? `<${resolvedUrl}>` : resolvedUrl;
+    const formattedTitle = normalizedTitle ? ` "${normalizedTitle.replace(/"/g, '\\"')}"` : '';
+
+    return `![${alt}](${formattedUrl}${formattedTitle})`;
+  }
+
+  const titleAttribute = normalizedTitle
+    ? ` title="${escapeHtmlAttribute(normalizedTitle)}"`
+    : '';
+
+  return [
+    '<img',
+    ` src="${escapeHtmlAttribute(resolvedUrl)}"`,
+    ` alt="${escapeHtmlAttribute(alt)}"`,
+    ` width="${asset.dimensions.width}"`,
+    ` height="${asset.dimensions.height}"`,
+    titleAttribute,
+    '>',
+  ].join('');
+}
+
+function formatHtmlImageReference(prefix: string, url: string, suffix: string, markdownPath: string) {
+  const asset = resolveArticleAssetInfo(url, markdownPath);
+  const resolvedUrl = asset.url ?? url;
+
+  if (!asset.dimensions) {
+    return `${prefix}${resolvedUrl}${suffix}`;
+  }
+
+  const tag = `${prefix}${resolvedUrl}${suffix}`;
+  const widthAttribute = /\swidth\s*=/i.test(tag) ? '' : ` width="${asset.dimensions.width}"`;
+  const heightAttribute = /\sheight\s*=/i.test(tag) ? '' : ` height="${asset.dimensions.height}"`;
+
+  if (!widthAttribute && !heightAttribute) {
+    return tag;
+  }
+
+  return `${prefix}${resolvedUrl}${suffix.replace(/(\s*\/?>)$/i, `${widthAttribute}${heightAttribute}$1`)}`;
 }
 
 function transformMarkdownOutsideFences(markdown: string, transform: (segment: string) => string) {
@@ -144,30 +241,23 @@ function transformMarkdownOutsideFences(markdown: string, transform: (segment: s
 
 function resolveMarkdownAssetReferences(markdown: string, markdownPath: string) {
   return transformMarkdownOutsideFences(markdown, (segment) => segment
-    .replace(/(!\[[^\]]*]\()(\s*)(<([^>]+)>|[^\s)]+)([^)]*\))/g, (
+    .replace(/!\[([^\]]*)]\(\s*(<([^>]+)>|[^\s)]+)(?:\s+("[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g, (
       _match,
-      prefix: string,
-      whitespace: string,
-      rawUrl: string,
+      alt: string,
+      wrappedUrl: string,
       angleUrl: string | undefined,
-      suffix: string,
+      title: string | undefined,
     ) => {
-      const url = angleUrl ?? rawUrl;
-      const resolvedUrl = resolveArticleAsset(url, markdownPath) ?? url;
-      const formattedUrl = angleUrl ? `<${resolvedUrl}>` : resolvedUrl;
+      const url = angleUrl ?? wrappedUrl;
 
-      return `${prefix}${whitespace}${formattedUrl}${suffix}`;
+      return formatMarkdownImageReference(alt, url, title, markdownPath, Boolean(angleUrl));
     })
     .replace(/(<img\b[^>]*\bsrc\s*=\s*["'])([^"']+)(["'][^>]*>)/gi, (
       _match,
       prefix: string,
       url: string,
       suffix: string,
-    ) => {
-      const resolvedUrl = resolveArticleAsset(url, markdownPath) ?? url;
-
-      return `${prefix}${resolvedUrl}${suffix}`;
-    }));
+    ) => formatHtmlImageReference(prefix, url, suffix, markdownPath)));
 }
 
 function getArticleFileInfo(path: string, rawContent: string): ArticleMarkdownFile {

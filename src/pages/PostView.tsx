@@ -10,6 +10,61 @@ import SeoHead from '../components/SeoHead';
 import { buildNotFoundSeo, buildPostSeo } from '../utils/seo';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
+const ARTICLE_BOOKMARK_STORAGE_KEY = 'ade-says:article-word-bookmarks:v1';
+
+type ArticleBookmarkStore = Record<string, {
+  updatedAt: number;
+  wordIndex: number;
+}>;
+
+function readArticleBookmarks(): ArticleBookmarkStore {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const rawBookmarks = window.localStorage.getItem(ARTICLE_BOOKMARK_STORAGE_KEY);
+    const parsedBookmarks: unknown = rawBookmarks ? JSON.parse(rawBookmarks) : {};
+
+    if (!parsedBookmarks || typeof parsedBookmarks !== 'object' || Array.isArray(parsedBookmarks)) {
+      return {};
+    }
+
+    const bookmarks: ArticleBookmarkStore = {};
+
+    for (const [key, value] of Object.entries(parsedBookmarks)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        continue;
+      }
+
+      const bookmark = value as { updatedAt?: unknown; wordIndex?: unknown };
+      const wordIndex = Number(bookmark.wordIndex);
+
+      if (Number.isInteger(wordIndex) && typeof bookmark.updatedAt === 'number') {
+        bookmarks[key] = {
+          updatedAt: bookmark.updatedAt,
+          wordIndex,
+        };
+      }
+    }
+
+    return bookmarks;
+  } catch {
+    return {};
+  }
+}
+
+function writeArticleBookmarks(bookmarks: ArticleBookmarkStore) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(ARTICLE_BOOKMARK_STORAGE_KEY, JSON.stringify(bookmarks));
+  } catch {
+    // Browsing modes with blocked storage should not break article interactions.
+  }
+}
 
 async function copyTextToClipboard(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -44,6 +99,8 @@ function PostView() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [bookmarks, setBookmarks] = useState<ArticleBookmarkStore>(readArticleBookmarks);
+  const [bookmarkScrollRequest, setBookmarkScrollRequest] = useState(0);
   const [pageSelection, setPageSelection] = useState({
     pageIndex: 0,
     postId: '',
@@ -92,11 +149,34 @@ function PostView() {
 
   const activeNarrationTrack = narrationTracks[lang];
   const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
+  const bookmarkKey = narrationKey;
+  const activeBookmarkWord = bookmarks[bookmarkKey]?.wordIndex ?? null;
   const activeNarrationWord = narrationProgress.key === narrationKey ? narrationProgress.wordIndex : null;
   const articleNarration = useMemo(() => ({
     activeWordIndex: activeNarrationWord,
     enabled: Boolean(activeNarrationTrack?.src),
   }), [activeNarrationTrack?.src, activeNarrationWord]);
+  const articleBookmark = useMemo(() => ({
+    activeWordIndex: activeBookmarkWord,
+    onToggle: (wordIndex: number) => {
+      setBookmarks((currentBookmarks) => {
+        const currentBookmark = currentBookmarks[bookmarkKey];
+        const nextBookmarks = { ...currentBookmarks };
+
+        if (currentBookmark?.wordIndex === wordIndex) {
+          delete nextBookmarks[bookmarkKey];
+        } else {
+          nextBookmarks[bookmarkKey] = {
+            updatedAt: Date.now(),
+            wordIndex,
+          };
+        }
+
+        return nextBookmarks;
+      });
+    },
+    scrollRequest: bookmarkScrollRequest,
+  }), [activeBookmarkWord, bookmarkKey, bookmarkScrollRequest]);
   const shareMenuId = `post-share-menu-${post?.meta.id ?? 'missing'}`;
   const canUseNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const hasNarration = Boolean(activeNarrationTrack?.src);
@@ -121,6 +201,7 @@ function PostView() {
     ? '\u0623\u063a\u0644\u0642 \u062e\u064a\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u0642\u0627\u0644'
     : 'Close article actions';
   const audioMenuLabel = lang === 'ar' ? '\u0641\u062a\u062d \u0627\u0644\u0646\u0637\u0642 \u0627\u0644\u0635\u0648\u062a\u064a' : 'Open narration';
+  const bookmarkMenuLabel = lang === 'ar' ? '\u0627\u0630\u0647\u0628 \u0644\u0644\u0639\u0644\u0627\u0645\u0629' : 'Go to bookmark';
   const copyLinkLabel = lang === 'ar' ? '\u0627\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637' : 'Copy link';
   const nativeShareLabel = lang === 'ar' ? '\u0645\u0634\u0627\u0631\u0643\u0629 \u0645\u0628\u0627\u0634\u0631\u0629' : 'Share...';
   const shareUrl = typeof window === 'undefined' ? '' : window.location.href;
@@ -146,6 +227,16 @@ function PostView() {
   const handleActiveNarrationWord = useCallback((wordIndex: number | null) => {
     setNarrationProgress({ key: narrationKey, wordIndex });
   }, [narrationKey]);
+
+  const handleGoToBookmark = useCallback(() => {
+    setIsFabMenuOpen(false);
+
+    if (activeBookmarkWord === null) {
+      return;
+    }
+
+    setBookmarkScrollRequest((request) => request + 1);
+  }, [activeBookmarkWord]);
 
   const handlePageSelect = useCallback((pageIndex: number) => {
     if (!post) {
@@ -218,6 +309,22 @@ function PostView() {
     if (playing) {
       setIsFabMenuOpen(false);
     }
+  }, []);
+
+  useEffect(() => {
+    writeArticleBookmarks(bookmarks);
+  }, [bookmarks]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === ARTICLE_BOOKMARK_STORAGE_KEY) {
+        setBookmarks(readArticleBookmarks());
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   useEffect(() => {
@@ -327,6 +434,15 @@ function PostView() {
                   {audioMenuLabel}
                 </m3e-fab-menu-item>
               )}
+              <m3e-fab-menu-item
+                aria-disabled={activeBookmarkWord === null ? 'true' : 'false'}
+                className={`article-share-menu-item is-bookmark${activeBookmarkWord === null ? ' is-disabled' : ''}`}
+                onClick={handleGoToBookmark}
+                tabIndex={isFabMenuVisible && activeBookmarkWord !== null ? 0 : -1}
+              >
+                <span className="material-symbols-rounded" aria-hidden="true" slot="icon">bookmark</span>
+                {bookmarkMenuLabel}
+              </m3e-fab-menu-item>
               {canUseNativeShare && (
                 <m3e-fab-menu-item
                   className="article-share-menu-item is-share"
@@ -416,6 +532,7 @@ function PostView() {
         <div className="article-content" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           <Suspense fallback={<PageLoading label="Loading article" />}>
             <ArticleRenderer
+              bookmark={articleBookmark}
               content={activeContent}
               narration={articleNarration}
             />
