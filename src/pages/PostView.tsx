@@ -215,11 +215,11 @@ function PostView() {
   const bookmarkMenuLabel = lang === 'ar' ? '\u0627\u0630\u0647\u0628 \u0644\u0644\u0639\u0644\u0627\u0645\u0629' : 'Go to bookmark';
   const bookmarkGuideLabel = lang === 'ar'
     ? (bookmarkGuideMode === 'tap'
-      ? '\u0627\u0636\u063a\u0637 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0623\u064a \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629'
-      : '\u0627\u0646\u0642\u0631 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0623\u064a \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629')
+      ? '\u0627\u0636\u063a\u0637 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629'
+      : '\u0627\u0646\u0642\u0631 \u062b\u0644\u0627\u062b \u0645\u0631\u0627\u062a \u0639\u0644\u0649 \u0643\u0644\u0645\u0629 \u0644\u0648\u0636\u0639 \u0639\u0644\u0627\u0645\u0629')
     : (bookmarkGuideMode === 'tap'
-      ? 'Triple-tap any word to bookmark it'
-      : 'Triple-click any word to bookmark it');
+      ? 'Triple-tap a word to bookmark'
+      : 'Triple-click a word to bookmark');
   const bookmarkGuideDemoWord = lang === 'ar'
     ? '\u0643\u0644\u0645\u0629'
     : 'word';

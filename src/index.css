@@ -2403,7 +2403,7 @@ body.photo-viewer-open .app-container {
   --m3e-fab-menu-close-button-leading-space: 1rem;
   --m3e-fab-menu-close-button-trailing-space: 1rem;
   --m3e-fab-menu-close-button-icon-size: 1.25rem;
-  --m3e-fab-menu-close-button-container-shape: var(--article-share-control-shape);
+  --m3e-fab-menu-close-button-container-shape: 999px;
   --m3e-surface-fab-container-color: var(--article-share-control-surface);
   --m3e-surface-fab-icon-color: var(--article-share-control-ink);
   --m3e-surface-fab-hover-icon-color: var(--article-share-control-ink);
@@ -2693,11 +2693,15 @@ body.photo-viewer-open .app-container {
 }
 
 .article-bookmark-toast {
+  --article-bookmark-toast-surface: var(--mag-accent-orange);
+  --article-bookmark-toast-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.08);
   --article-bookmark-toast-shift-x: -50%;
   position: fixed;
   bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 20px));
   left: 50%;
-  z-index: 176;
+  z-index: 180;
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -2705,10 +2709,10 @@ body.photo-viewer-open .app-container {
   height: var(--article-share-control-height);
   width: min(calc(100vw - 40px), 34rem);
   padding: 0 1rem;
-  border: 1px solid rgba(16, 15, 19, 0.08);
+  border: 1px solid rgba(106, 67, 30, 0.24);
   border-radius: var(--article-share-control-shape);
-  background: var(--article-share-control-surface);
-  box-shadow: var(--article-share-control-shadow);
+  background: var(--article-bookmark-toast-surface);
+  box-shadow: var(--article-bookmark-toast-shadow);
   backdrop-filter: blur(12px);
   color: var(--article-share-control-ink);
   animation: articleBookmarkToastCycle 4.6s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -2736,7 +2740,7 @@ body.photo-viewer-open .app-container {
 .article-bookmark-toast-ring {
   position: absolute;
   inset: 0.14rem;
-  border: 1px solid rgba(255, 155, 69, 0.56);
+  border: 1px solid rgba(16, 15, 19, 0.26);
   border-radius: 999px;
   opacity: 0;
   transform: scale(0.42);
@@ -2755,7 +2759,7 @@ body.photo-viewer-open .app-container {
   position: relative;
   z-index: 1;
   font-size: 1.08rem;
-  color: rgba(255, 155, 69, 0.94);
+  color: rgba(16, 15, 19, 0.76);
 }
 
 .article-bookmark-toast-label {
@@ -2779,7 +2783,7 @@ body.photo-viewer-open .app-container {
   height: calc(var(--article-share-control-height) - 1rem);
   padding: 0 0.58rem;
   border-radius: 999px;
-  background: rgba(255, 155, 69, 0.12);
+  background: rgba(255, 244, 232, 0.58);
   white-space: nowrap;
 }
 
@@ -4646,20 +4650,45 @@ body.photo-viewer-open .app-container {
 
   .article-bookmark-toast {
     --article-bookmark-toast-shift-x: 0%;
-    right: 84px;
+    --article-bookmark-toast-shadow:
+      0 10px 22px rgba(0, 0, 0, 0.16),
+      0 2px 6px rgba(0, 0, 0, 0.06);
+    right: calc(12px + var(--article-share-control-height) + 18px);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
     left: 12px;
     width: auto;
-    gap: 0.78rem;
-    padding: 0 0.84rem;
+    gap: 0.54rem;
+    padding: 0 0.68rem;
+  }
+
+  .article-bookmark-toast-gesture {
+    width: 1.32rem;
+    height: 1.32rem;
+  }
+
+  .article-bookmark-toast-hand,
+  .article-bookmark-toast-icon {
+    font-size: 0.94rem;
   }
 
   .article-bookmark-toast-label {
-    font-size: 0.74rem;
+    font-size: 0.6rem;
+    line-height: 1.08;
+    text-overflow: clip;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .article-bookmark-toast-preview {
+    gap: 0.28rem;
+    height: calc(var(--article-share-control-height) - 1.26rem);
+    padding: 0 0.38rem;
   }
 
   .article-bookmark-toast-word {
-    font-size: 0.82rem;
+    font-size: 0.66rem;
   }
 
   .virtual-article {
@@ -4819,26 +4848,42 @@ body.photo-viewer-open .app-container {
   }
 
   .article-bookmark-toast {
-    right: 76px;
-    gap: 0.62rem;
-    padding: 0 0.74rem;
+    --article-bookmark-toast-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.14),
+      0 2px 5px rgba(0, 0, 0, 0.05);
+    right: calc(12px + var(--article-share-control-height) + 16px);
+    gap: 0.42rem;
+    padding: 0 0.54rem;
   }
 
   .article-bookmark-toast-gesture {
-    width: 1.4rem;
-    height: 1.4rem;
+    width: 1.18rem;
+    height: 1.18rem;
+  }
+
+  .article-bookmark-toast-hand,
+  .article-bookmark-toast-icon {
+    font-size: 0.86rem;
   }
 
   .article-bookmark-toast-label {
-    font-size: 0.7rem;
+    font-size: 0.54rem;
+    line-height: 1.04;
+    text-overflow: clip;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .article-bookmark-toast-preview {
-    gap: 0.42rem;
+    gap: 0.22rem;
+    height: calc(var(--article-share-control-height) - 1.34rem);
+    padding: 0 0.32rem;
   }
 
   .article-bookmark-toast-word {
-    font-size: 0.78rem;
+    font-size: 0.58rem;
   }
 
   .virtual-article {
