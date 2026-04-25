@@ -2415,8 +2415,12 @@ body.photo-viewer-open .app-container {
   --m3e-surface-fab-hover-state-layer-opacity: 0.08;
   --m3e-surface-fab-focus-state-layer-opacity: 0.12;
   --m3e-surface-fab-pressed-state-layer-opacity: 0.14;
-  --m3e-surface-fab-lowered-container-color: var(--article-share-control-surface);
-  --m3e-surface-fab-lowered-container-elevation: var(--article-share-control-shadow);
+  --m3e-surface-fab-lowered-container-color: var(
+    --article-share-control-surface
+  );
+  --m3e-surface-fab-lowered-container-elevation: var(
+    --article-share-control-shadow
+  );
 }
 
 .article-share-fab.is-audio-mode {
@@ -2695,8 +2699,7 @@ body.photo-viewer-open .app-container {
 .article-bookmark-toast {
   --article-bookmark-toast-surface: var(--mag-accent-orange);
   --article-bookmark-toast-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.08);
+    0 12px 28px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
   --article-bookmark-toast-shift-x: -50%;
   position: fixed;
   bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 20px));
@@ -4651,8 +4654,7 @@ body.photo-viewer-open .app-container {
   .article-bookmark-toast {
     --article-bookmark-toast-shift-x: 0%;
     --article-bookmark-toast-shadow:
-      0 10px 22px rgba(0, 0, 0, 0.16),
-      0 2px 6px rgba(0, 0, 0, 0.06);
+      0 10px 22px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.06);
     right: calc(12px + var(--article-share-control-height) + 18px);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
     left: 12px;
@@ -4677,6 +4679,7 @@ body.photo-viewer-open .app-container {
     text-overflow: clip;
     white-space: normal;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
@@ -4849,8 +4852,7 @@ body.photo-viewer-open .app-container {
 
   .article-bookmark-toast {
     --article-bookmark-toast-shadow:
-      0 8px 18px rgba(0, 0, 0, 0.14),
-      0 2px 5px rgba(0, 0, 0, 0.05);
+      0 8px 18px rgba(0, 0, 0, 0.14), 0 2px 5px rgba(0, 0, 0, 0.05);
     right: calc(12px + var(--article-share-control-height) + 16px);
     gap: 0.42rem;
     padding: 0 0.54rem;
@@ -4872,6 +4874,7 @@ body.photo-viewer-open .app-container {
     text-overflow: clip;
     white-space: normal;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
