@@ -2378,10 +2378,15 @@ body.photo-viewer-open .app-container {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  pointer-events: none;
   touch-action: manipulation;
   transition:
     opacity 0.22s ease,
     transform 0.24s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.article-share-stack > * {
+  pointer-events: auto;
 }
 
 .article-share-stack.is-hidden {
