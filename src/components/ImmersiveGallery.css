@@ -1,13 +1,26 @@
-/* ImmersiveGallery.css */
 .immersive-gallery-section {
-  width: 100%;
-  padding: 20px 0 100px 0;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  margin-bottom: 80px;
+  padding: 60px 0 80px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   contain: layout style;
-  position: relative;
   z-index: 10;
+  background-color: #ffffff;
+}
+
+.immersive-gallery-section .section-heading-row h2 {
+  color: #100f13;
+}
+
+.immersive-gallery-section .page-kicker {
+  color: var(--mag-accent-blue);
 }
 
 .immersive-gallery-header {
@@ -21,7 +34,7 @@
   display: flex;
   width: 100%;
   max-width: 1350px;
-  height: 550px;
+  height: 680px;
   gap: 16px;
   padding: 0 24px;
 }

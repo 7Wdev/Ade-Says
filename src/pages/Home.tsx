@@ -13,6 +13,7 @@ import { buildHomeSeo, resolvePostSeoImage } from "../utils/seo";
 const DeveloperBioImage = lazy(() => import("../components/DeveloperBioImage"));
 const PixelBlast = lazy(() => import("../components/PixelBlast"));
 import { ImmersiveGallery } from "../components/ImmersiveGallery";
+import { HomeFooter } from "../components/HomeFooter";
 
 const editorialColors = [
   "mag-color-dark",
@@ -355,6 +356,7 @@ function Home() {
         <ProfileBlock />
         <PinnedArticles />
       </div>
+      <HomeFooter />
     </div>
   );
 }

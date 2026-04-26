@@ -498,7 +498,6 @@ body.photo-viewer-open .app-container {
   gap: 32px;
   position: relative;
   z-index: 5;
-  margin-bottom: 100px;
   contain: layout style;
 }
 

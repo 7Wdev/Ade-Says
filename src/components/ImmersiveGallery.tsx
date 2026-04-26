@@ -1,5 +1,9 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, type CSSProperties } from "react";
 import "./ImmersiveGallery.css";
+
+interface PanelStyle extends CSSProperties {
+  "--panel-color": string;
+}
 
 const categories = [
   { id: "photography", title: "Photography", src: "/uq/a.webp", color: "var(--mag-accent-blue)" },
@@ -24,7 +28,7 @@ export const ImmersiveGallery = memo(function ImmersiveGallery() {
       </div>
       <div className="immersive-gallery">
         {categories.map((cat, index) => (
-          <div key={cat.id} className="gallery-panel" style={{ "--panel-color": cat.color } as any}>
+          <div key={cat.id} className="gallery-panel" style={{ "--panel-color": cat.color } as PanelStyle}>
             <img src={cat.src} alt={cat.title} loading="lazy" decoding="async" className="gallery-img" />
             <div className="gallery-panel-overlay">
               <span className="gallery-panel-title-vertical">{cat.title}</span>
