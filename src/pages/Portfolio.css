@@ -1,0 +1,125 @@
+.portfolio-page {
+  min-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--md-sys-color-surface);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.3);
+}
+
+.portfolio-hero {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-family: var(--md-sys-typescale-body-font);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: #fff;
+  margin-bottom: 48px;
+  animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mag-accent-yellow);
+  box-shadow: 0 0 12px var(--mag-accent-yellow);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+.portfolio-title {
+  margin-bottom: 32px;
+  animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+}
+
+.portfolio-subtitle {
+  max-width: 620px;
+  font-size: 20px;
+  color: var(--md-sys-color-on-surface-variant);
+  animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+  line-height: 1.7;
+}
+
+/* Subtle architectural/blueprint background */
+.blueprint-background {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.3;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  mask-image: radial-gradient(ellipse at center, black 10%, transparent 60%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 10%, transparent 60%);
+}
+
+.blueprint-accents {
+  position: absolute;
+  inset: 40px;
+  z-index: 1;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.crosshair {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+}
+
+.crosshair::before, .crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.crosshair::before {
+  top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%);
+}
+
+.crosshair::after {
+  left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%);
+}
+
+.crosshair.tl { top: -12px; left: -12px; }
+.crosshair.tr { top: -12px; right: -12px; }
+.crosshair.bl { bottom: -12px; left: -12px; }
+.crosshair.br { bottom: -12px; right: -12px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes pulse-dot {
+  0% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 16px var(--mag-accent-yellow); }
+  100% { opacity: 0.4; transform: scale(0.8); }
+}

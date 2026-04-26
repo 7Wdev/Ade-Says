@@ -212,6 +212,130 @@ body.photo-viewer-open .app-container {
   gap: 12px;
 }
 
+.navbar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  z-index: 201;
+  transition: transform 0.2s ease;
+}
+
+.navbar-toggle .material-symbols-rounded {
+  font-size: 28px;
+}
+
+.navbar-toggle:hover {
+  transform: scale(1.1);
+}
+
+.mobile-menu-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 12px 20px;
+    border-radius: 40px;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100%;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .navbar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+  
+  .mobile-menu-overlay {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background: rgba(14, 13, 17, 0.98);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    clip-path: circle(0% at top right);
+    transition: clip-path 0.6s cubic-bezier(0.8, 0, 0.2, 1), opacity 0.6s ease, visibility 0.6s;
+    z-index: 9999;
+  }
+  
+  .mobile-menu-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    clip-path: circle(150% at top right);
+  }
+  
+  .mobile-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10000;
+  }
+  
+  .mobile-links-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    width: 100%;
+    padding: 0;
+  }
+  
+  .mobile-menu-overlay .nav-button {
+    /* Scale the original m3e-button so it retains its exact pill shape and onclick morph animation! */
+    opacity: 0;
+    transform: translateY(40px) scale(1.8);
+    transition: opacity 0.4s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    margin: 0;
+    pointer-events: auto;
+  }
+
+  .mobile-menu-overlay.is-open .nav-button {
+    opacity: 1;
+    transform: translateY(0) scale(1.8);
+  }
+  
+  .mobile-menu-overlay.is-open .nav-button:nth-child(1) { transition-delay: 0.1s; }
+  .mobile-menu-overlay.is-open .nav-button:nth-child(2) { transition-delay: 0.2s; }
+  .mobile-menu-overlay.is-open .nav-button:nth-child(3) { transition-delay: 0.3s; }
+  .mobile-menu-overlay.is-open .nav-button:nth-child(4) { transition-delay: 0.4s; }
+}
+
 .nav-button {
   --m3e-button-shape-round: 999px;
   --m3e-button-shape-pressed-morph: 8px;
