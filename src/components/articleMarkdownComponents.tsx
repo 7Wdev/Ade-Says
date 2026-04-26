@@ -11,6 +11,7 @@ import {
   type ImgHTMLAttributes,
   type ReactElement,
   type ReactNode,
+  useState,
 } from 'react';
 import type { Components } from 'react-markdown';
 
@@ -18,6 +19,7 @@ import { isNarrationWordToken, splitNarrationTextTokens } from '../utils/narrati
 
 const TikZRenderer = lazy(() => import('./TikZRenderer'));
 const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
+const AnimatedCodeBlock = lazy(() => import('./AnimatedCodeBlock'));
 const hexColorPattern = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
 const javascriptKeywords = new Set([
   'break',
@@ -58,7 +60,7 @@ const codeLanguageLabels: Record<string, string> = {
   typescript: 'TypeScript',
 };
 
-const jsTokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^\\`])*`|'(?:\\.|[^\\'])*'|"(?:\\.|[^\\"])*"|\b(?:true|false|null|undefined|NaN|Infinity)\b|\b[A-Za-z_$][\w$]*\b|\b\d+(?:\.\d+)?\b|[&|^~!?=<>+\-*/%]+|[{}()[\].,;:])/g;
+const jsTokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^\\`])*`|'(?:\\.|[^\\'])*'|"(?:\\.|[^\\"])*"|\b(?:true|false|null|undefined|NaN|Infinity)\b|\b[A-Za-z_$][\w$]*\b|\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|[&|^~!?=<>+\-*/%]+|[{}()[\].,;:])/g;
 
 export type NarrationRenderState = {
   enabled: boolean;
@@ -120,6 +122,29 @@ function SandboxFallback({ code }: { code: string }) {
         <span>Preparing sandbox...</span>
       </div>
     </div>
+  );
+}
+
+function CopyCodeButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      className={`article-code-copy-btn ${copied ? 'is-copied' : ''}`}
+      onClick={handleCopy}
+      aria-label="Copy code"
+      title="Copy code"
+    >
+      <span className="material-symbols-rounded">
+        {copied ? 'check' : 'content_copy'}
+      </span>
+    </button>
   );
 }
 
@@ -188,11 +213,11 @@ function getLanguageFromClassName(className: unknown) {
   return match ? match[1] : '';
 }
 
-function getLanguageLabel(language: string) {
+export function getLanguageLabel(language: string) {
   return codeLanguageLabels[language] ?? language.toUpperCase();
 }
 
-function getLanguageBadge(language: string) {
+export function getLanguageBadge(language: string) {
   if (language === 'js' || language === 'javascript') {
     return 'JS';
   }
@@ -217,7 +242,7 @@ function getJavaScriptTokenClass(token: string) {
     return 'constant';
   }
 
-  if (/^\d/.test(token)) {
+  if (/^(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$/.test(token)) {
     return 'number';
   }
 
@@ -249,7 +274,23 @@ function highlightJavaScript(code: string): ReactNode[] {
       nodes.push(code.slice(lastIndex, index));
     }
 
-    const tokenClass = getJavaScriptTokenClass(token);
+    let tokenClass = getJavaScriptTokenClass(token);
+    
+    // Improve identifier highlighting
+    if (tokenClass === '' && /^[A-Za-z_$][\w$]*$/.test(token)) {
+      const nextChars = code.slice(index + token.length).trimStart();
+      if (nextChars.startsWith('(')) {
+        tokenClass = 'function';
+      } else {
+        const prevChars = code.slice(0, index).trimEnd();
+        if (prevChars.endsWith('.')) {
+          tokenClass = 'property';
+        } else {
+          tokenClass = 'variable';
+        }
+      }
+    }
+
     nodes.push(tokenClass
       ? (
         <span className={`syntax-token syntax-${tokenClass}`} key={`token-${tokenIndex}`}>
@@ -269,7 +310,7 @@ function highlightJavaScript(code: string): ReactNode[] {
   return nodes;
 }
 
-function highlightCode(language: string, code: string) {
+export function highlightCode(language: string, code: string) {
   if (language === 'js' || language === 'javascript') {
     return highlightJavaScript(code);
   }
@@ -317,9 +358,13 @@ export const markdownComponents = {
 
     if (isBlock && language) {
       return (
-        <code className={className} {...props}>
-          {highlightCode(language, codeString)}
-        </code>
+        <Suspense fallback={<code className={className} {...props}>{codeString}</code>}>
+          <AnimatedCodeBlock
+            code={codeString}
+            language={language}
+            className={className}
+          />
+        </Suspense>
       );
     }
 
@@ -360,13 +405,26 @@ export const markdownComponents = {
         }
 
         if (language) {
+          // Extract the raw code string to pass to the copy button
+          // children is the <code> element. children.props.children is the text.
+          let rawCode = '';
+          if (isValidElement(children)) {
+             const childProps = (children as ReactElement<any>).props;
+             if (typeof childProps.children === 'string') {
+               rawCode = childProps.children;
+             }
+          }
+
           return (
             <div className="article-code-frame" data-language={language}>
               <div className="article-code-header">
-                <span className="article-code-badge" aria-hidden="true">
-                  {getLanguageBadge(language)}
-                </span>
-                <span>{getLanguageLabel(language)}</span>
+                <div className="article-code-header-left">
+                  <span className="article-code-badge" aria-hidden="true">
+                    {getLanguageBadge(language)}
+                  </span>
+                  <span className="article-code-filename">{getLanguageLabel(language)}</span>
+                </div>
+                {rawCode && <CopyCodeButton code={rawCode} />}
               </div>
               <pre {...props}>{children}</pre>
             </div>

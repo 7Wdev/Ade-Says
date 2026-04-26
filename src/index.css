@@ -3503,27 +3503,64 @@ body.photo-viewer-open .app-container {
   margin: 32px 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--md-sys-shape-corner-large);
+  border-radius: var(--md-sys-shape-corner-small);
   background: rgba(10, 10, 14, 0.88);
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.24),
-    0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .article-content .article-code-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   min-height: 42px;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(230, 224, 233, 0.78);
-  font-size: 12px;
-  font-weight: 900;
+  padding: 8px 12px 8px 16px;
+  border-bottom: none;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-small) 0 0;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
   direction: ltr;
+}
+
+.article-content .article-code-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.article-code-filename {
+  font-family: var(--md-sys-typescale-display-font);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.article-code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.8;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.article-code-copy-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  opacity: 1;
+}
+.article-code-copy-btn .material-symbols-rounded {
+  font-size: 18px;
+}
+.article-code-copy-btn.is-copied {
+  color: var(--md-sys-color-primary);
 }
 
 .article-content .article-code-badge {
@@ -3532,10 +3569,10 @@ body.photo-viewer-open .app-container {
   justify-content: center;
   width: 30px;
   height: 24px;
-  border: 1px solid rgba(255, 225, 53, 0.28);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 6px;
-  background: rgba(255, 225, 53, 0.12);
-  color: var(--mag-accent-yellow);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--md-sys-color-on-primary-container);
   font-family:
     "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace !important;
   font-size: 11px;
@@ -3551,11 +3588,9 @@ body.photo-viewer-open .app-container {
   padding: 24px 28px;
   background: rgba(10, 10, 14, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--md-sys-shape-corner-large);
+  border-radius: var(--md-sys-shape-corner-small);
   overflow-x: auto;
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.3),
-    0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -3565,6 +3600,22 @@ body.photo-viewer-open .app-container {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.article-content pre::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.article-content pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+.article-content pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  border: 3px solid rgba(10, 10, 14, 0.88);
+}
+.article-content pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .article-content pre code {
@@ -3585,21 +3636,33 @@ body.photo-viewer-open .app-container {
 }
 
 .article-content pre code .syntax-keyword {
-  color: #80d8ff;
+  color: var(--md-sys-color-primary);
   font-weight: 900;
 }
 
 .article-content pre code .syntax-string {
-  color: #9bd77f;
+  color: var(--md-sys-color-tertiary);
 }
 
 .article-content pre code .syntax-number,
 .article-content pre code .syntax-constant {
-  color: #ffb86c;
+  color: var(--mag-accent-yellow);
+}
+
+.article-content pre code .syntax-function {
+  color: var(--mag-accent-lilac);
+}
+
+.article-content pre code .syntax-property {
+  color: var(--md-sys-color-secondary);
+}
+
+.article-content pre code .syntax-variable {
+  color: #ffffff;
 }
 
 .article-content pre code .syntax-operator {
-  color: #f58fb0;
+  color: #eaddff;
 }
 
 .article-content pre code .syntax-punctuation {
