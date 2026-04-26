@@ -1,18 +1,18 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import "./ImmersiveGallery.css";
 
 const categories = [
-  { id: "photography", title: "Photography", src: "/uq/a.png", color: "var(--mag-accent-blue)" },
-  { id: "software", title: "Software Engineering", src: "/uq/b.png", color: "var(--mag-accent-lilac)" },
-  { id: "physics", title: "Physics", src: "/uq/c.png", color: "var(--mag-accent-teal)" },
-  { id: "art", title: "Art", src: "/uq/d.png", color: "var(--mag-accent-green)" },
-  { id: "society", title: "Society", src: "/uq/e.png", color: "var(--mag-accent-pink)" },
-  { id: "economics", title: "Economics", src: "/uq/f.png", color: "var(--mag-accent-yellow)" },
-  { id: "philosophy", title: "Philosophy / Life", src: "/uq/g.png", color: "var(--mag-accent-orange)" },
+  { id: "photography", title: "Photography", src: "/uq/a.webp", color: "var(--mag-accent-blue)" },
+  { id: "software", title: "Software Engineering", src: "/uq/b.webp", color: "var(--mag-accent-lilac)" },
+  { id: "physics", title: "Physics", src: "/uq/c.webp", color: "var(--mag-accent-teal)" },
+  { id: "art", title: "Art", src: "/uq/d.webp", color: "var(--mag-accent-green)" },
+  { id: "society", title: "Society", src: "/uq/e.webp", color: "var(--mag-accent-pink)" },
+  { id: "economics", title: "Economics", src: "/uq/f.webp", color: "var(--mag-accent-yellow)" },
+  { id: "philosophy", title: "Philosophy / Life", src: "/uq/g.webp", color: "var(--mag-accent-orange)" },
 ];
 
 export const ImmersiveGallery = memo(function ImmersiveGallery() {
-  return (
+  const galleryContent = useMemo(() => (
     <section className="immersive-gallery-section home-enter home-enter-1">
       <div className="immersive-gallery-header">
         <div className="section-heading-row">
@@ -37,5 +37,7 @@ export const ImmersiveGallery = memo(function ImmersiveGallery() {
         ))}
       </div>
     </section>
-  );
+  ), []);
+
+  return galleryContent;
 });
