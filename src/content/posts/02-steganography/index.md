@@ -2,7 +2,7 @@
 title: Steganography, The Art of Hiding a Whisper Inside a Picture!
 titleAr: الستيغانوغرافي، فن إخفاء الهمسة داخل صورة!
 author: Ade
-date: April 24, 2026
+date: April 26, 2026
 excerpt: A walk through hidden messages, old tricks, pixel secrets, and hiding techniques.
 excerptAr: المرور عبر الرسائل المخفية، من الحيل القديمة وصولا الى أسرار البكسلات وأساليب اخفاء المعلومات.
 pinned: true

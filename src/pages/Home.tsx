@@ -12,6 +12,7 @@ import { buildHomeSeo, resolvePostSeoImage } from "../utils/seo";
 
 const DeveloperBioImage = lazy(() => import("../components/DeveloperBioImage"));
 const PixelBlast = lazy(() => import("../components/PixelBlast"));
+import { ImmersiveGallery } from "../components/ImmersiveGallery";
 
 const editorialColors = [
   "mag-color-dark",
@@ -348,6 +349,7 @@ function Home() {
       <SeoHead meta={seoMeta} />
       <HomeBackground />
       <HeroSection />
+      <ImmersiveGallery />
 
       <div className="editorial-grid">
         <ProfileBlock />
