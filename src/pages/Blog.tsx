@@ -6,6 +6,7 @@ import { buildBlogSeo, resolvePostSeoImage } from '../utils/seo';
 import { searchPosts, type SearchResult } from '../utils/search';
 import ViewportRender from '../components/ViewportRender';
 import ArticleCardMetadata from '../components/ArticleCardMetadata';
+import SubscribeButton from '../components/SubscribeBanner';
 
 const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-orange', 'mag-color-brown', 'mag-color-lilac', 'mag-color-red', 'mag-color-pink', 'mag-color-blue', 'mag-color-teal', 'mag-color-glass'];
 const BLOG_CARD_VIRTUALIZATION_THRESHOLD = 12;
@@ -98,10 +99,13 @@ function Blog() {
   return (
     <section className="page-shell blog-page">
       <SeoHead meta={seoMeta} />
-      <Link to="/" className="back-link">
-        <span className="material-symbols-rounded">arrow_back</span>
-        Back Home
-      </Link>
+      <div className="blog-top-bar">
+        <Link to="/" className="back-link">
+          <span className="material-symbols-rounded">arrow_back</span>
+          Back Home
+        </Link>
+        <SubscribeButton />
+      </div>
 
       <div className="page-heading">
         <span className="page-kicker">Archive</span>

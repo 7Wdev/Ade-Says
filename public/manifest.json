@@ -1,0 +1,16 @@
+{
+  "name": "Ade Says",
+  "short_name": "Ade Says",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#7c3aed",
+  "description": "Personal notebook by Ade Issawe about software, experiments, physics, mathematics, design, photography, and curious ideas.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+name: Notify Subscribers on New Post
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/posts/**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Only run on the main branch, skip if commit message contains [skip-notify]
+    if: >
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip-notify]')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect new or updated posts
+        id: detect
+        run: |
+          # Find changed files in the posts directory
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- src/content/posts/ || echo "")
+          
+          if [ -z "$CHANGED" ]; then
+            echo "No post changes detected"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Changed files:"
+          echo "$CHANGED"
+          
+          # Get the post directory (e.g., "02-steganography")
+          POST_DIR=$(echo "$CHANGED" | grep "index.md" | head -1 | cut -d'/' -f4)
+          
+          if [ -z "$POST_DIR" ]; then
+            echo "No index.md changed, likely a media update"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "post_dir=$POST_DIR" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Extract post metadata
+        if: steps.detect.outputs.skip != 'true'
+        id: meta
+        run: |
+          POST_FILE="src/content/posts/${{ steps.detect.outputs.post_dir }}/index.md"
+          
+          if [ ! -f "$POST_FILE" ]; then
+            echo "Post file not found: $POST_FILE"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Extract title from frontmatter (handles both quoted and unquoted)
+          TITLE=$(sed -n '/^---$/,/^---$/p' "$POST_FILE" | grep '^title:' | sed 's/^title: *//' | sed 's/^["'"'"']//;s/["'"'"']$//' | head -1)
+          
+          # Extract excerpt from frontmatter
+          EXCERPT=$(sed -n '/^---$/,/^---$/p' "$POST_FILE" | grep '^excerpt:' | sed 's/^excerpt: *//' | sed 's/^["'"'"']//;s/["'"'"']$//' | head -1)
+          
+          # Build the slug (remove leading number prefix like "01-")
+          SLUG=$(echo "${{ steps.detect.outputs.post_dir }}" | sed 's/^[0-9]*-//')
+          
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "excerpt=$EXCERPT" >> $GITHUB_OUTPUT
+          echo "slug=$SLUG" >> $GITHUB_OUTPUT
+          
+          echo "Post: $TITLE"
+          echo "Excerpt: $EXCERPT"
+          echo "Slug: $SLUG"
+
+      - name: Send push notification via OneSignal
+        if: steps.detect.outputs.skip != 'true' && steps.meta.outputs.title != ''
+        run: |
+          curl -s -X POST \
+            --url 'https://api.onesignal.com/notifications' \
+            --header 'Content-Type: application/json; charset=utf-8' \
+            --header 'Authorization: Key ${{ secrets.ONESIGNAL_REST_API_KEY }}' \
+            --data '{
+              "app_id": "${{ secrets.ONESIGNAL_APP_ID }}",
+              "target_channel": "push",
+              "included_segments": ["Subscribed Users"],
+              "name": "New Post: ${{ steps.meta.outputs.title }}",
+              "headings": { "en": "📝 New on Ade Says" },
+              "contents": { "en": "${{ steps.meta.outputs.title }} — ${{ steps.meta.outputs.excerpt }}" },
+              "url": "https://ade-says.vercel.app/post/${{ steps.meta.outputs.slug }}",
+              "chrome_web_image": "https://ade-says.vercel.app/favicon.svg"
+            }'
+          
+          echo ""
+          echo "✅ Push notification sent!"

@@ -18,6 +18,7 @@ import PostDiscussion from '../components/PostDiscussion';
 import { allPosts } from '../utils/markdown';
 import SeoHead from '../components/SeoHead';
 import { buildNotFoundSeo, buildPostSeo } from '../utils/seo';
+import SubscribeButton from '../components/SubscribeBanner';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
 const ARTICLE_BOOKMARK_STORAGE_KEY = 'ade-says:article-word-bookmarks:v1';
@@ -498,6 +499,7 @@ function PostView() {
                   {audioMenuLabel}
                 </m3e-fab-menu-item>
               )}
+              <SubscribeButton tabIndex={isFabMenuVisible ? 0 : -1} variant="fab-item" lang={lang as "en" | "ar"} />
               <m3e-fab-menu-item
                 aria-disabled={activeBookmarkWord === null ? 'true' : 'false'}
                 className={`article-share-menu-item is-bookmark${activeBookmarkWord === null ? ' is-disabled' : ''}`}

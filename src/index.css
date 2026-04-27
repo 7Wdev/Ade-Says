@@ -2689,6 +2689,14 @@ body.photo-viewer-open .app-container {
   --_fab-menu-ripple-color: var(--md-sys-color-on-primary);
 }
 
+.article-share-menu-item.is-subscribe {
+  --_fab-menu-item-container-color: #fff;
+  --_fab-menu-item-color: #100f13;
+  --_fab-menu-background-hover-color: #100f13;
+  --_fab-menu-background-focus-color: #100f13;
+  --_fab-menu-ripple-color: #100f13;
+}
+
 .article-share-menu-item.is-copy-link {
   --_fab-menu-item-container-color: var(--md-sys-color-primary-container);
   --_fab-menu-item-color: var(--md-sys-color-on-primary-container);
@@ -5164,4 +5172,71 @@ body.photo-viewer-open .app-container {
   .article-bookmark-toast-ring {
     animation: none !important;
   }
+}
+
+/* ── Subscribe Button ── */
+.subscribe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--md-sys-typescale-body-font);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.subscribe-btn .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.subscribe-btn:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.12);
+}
+
+.subscribe-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.subscribe-btn:disabled {
+  cursor: default;
+}
+
+.subscribe-btn.is-subscribed {
+  border-color: rgba(208, 188, 255, 0.3);
+  color: var(--md-sys-color-primary);
+}
+
+.subscribe-btn.is-denied {
+  opacity: 0.5;
+}
+
+/* Blog page top bar */
+.blog-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.blog-top-bar .back-link {
+  margin-bottom: 0;
 }
