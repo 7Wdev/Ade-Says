@@ -34,7 +34,7 @@ function SubscribeButton({
       // Listen for subscription changes
       OneSignal.User?.PushSubscription?.addEventListener(
         "change",
-        (event) => {
+        (event: { current: { optedIn: boolean } }) => {
           if (event.current.optedIn) {
             setStatus("granted");
           } else {
