@@ -60,9 +60,9 @@ function SubscribeButton({
           ? OneSignal.User.PushSubscription.optOut() 
           : OneSignal.User.PushSubscription.optIn();
           
-        // Timeout after 5 seconds to prevent hanging UI
+        // Timeout after 15 seconds to prevent hanging UI
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("OneSignal timeout")), 5000)
+          setTimeout(() => reject(new Error("OneSignal timeout")), 15000)
         );
 
         await Promise.race([actionPromise, timeoutPromise]);
@@ -90,7 +90,7 @@ function SubscribeButton({
       // and never processes the deferred array.
       setTimeout(() => {
         setStatus((current) => current === "requesting" ? "denied" : current);
-      }, 5000);
+      }, 15000);
     }
   }, [status]);
 
