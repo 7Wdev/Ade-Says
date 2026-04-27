@@ -64,8 +64,8 @@ jobs:
           # Extract excerpt from frontmatter
           EXCERPT=$(sed -n '/^---$/,/^---$/p' "$POST_FILE" | grep '^excerpt:' | sed 's/^excerpt: *//' | sed 's/^["'"'"']//;s/["'"'"']$//' | head -1)
 
-          # Build the slug (remove leading number prefix like "01-")
-          SLUG=$(echo "${{ steps.detect.outputs.post_dir }}" | sed 's/^[0-9]*-//')
+          # Build the slug (use the exact directory name, e.g., "02-steganography")
+          SLUG="${{ steps.detect.outputs.post_dir }}"
 
           echo "title=$TITLE" >> $GITHUB_OUTPUT
           echo "excerpt=$EXCERPT" >> $GITHUB_OUTPUT
