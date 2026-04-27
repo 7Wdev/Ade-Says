@@ -84,7 +84,7 @@ jobs:
             --header 'Authorization: Key ${{ secrets.ONESIGNAL_REST_API_KEY }}' \
             --data '{
               "app_id": "${{ secrets.ONESIGNAL_APP_ID }}",
-              "included_segments": ["Subscribed Users"],
+              "included_segments": ["Total Subscriptions"],
               "name": "New Post: ${{ steps.meta.outputs.title }}",
               "headings": { "en": "📝 New on Ade Says" },
               "contents": { "en": "${{ steps.meta.outputs.title }} — ${{ steps.meta.outputs.excerpt }}" },
