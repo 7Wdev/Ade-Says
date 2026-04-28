@@ -46,6 +46,15 @@ jobs:
           echo "post_dir=$POST_DIR" >> $GITHUB_OUTPUT
           echo "skip=false" >> $GITHUB_OUTPUT
 
+      - name: Wait for Vercel Production Deployment
+        if: steps.detect.outputs.skip != 'true'
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.3
+        id: waitForDeployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: Production
+          max_timeout: 300
+
       - name: Extract post metadata
         if: steps.detect.outputs.skip != 'true'
         id: meta
