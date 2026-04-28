@@ -409,7 +409,7 @@ export const markdownComponents = {
           // children is the <code> element. children.props.children is the text.
           let rawCode = '';
           if (isValidElement(children)) {
-             const childProps = (children as ReactElement<any>).props;
+             const childProps = (children as ReactElement<{ children?: unknown }>).props;
              if (typeof childProps.children === 'string') {
                rawCode = childProps.children;
              }

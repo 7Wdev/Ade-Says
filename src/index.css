@@ -3682,8 +3682,26 @@ body.photo-viewer-open .app-container {
   font-style: italic;
 }
 
-[dir="rtl"] .article-content .article-code-frame {
+.article-content[dir="rtl"] .article-code-frame {
   direction: ltr;
+}
+
+/* Keep code block fonts intact inside RTL articles instead of inheriting the Arabic UI font */
+.article-content[dir="rtl"] .article-code-frame .article-code-filename {
+  font-family: var(--md-sys-typescale-display-font) !important;
+}
+
+.article-content[dir="rtl"] .article-code-frame pre code,
+.article-content[dir="rtl"] .article-code-frame pre code *,
+.article-content[dir="rtl"] code,
+.article-content[dir="rtl"] code *,
+.article-content[dir="rtl"] .article-hex-chip,
+.article-content[dir="rtl"] .article-hex-chip * {
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace !important;
+}
+
+.article-content[dir="rtl"] .article-code-frame .article-code-badge {
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace !important;
 }
 
 /* --- Tables --- */
