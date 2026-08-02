@@ -1,6 +1,9 @@
 import { lazy, memo, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import '@m3e/web/skeleton';
 import ArticleCardMetadata from "../components/ArticleCardMetadata";
+import M3eRouterButton from "../components/M3eRouterButton";
+import PinnedBadge from "../components/PinnedBadge";
 import SeoHead from "../components/SeoHead";
 import ViewportRender from "../components/ViewportRender";
 import {
@@ -56,7 +59,14 @@ const postIndexById = new Map(
 );
 const profileImageFallback = (
   <div className="profile-image-loader" role="status" aria-live="polite">
-    <m3e-loading-indicator variant="contained" aria-label="Loading portrait" />
+    <m3e-skeleton
+      animation="wave"
+      className="profile-image-skeleton"
+      shape="rounded"
+    >
+      <div className="profile-image-skeleton-shape" />
+    </m3e-skeleton>
+    <span className="sr-only">Loading portrait</span>
   </div>
 );
 const backgroundFallback = (
@@ -209,26 +219,31 @@ const ProfileBlock = memo(function ProfileBlock() {
           elegant as they are efficient. Currently pursuing my B.Sc. in Computer
           Science at the Technion &ndash; Institute of Technology.
         </p>
-        <div className="developer-links">
-          <a href="https://www.instagram.com/adeissawe/" target="_blank" rel="noopener noreferrer" className="developer-link" aria-label="Instagram">
+        <m3e-button-group
+          aria-label="Developer profiles"
+          className="developer-links"
+          size="small"
+          variant="standard"
+        >
+          <m3e-icon-button href="https://www.instagram.com/adeissawe/" target="_blank" rel="noopener noreferrer" role="link" className="developer-link" aria-label="Instagram" size="small" variant="tonal">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect>
               <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
               <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line>
             </svg>
-          </a>
-          <a href="https://github.com/7Wdev" target="_blank" rel="noopener noreferrer" className="developer-link" aria-label="GitHub">
+          </m3e-icon-button>
+          <m3e-icon-button href="https://github.com/7Wdev" target="_blank" rel="noopener noreferrer" role="link" className="developer-link" aria-label="GitHub" size="small" variant="tonal">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path>
             </svg>
-          </a>
-          <a href="https://www.youtube.com/@AdeTheCoder" target="_blank" rel="noopener noreferrer" className="developer-link" aria-label="YouTube">
+          </m3e-icon-button>
+          <m3e-icon-button href="https://www.youtube.com/@AdeTheCoder" target="_blank" rel="noopener noreferrer" role="link" className="developer-link" aria-label="YouTube" size="small" variant="tonal">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path>
               <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
             </svg>
-          </a>
-        </div>
+          </m3e-icon-button>
+        </m3e-button-group>
         <div className="profile-socials">
           <Link
             to="/photography"
@@ -252,9 +267,7 @@ const ProfileBlock = memo(function ProfileBlock() {
             <span className="photography-sign-kicker">Tiny side quest</span>
             <span className="photography-sign-title">Did u know?</span>
             <span className="photography-sign-copy">I like photography!</span>
-            <span className="material-symbols-rounded" aria-hidden="true">
-              arrow_forward
-            </span>
+            <m3e-icon aria-hidden="true" filled name="arrow_forward" variant="rounded" />
           </Link>
         </div>
       </div>
@@ -284,7 +297,7 @@ const PinnedArticleCard = memo(function PinnedArticleCard({
         />
       )}
       <div className="post-card-content">
-        <span className="card-cat">Pinned</span>
+        <PinnedBadge />
         <h3>{post.meta.title}</h3>
         {isFeatured && <p>{post.meta.excerpt}</p>}
         <ArticleCardMetadata
@@ -294,9 +307,7 @@ const PinnedArticleCard = memo(function PinnedArticleCard({
       </div>
       <div className="card-footer">
         <span>{post.meta.date}</span>
-        <span className="material-symbols-rounded" aria-hidden="true">
-          arrow_forward
-        </span>
+        <m3e-icon aria-hidden="true" filled name="arrow_forward" variant="rounded" />
       </div>
     </Link>
   );
@@ -310,9 +321,9 @@ const PinnedArticles = memo(function PinnedArticles() {
           <span className="page-kicker">Pinned</span>
           <h2>Hot Articles</h2>
         </div>
-        <Link to="/blog" className="section-link">
+        <M3eRouterButton to="/blog" className="section-link" shape="square" size="extra-small" variant="outlined">
           All articles
-        </Link>
+        </M3eRouterButton>
       </div>
 
       {pinnedArticleCards.length > 0 ? (
@@ -352,10 +363,12 @@ function Home() {
       <HeroSection />
       <ImmersiveGallery />
 
-      <div className="editorial-grid">
-        <ProfileBlock />
-        <PinnedArticles />
-      </div>
+      <section className="home-editorial-section">
+        <div className="editorial-grid">
+          <ProfileBlock />
+          <PinnedArticles />
+        </div>
+      </section>
       <HomeFooter />
     </div>
   );

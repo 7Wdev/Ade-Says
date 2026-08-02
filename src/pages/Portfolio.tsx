@@ -1,3 +1,4 @@
+import '@m3e/web/badge';
 import './Portfolio.css';
 
 export default function Portfolio() {
@@ -12,10 +13,12 @@ export default function Portfolio() {
       </div>
       
       <div className="portfolio-hero">
-        <div className="status-badge">
-          <span className="status-dot"></span>
-          <span>Under Construction</span>
-        </div>
+        <m3e-badge className="status-badge" size="large">
+          <span className="status-badge-content">
+            <span className="status-dot" />
+            <span>Under Construction</span>
+          </span>
+        </m3e-badge>
         
         <h1 className="hero-title portfolio-title">Portfolio</h1>
         

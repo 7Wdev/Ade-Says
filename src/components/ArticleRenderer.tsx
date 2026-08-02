@@ -53,6 +53,7 @@ type ArticleChunk = {
   estimatedHeight: number;
   hasMath: boolean;
   id: string;
+  isHeadingOnly: boolean;
 };
 
 type MarkdownAtom = {
@@ -350,6 +351,7 @@ function createArticleChunks(content: string): ArticleChunk[] {
       estimatedHeight: estimateMarkdownAtom(content),
       hasMath: mathDelimiterPattern.test(content),
       id: createChunkId(0, content, content.length),
+      isHeadingOnly: false,
     }];
   }
 
@@ -368,6 +370,7 @@ function createArticleChunks(content: string): ArticleChunk[] {
         estimatedHeight: Math.max(220, currentEstimatedHeight),
         hasMath: mathDelimiterPattern.test(chunkContent),
         id: createChunkId(chunks.length, chunkContent, currentEstimatedHeight),
+        isHeadingOnly: currentAtoms.length === 1 && currentAtoms[0].isHeading,
       });
     }
 
@@ -392,7 +395,7 @@ function createArticleChunks(content: string): ArticleChunk[] {
     currentLength += atom.content.length + 2;
     currentEstimatedHeight += atom.estimatedHeight;
 
-    if (atom.isHeavy && currentAtoms.length > 0) {
+    if ((atom.isHeading || atom.isHeavy) && currentAtoms.length > 0) {
       pushChunk();
     }
   }
@@ -404,6 +407,7 @@ function createArticleChunks(content: string): ArticleChunk[] {
     estimatedHeight: estimateMarkdownAtom(content),
     hasMath: mathDelimiterPattern.test(content),
     id: createChunkId(0, content, content.length),
+    isHeadingOnly: false,
   }];
 }
 
@@ -1325,7 +1329,7 @@ function ArticleRenderer({ bookmark, content, narration }: ArticleRendererProps)
         '--article-bookmark-marker-top': `${bookmarkMarker.top}px`,
       } as CSSProperties}
     >
-      <span className="material-symbols-rounded">bookmark</span>
+      <m3e-icon filled name="bookmark" variant="rounded" weight={500} />
     </span>
   ) : null;
 
@@ -1341,7 +1345,7 @@ function ArticleRenderer({ bookmark, content, narration }: ArticleRendererProps)
         {chunks.map((chunk, index) => {
           const estimatedHeight = getResponsiveChunkHeight(chunk, articleWidthClass);
 
-          if (index < initialRenderCount) {
+          if (index < initialRenderCount || chunk.isHeadingOnly) {
             return (
               <div className="lazy-article-block" key={chunk.id}>
                 <MarkdownBlock

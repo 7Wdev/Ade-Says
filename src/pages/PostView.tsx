@@ -8,11 +8,20 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import '@m3e/web/chips';
+import '@m3e/web/divider';
+import '@m3e/web/fab';
+import '@m3e/web/fab-menu';
+import '@m3e/web/segmented-button';
+import '@m3e/web/toc';
+import { M3eSnackbar } from '@m3e/web/snackbar';
 
 import FloatingAudioPlayer, { type NarrationTrackMap } from '../components/FloatingAudioPlayer';
+import M3eRouterButton from '../components/M3eRouterButton';
 import PageLoading from '../components/PageLoading';
 import PostDiscussion from '../components/PostDiscussion';
 import { allPosts } from '../utils/markdown';
@@ -27,6 +36,23 @@ type ArticleBookmarkStore = Record<string, {
   updatedAt: number;
   wordIndex: number;
 }>;
+
+type M3eTocItemWithNode = HTMLElement & {
+  node?: {
+    element?: HTMLElement;
+  };
+};
+
+type ArticleTocDragState = {
+  currentTranslate: number;
+  moved: boolean;
+  pointerId: number;
+  startOpen: boolean;
+  startTime: number;
+  startTranslate: number;
+  startX: number;
+  width: number;
+};
 
 function readArticleBookmarks(): ArticleBookmarkStore {
   if (typeof window === 'undefined') {
@@ -121,8 +147,13 @@ function PostView() {
     wordIndex: null as number | null,
   });
   const [bookmarkGuideMode, setBookmarkGuideMode] = useState<'click' | 'tap'>('tap');
-  const fabStackRef = useRef<HTMLDivElement | null>(null);
+  const [isTocOpen, setIsTocOpen] = useState(false);
+  const [isTocHandleArmed, setIsTocHandleArmed] = useState(false);
   const shareResetTimeoutRef = useRef<number | null>(null);
+  const shareStackRef = useRef<HTMLDivElement | null>(null);
+  const tocDragRef = useRef<ArticleTocDragState | null>(null);
+  const tocRef = useRef<HTMLElement | null>(null);
+  const tocToggleSuppressedRef = useRef(false);
 
   const selectedPageIndex = post && pageSelection.postId === post.meta.id
     ? Math.min(pageSelection.pageIndex, post.pages.length - 1)
@@ -189,6 +220,159 @@ function PostView() {
     },
     scrollRequest: bookmarkScrollRequest,
   }), [activeBookmarkWord, bookmarkKey, bookmarkScrollRequest]);
+
+  useEffect(() => {
+    const toc = tocRef.current;
+    const tocRoot = toc?.shadowRoot;
+
+    if (!tocRoot) {
+      return undefined;
+    }
+
+    let syncFrame = 0;
+
+    const syncLabels = () => {
+      syncFrame = 0;
+
+      tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item').forEach((item) => {
+        const label = item.node?.element?.textContent?.replace(/\s+/g, ' ').trim();
+
+        if (label && item.textContent !== label) {
+          item.textContent = label;
+        }
+      });
+    };
+
+    const scheduleLabelSync = () => {
+      if (!syncFrame) {
+        syncFrame = window.requestAnimationFrame(syncLabels);
+      }
+    };
+
+    const observer = new MutationObserver(scheduleLabelSync);
+    observer.observe(tocRoot, { childList: true, subtree: true });
+    scheduleLabelSync();
+
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(syncFrame);
+    };
+  }, [narrationKey]);
+
+  const handleTocToggle = useCallback(() => {
+    if (tocToggleSuppressedRef.current) {
+      return;
+    }
+
+    if (isTocOpen) {
+      setIsTocOpen(false);
+      setIsTocHandleArmed(false);
+      return;
+    }
+
+    if (!isTocHandleArmed) {
+      setIsTocHandleArmed(true);
+      return;
+    }
+
+    setIsTocHandleArmed(false);
+    setIsTocOpen(true);
+  }, [isTocHandleArmed, isTocOpen]);
+
+  const handleFabMenuToggle = useCallback(() => {
+    setIsFabMenuOpen((currentOpen) => !currentOpen);
+  }, []);
+
+  const handleTocPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    const drawer = event.currentTarget;
+    const width = drawer.getBoundingClientRect().width;
+
+    if (width <= 0) {
+      return;
+    }
+
+    const startTranslate = isTocOpen ? 0 : (lang === 'ar' ? width : -width);
+    tocDragRef.current = {
+      currentTranslate: startTranslate,
+      moved: false,
+      pointerId: event.pointerId,
+      startOpen: isTocOpen,
+      startTime: performance.now(),
+      startTranslate,
+      startX: event.clientX,
+      width,
+    };
+
+    drawer.classList.add('is-dragging');
+  }, [isTocOpen, lang]);
+
+  const handleTocPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    const drag = tocDragRef.current;
+
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaX = event.clientX - drag.startX;
+    const minTranslate = lang === 'ar' ? 0 : -drag.width;
+    const maxTranslate = lang === 'ar' ? drag.width : 0;
+    const nextTranslate = Math.min(
+      maxTranslate,
+      Math.max(minTranslate, drag.startTranslate + deltaX)
+    );
+
+    drag.currentTranslate = nextTranslate;
+
+    if (!drag.moved && Math.abs(deltaX) > 4) {
+      drag.moved = true;
+      setIsTocHandleArmed(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    event.currentTarget.style.transform = `translate3d(${nextTranslate}px, 0, 0)`;
+  }, [lang]);
+
+  const finishTocDrag = useCallback((event: ReactPointerEvent<HTMLElement>, cancelled: boolean) => {
+    const drag = tocDragRef.current;
+
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const drawer = event.currentTarget;
+    const deltaX = event.clientX - drag.startX;
+    const elapsed = performance.now() - drag.startTime;
+    let nextOpen = drag.startOpen;
+
+    if (!cancelled && drag.moved) {
+      nextOpen = 1 - Math.abs(drag.currentTranslate) / drag.width >= 0.5;
+
+      if (elapsed < 360 && Math.abs(deltaX) > 28) {
+        nextOpen = lang === 'ar' ? deltaX < 0 : deltaX > 0;
+      }
+    }
+
+    if (drawer.hasPointerCapture(event.pointerId)) {
+      drawer.releasePointerCapture(event.pointerId);
+    }
+
+    tocDragRef.current = null;
+    tocToggleSuppressedRef.current = drag.moved;
+    setIsTocHandleArmed(false);
+    setIsTocOpen(nextOpen);
+    drawer.classList.remove('is-dragging');
+
+    window.requestAnimationFrame(() => {
+      drawer.style.removeProperty('transform');
+      window.setTimeout(() => {
+        tocToggleSuppressedRef.current = false;
+      }, 0);
+    });
+  }, [lang]);
   const shareMenuId = `post-share-menu-${post?.meta.id ?? 'missing'}`;
   const canUseNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const hasNarration = Boolean(activeNarrationTrack?.src);
@@ -231,6 +415,8 @@ function PostView() {
   const handleLanguageChange = useCallback((nextLang: 'en' | 'ar') => {
     setLang(nextLang);
     setIsFabMenuOpen(false);
+    setIsTocOpen(false);
+    setIsTocHandleArmed(false);
 
     if (!narrationTracks[nextLang]?.src) {
       setIsAudioExpanded(false);
@@ -282,10 +468,19 @@ function PostView() {
     try {
       await copyTextToClipboard(shareUrl);
       setShareStatus('copied');
+      M3eSnackbar.open(
+        lang === 'ar' ? '\u062a\u0645 \u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637' : 'Link copied',
+        { duration: 2200 },
+      );
     } catch {
       setShareStatus('error');
+      M3eSnackbar.open(
+        lang === 'ar' ? '\u062a\u0639\u0630\u0651\u0631 \u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637' : 'Could not copy the link',
+        true,
+        { duration: 3600 },
+      );
     }
-  }, [shareUrl]);
+  }, [lang, shareUrl]);
   const handleNativeShare = useCallback(async () => {
     setIsFabMenuOpen(false);
 
@@ -303,20 +498,26 @@ function PostView() {
         url: shareUrl,
       });
       setShareStatus('copied');
+      M3eSnackbar.open(
+        lang === 'ar' ? '\u062a\u0645\u0651\u062a \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0645\u0642\u0627\u0644' : 'Article shared',
+        { duration: 2200 },
+      );
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
       }
 
       setShareStatus('error');
+      M3eSnackbar.open(
+        lang === 'ar' ? '\u062a\u0639\u0630\u0651\u0631\u062a \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0645\u0642\u0627\u0644' : 'Could not share the article',
+        true,
+        { duration: 3600 },
+      );
     }
   }, [lang, post, shareUrl]);
   const handleOpenAudio = useCallback(() => {
     setIsFabMenuOpen(false);
     setIsAudioExpanded(true);
-  }, []);
-  const handleToggleFabMenu = useCallback(() => {
-    setIsFabMenuOpen((open) => !open);
   }, []);
   const handleAudioExpandedChange = useCallback((nextExpanded: boolean) => {
     setIsAudioExpanded(nextExpanded);
@@ -390,32 +591,29 @@ function PostView() {
 
   useEffect(() => {
     if (!isFabMenuVisible) {
-      return;
+      return undefined;
     }
 
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (!fabStackRef.current?.contains(target)) {
-        setIsFabMenuOpen(false);
+    const closeMenu = () => setIsFabMenuOpen(false);
+    const handleOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !shareStackRef.current?.contains(event.target)) {
+        closeMenu();
       }
     };
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handleMenuKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsFabMenuOpen(false);
+        closeMenu();
       }
     };
 
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handleOutsidePointer, true);
+    document.addEventListener('keydown', handleMenuKeyDown);
+    window.addEventListener('resize', closeMenu);
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown, true);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handleOutsidePointer, true);
+      document.removeEventListener('keydown', handleMenuKeyDown);
+      window.removeEventListener('resize', closeMenu);
     };
   }, [isFabMenuVisible]);
 
@@ -434,7 +632,9 @@ function PostView() {
       <div className="not-found">
         <SeoHead meta={seoMeta} />
         <h1>Post not found</h1>
-        <Link to="/blog" className="back-link">Return to blog</Link>
+        <M3eRouterButton to="/blog" className="back-link" size="extra-small" variant="tonal">
+          Return to blog
+        </M3eRouterButton>
       </div>
     );
   }
@@ -450,129 +650,205 @@ function PostView() {
         document.body
       )}
       {createPortal(
-        <div
-          className="article-bookmark-toast"
-          dir={lang === 'ar' ? 'rtl' : 'ltr'}
-          key={post.meta.id}
-          role="note"
-        >
-          <span aria-hidden="true" className="article-bookmark-toast-gesture">
-            <span className="article-bookmark-toast-rings">
-              <span className="article-bookmark-toast-ring" />
-              <span className="article-bookmark-toast-ring" />
-              <span className="article-bookmark-toast-ring" />
+        <div className="article-floating-actions">
+          <div
+            className="article-bookmark-toast"
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            key={post.meta.id}
+            role="note"
+          >
+            <span aria-hidden="true" className="article-bookmark-toast-gesture">
+              <span className="article-bookmark-toast-rings">
+                <span className="article-bookmark-toast-ring" />
+                <span className="article-bookmark-toast-ring" />
+                <span className="article-bookmark-toast-ring" />
+              </span>
+              <m3e-icon
+                aria-hidden="true"
+                className="article-bookmark-toast-hand"
+                filled
+                name={bookmarkGuideMode === 'tap' ? 'touch_app' : 'mouse'}
+                variant="rounded"
+              />
             </span>
-            <span className="article-bookmark-toast-hand material-symbols-rounded">
-              {bookmarkGuideMode === 'tap' ? 'touch_app' : 'mouse'}
+            <span className="article-bookmark-toast-label">{bookmarkGuideLabel}</span>
+            <span aria-hidden="true" className="article-bookmark-toast-preview">
+              <span className="article-bookmark-toast-word">{bookmarkGuideDemoWord}</span>
+              <m3e-icon
+                aria-hidden="true"
+                className="article-bookmark-toast-icon"
+                filled
+                name="bookmark"
+                variant="rounded"
+              />
             </span>
-          </span>
-          <span className="article-bookmark-toast-label">{bookmarkGuideLabel}</span>
-          <span aria-hidden="true" className="article-bookmark-toast-preview">
-            <span className="article-bookmark-toast-word">{bookmarkGuideDemoWord}</span>
-            <span className="article-bookmark-toast-icon material-symbols-rounded">bookmark</span>
-          </span>
+          </div>
+          <div
+            className={`article-share-stack${isAudioExpandedVisible ? ' is-hidden' : ''}`}
+            data-lang={lang}
+            ref={shareStackRef}
+          >
+            {!isAudioFabMode && (
+              <div
+                aria-hidden={isFabMenuVisible ? undefined : 'true'}
+                aria-label={articleActionsLabel}
+                className={`article-share-menu${isFabMenuVisible ? ' is-open' : ''}`}
+                id={shareMenuId}
+                onClick={() => setIsFabMenuOpen(false)}
+                role="menu"
+              >
+                {hasNarration && (
+                  <m3e-fab-menu-item
+                    className="article-share-menu-item is-narration"
+                    onClick={handleOpenAudio}
+                  >
+                    <m3e-icon aria-hidden="true" filled name="headphones" slot="icon" variant="rounded" />
+                    {audioMenuLabel}
+                  </m3e-fab-menu-item>
+                )}
+                <SubscribeButton variant="fab-item" lang={lang as "en" | "ar"} />
+                <m3e-fab-menu-item
+                  aria-disabled={activeBookmarkWord === null ? 'true' : 'false'}
+                  className={`article-share-menu-item is-bookmark${activeBookmarkWord === null ? ' is-disabled' : ''}`}
+                  disabled={activeBookmarkWord === null}
+                  onClick={handleGoToBookmark}
+                >
+                  <m3e-icon aria-hidden="true" filled name="bookmark" slot="icon" variant="rounded" />
+                  {bookmarkMenuLabel}
+                </m3e-fab-menu-item>
+                {canUseNativeShare && (
+                  <m3e-fab-menu-item
+                    className="article-share-menu-item is-share"
+                    onClick={handleNativeShare}
+                  >
+                    <m3e-icon aria-hidden="true" filled name="ios_share" slot="icon" variant="rounded" />
+                    {nativeShareLabel}
+                  </m3e-fab-menu-item>
+                )}
+                <m3e-fab-menu-item
+                  className="article-share-menu-item is-copy-link"
+                  onClick={handleCopyLink}
+                >
+                  <m3e-icon aria-hidden="true" filled name="link" slot="icon" variant="rounded" />
+                  {copyLinkLabel}
+                </m3e-fab-menu-item>
+              </div>
+            )}
+            {isAudioFabMode ? (
+              <m3e-fab
+                aria-label={audioFabAriaLabel}
+                className="article-share-fab is-audio-mode"
+                lowered
+                onClick={handleOpenAudio}
+                size="small"
+                variant="primary"
+              >
+                <m3e-icon aria-hidden="true" filled name="graphic_eq" variant="rounded" />
+              </m3e-fab>
+            ) : (
+              <m3e-fab
+                aria-controls={shareMenuId}
+                aria-expanded={isFabMenuVisible ? 'true' : 'false'}
+                aria-haspopup="menu"
+                aria-label={isFabMenuVisible ? closeFabAriaLabel : shareFabAriaLabel}
+                className={`article-share-fab ${shareStatus !== 'idle' ? `is-${shareStatus}` : ''}`}
+                lowered
+                onClick={handleFabMenuToggle}
+                size="small"
+                variant={shareStatus === 'error' ? 'tertiary' : 'primary'}
+              >
+                <m3e-icon
+                  aria-hidden="true"
+                  filled
+                  name={shareStatus === 'copied'
+                    ? 'check'
+                    : shareStatus === 'error'
+                      ? 'error'
+                      : isFabMenuVisible
+                        ? 'close'
+                        : 'tune'}
+                  variant="rounded"
+                />
+              </m3e-fab>
+            )}
+          </div>
         </div>,
         document.body
       )}
       {createPortal(
-        <div
-          className={`article-share-stack${isAudioExpandedVisible ? ' is-hidden' : ''}`}
-          data-lang={lang}
-          ref={fabStackRef}
-        >
-          {!isAudioFabMode && (
-            <div
-              aria-hidden={!isFabMenuVisible}
-              aria-label={articleActionsLabel}
-              className={`article-share-menu${isFabMenuVisible ? ' is-open' : ''}`}
-              data-open={isFabMenuVisible ? 'true' : 'false'}
-              id={shareMenuId}
-              role="menu"
-            >
-              {hasNarration && (
-                <m3e-fab-menu-item
-                  className="article-share-menu-item is-narration"
-                  onClick={handleOpenAudio}
-                  tabIndex={isFabMenuVisible ? 0 : -1}
-                >
-                  <span className="material-symbols-rounded" aria-hidden="true" slot="icon">headphones</span>
-                  {audioMenuLabel}
-                </m3e-fab-menu-item>
-              )}
-              <SubscribeButton tabIndex={isFabMenuVisible ? 0 : -1} variant="fab-item" lang={lang as "en" | "ar"} />
-              <m3e-fab-menu-item
-                aria-disabled={activeBookmarkWord === null ? 'true' : 'false'}
-                className={`article-share-menu-item is-bookmark${activeBookmarkWord === null ? ' is-disabled' : ''}`}
-                onClick={handleGoToBookmark}
-                tabIndex={isFabMenuVisible && activeBookmarkWord !== null ? 0 : -1}
+        <>
+          <div
+            aria-hidden="true"
+            className={`article-toc-scrim${isTocOpen ? ' is-open' : ''}`}
+            onPointerDown={() => {
+              setIsTocOpen(false);
+              setIsTocHandleArmed(false);
+            }}
+          />
+          <aside
+            aria-label={lang === 'ar' ? 'جدول محتويات المقال' : 'Article table of contents'}
+            className={`article-toc-rail${isTocOpen ? ' is-open' : ''}`}
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            onPointerCancel={(event) => finishTocDrag(event, true)}
+            onPointerDown={handleTocPointerDown}
+            onPointerMove={handleTocPointerMove}
+            onPointerUp={(event) => finishTocDrag(event, false)}
+          >
+            <div className={`article-toc-toggle-shell${isTocHandleArmed ? ' is-armed' : ''}`}>
+              <m3e-icon-button
+                aria-controls="article-toc-navigation"
+                aria-expanded={isTocOpen ? 'true' : 'false'}
+                aria-label={isTocOpen
+                  ? 'Close table of contents'
+                  : isTocHandleArmed
+                    ? 'Open table of contents'
+                    : 'Pull out table of contents handle'}
+                className="article-toc-toggle"
+                onClick={handleTocToggle}
+                size="small"
+                variant="tonal"
               >
-                <span className="material-symbols-rounded" aria-hidden="true" slot="icon">bookmark</span>
-                {bookmarkMenuLabel}
-              </m3e-fab-menu-item>
-              {canUseNativeShare && (
-                <m3e-fab-menu-item
-                  className="article-share-menu-item is-share"
-                  onClick={handleNativeShare}
-                  tabIndex={isFabMenuVisible ? 0 : -1}
-                >
-                  <span className="material-symbols-rounded" aria-hidden="true" slot="icon">ios_share</span>
-                  {nativeShareLabel}
-                </m3e-fab-menu-item>
-              )}
-              <m3e-fab-menu-item
-                className="article-share-menu-item is-copy-link"
-                onClick={handleCopyLink}
-                tabIndex={isFabMenuVisible ? 0 : -1}
-              >
-                <span className="material-symbols-rounded" aria-hidden="true" slot="icon">link</span>
-                {copyLinkLabel}
-              </m3e-fab-menu-item>
+                <m3e-icon
+                  aria-hidden="true"
+                  filled
+                  name={lang === 'ar'
+                    ? (isTocOpen ? 'chevron_right' : 'chevron_left')
+                    : (isTocOpen ? 'chevron_left' : 'chevron_right')}
+                  variant="rounded"
+                />
+              </m3e-icon-button>
             </div>
-          )}
-          {isAudioFabMode ? (
-            <m3e-fab
-              aria-label={audioFabAriaLabel}
-              className="article-share-fab is-audio-mode"
-              lowered
-              onClick={handleOpenAudio}
-              size="small"
-              variant="surface"
+            <m3e-toc
+              aria-label={lang === 'ar' ? 'جدول محتويات المقال' : 'Article table of contents'}
+              className="article-toc"
+              for="article-page-content"
+              id="article-toc-navigation"
+              key={`toc:${narrationKey}`}
+              max-depth={3}
+              onClick={() => {
+                setIsTocOpen(false);
+                setIsTocHandleArmed(false);
+              }}
+              ref={tocRef}
             >
-              <span className="material-symbols-rounded" aria-hidden="true">graphic_eq</span>
-            </m3e-fab>
-          ) : (
-            <m3e-fab
-              aria-controls={shareMenuId}
-              aria-expanded={isFabMenuVisible ? 'true' : 'false'}
-              aria-haspopup="menu"
-              aria-label={isFabMenuVisible ? closeFabAriaLabel : shareFabAriaLabel}
-              className={`article-share-fab ${shareStatus !== 'idle' ? `is-${shareStatus}` : ''}`}
-              lowered
-              onClick={handleToggleFabMenu}
-              size="small"
-              variant="surface"
-            >
-              <m3e-fab-menu-trigger>
-                <span className="material-symbols-rounded" aria-hidden="true">
-                  {shareStatus === 'copied' ? 'check' : shareStatus === 'error' ? 'error' : 'tune'}
-                </span>
-              </m3e-fab-menu-trigger>
-            </m3e-fab>
-          )}
-        </div>,
+              <span slot="overline">{lang === 'ar' ? 'في هذه الصفحة' : 'On this page'}</span>
+              <span slot="title">{lang === 'ar' ? 'المحتويات' : 'Contents'}</span>
+            </m3e-toc>
+          </aside>
+        </>,
         document.body
       )}
       <article className="post-view">
         <div className="article-toolbar">
-          <Link to="/blog" className="back-link post-back-link">
-            <span className="material-symbols-rounded">arrow_back</span>
+          <M3eRouterButton to="/blog" className="back-link post-back-link" size="extra-small" variant="filled">
+            <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
             Back to Blog
-          </Link>
+          </M3eRouterButton>
           <div className="article-toolbar-actions">
-            <div className="lang-switcher">
-              <m3e-button variant={lang === 'en' ? 'filled' : 'tonal'} onClick={showEnglish}>EN</m3e-button>
-              <m3e-button className="arabic-text" variant={lang === 'ar' ? 'filled' : 'tonal'} onClick={showArabic}>{'\u0639\u0631'}</m3e-button>
-            </div>
+            <m3e-segmented-button aria-label="Article language" className="lang-switcher">
+              <m3e-button-segment checked={lang === 'en'} onClick={showEnglish} value="en">EN</m3e-button-segment>
+              <m3e-button-segment checked={lang === 'ar'} className="arabic-text" onClick={showArabic} value="ar">{'\u0639\u0631'}</m3e-button-segment>
+            </m3e-segmented-button>
           </div>
         </div>
 
@@ -582,44 +858,55 @@ function PostView() {
             <span>{post.meta.date}</span> {'\u2022'} <span>{post.meta.author}</span>
           </div>
           {post.meta.tags && post.meta.tags.length > 0 && (
-            <div className="article-tags">
+            <m3e-chip-set aria-label="Article tags" className="article-tags">
               {post.meta.tags.map((tag) => (
-                <span key={tag} className="article-tag">{tag}</span>
+                <m3e-chip key={tag} variant="outlined">{tag}</m3e-chip>
               ))}
-            </div>
+            </m3e-chip-set>
           )}
           {(post.meta.excerpt || post.meta.excerptAr) && (
             <p className="article-excerpt">
               {lang === 'ar' && post.meta.excerptAr ? post.meta.excerptAr : post.meta.excerpt}
             </p>
           )}
+          <m3e-divider className="article-header-divider" />
         </header>
 
-        <div className="article-content" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-          <Suspense fallback={<PageLoading label="Loading article" />}>
-            <ArticleRenderer
-              bookmark={articleBookmark}
-              content={activeContent}
-              narration={articleNarration}
-            />
-          </Suspense>
+        <div className="article-reading-layout" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="article-content" dir={lang === 'ar' ? 'rtl' : 'ltr'} id="article-page-content">
+            <Suspense fallback={<PageLoading label="Loading article" />}>
+              <ArticleRenderer
+                bookmark={articleBookmark}
+                content={activeContent}
+                narration={articleNarration}
+              />
+            </Suspense>
+          </div>
         </div>
         {post.pages.length > 1 && (
-          <nav className="article-page-nav" aria-label="Article pages">
-            <span className="article-page-nav-label">Pages</span>
-            <div className="article-page-nav-buttons">
-              {post.pages.map((page, index) => (
-                <button
-                  className={`article-page-button ${index === selectedPageIndex ? 'is-active' : ''}`}
-                  key={page.id}
-                  onClick={() => handlePageSelect(index)}
-                  type="button"
-                >
-                  {lang === 'ar' && page.labelAr ? page.labelAr : page.label}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <>
+            <m3e-divider className="article-page-divider" />
+            <nav className="article-page-nav" aria-label="Article pages">
+              <span className="article-page-nav-label">Pages</span>
+              <div className="article-page-nav-buttons">
+                {post.pages.map((page, index) => (
+                  <m3e-button
+                    aria-current={index === selectedPageIndex ? 'page' : undefined}
+                    key={page.id}
+                    onClick={() => handlePageSelect(index)}
+                    selected={index === selectedPageIndex}
+                    shape="square"
+                    size="extra-small"
+                    toggle
+                    type="button"
+                    variant="tonal"
+                  >
+                    {lang === 'ar' && page.labelAr ? page.labelAr : page.label}
+                  </m3e-button>
+                ))}
+              </div>
+            </nav>
+          </>
         )}
         <PostDiscussion
           lang={lang}

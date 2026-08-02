@@ -1,4 +1,5 @@
 import { memo, useEffect, useId, useRef, useState } from "react";
+import '@m3e/web/divider';
 
 type PostDiscussionProps = {
   lang: "en" | "ar";
@@ -101,6 +102,7 @@ function PostDiscussion({ lang, postId }: PostDiscussionProps) {
 
   return (
     <section className="post-discussion-shell" aria-labelledby={headingId}>
+      <m3e-divider className="post-discussion-divider" />
       <div
         className="post-discussion-header"
         dir={lang === "ar" ? "rtl" : "ltr"}

@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useState } from "react";
+import { M3eSnackbar } from '@m3e/web/snackbar';
 
 type SubscribeButtonProps = {
   tabIndex?: number;
@@ -46,9 +47,21 @@ function SubscribeButton({
   }, []);
 
   const handleSubscribe = useCallback(async () => {
-    if (!("Notification" in window)) return;
+    if (!("Notification" in window)) {
+      M3eSnackbar.open(
+        lang === "ar" ? "\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a \u063a\u064a\u0631 \u0645\u062f\u0639\u0648\u0645\u0629 \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u0645\u062a\u0635\u0641\u062d" : "Notifications are not supported in this browser",
+        true,
+        { duration: 4200 },
+      );
+      return;
+    }
     if (status === "denied" || Notification.permission === "denied") {
       setStatus("denied");
+      M3eSnackbar.open(
+        lang === "ar" ? "\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0645\u062d\u0638\u0648\u0631\u0629 \u0641\u064a \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0645\u062a\u0635\u0641\u062d" : "Notifications are blocked in your browser settings",
+        true,
+        { duration: 4200 },
+      );
       return;
     }
 
@@ -69,14 +82,27 @@ function SubscribeButton({
 
         if (status === "granted") {
           setStatus("idle");
+          M3eSnackbar.open(
+            lang === "ar" ? "\u062a\u0645 \u0625\u064a\u0642\u0627\u0641 \u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u062f\u0648\u0646\u0629" : "Blog notifications turned off",
+            { duration: 2600 },
+          );
         } else {
           if (Notification.permission === "granted") {
             setStatus("granted");
+            M3eSnackbar.open(
+              lang === "ar" ? "\u062a\u0645 \u062a\u0641\u0639\u064a\u0644 \u0625\u0634\u0639\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u062f\u0648\u0646\u0629" : "Blog notifications turned on",
+              { duration: 2600 },
+            );
           }
         }
       } catch (error) {
         console.error('OneSignal SDK Error:', error);
         setStatus("denied");
+        M3eSnackbar.open(
+          lang === "ar" ? "\u062a\u0639\u0630\u0651\u0631 \u062a\u062d\u062f\u064a\u062b \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a" : "Could not update notification settings",
+          true,
+          { duration: 4200 },
+        );
       }
     };
 
@@ -92,7 +118,7 @@ function SubscribeButton({
         setStatus((current) => current === "requesting" ? "denied" : current);
       }, 15000);
     }
-  }, [status]);
+  }, [lang, status]);
 
   const isAr = lang === "ar";
   
@@ -111,20 +137,21 @@ function SubscribeButton({
       <m3e-fab-menu-item
         aria-disabled={!isActionable ? "true" : "false"}
         className={`article-share-menu-item is-subscribe${!isActionable ? " is-disabled" : ""}`}
+        disabled={!isActionable}
         onClick={isActionable ? handleSubscribe : undefined}
         tabIndex={tabIndex}
       >
-        <span
-          className="material-symbols-rounded"
+        <m3e-icon
           aria-hidden="true"
-          slot="icon"
-        >
-          {status === "granted"
+          filled
+          name={status === "granted"
             ? "notifications_active"
             : status === "denied"
               ? "notifications_off"
               : "notifications"}
-        </span>
+          slot="icon"
+          variant="rounded"
+        />
         {status === "granted"
           ? labels.unsubscribe
           : status === "requesting"
@@ -137,19 +164,26 @@ function SubscribeButton({
   }
 
   return (
-    <button
+    <m3e-button
       className={`subscribe-btn${status === "denied" ? " is-denied" : ""}${status === "granted" ? " is-subscribed" : ""}`}
       disabled={status === "requesting"}
       onClick={handleSubscribe}
+      shape="rounded"
+      size="small"
       type="button"
+      variant="tonal"
     >
-      <span className="material-symbols-rounded" aria-hidden="true">
-        {status === "granted"
+      <m3e-icon
+        aria-hidden="true"
+        filled
+        name={status === "granted"
           ? "notifications_active"
           : status === "denied"
             ? "notifications_off"
             : "notifications"}
-      </span>
+        slot="icon"
+        variant="rounded"
+      />
       {status === "granted"
         ? labels.subscribed
         : status === "requesting"
@@ -157,7 +191,7 @@ function SubscribeButton({
           : status === "denied"
             ? labels.blocked
             : labels.subscribe}
-    </button>
+    </m3e-button>
   );
 }
 

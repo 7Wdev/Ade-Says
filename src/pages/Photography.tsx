@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal, preload } from "react-dom";
 import { Link, useParams } from "react-router-dom";
+import M3eRouterButton from "../components/M3eRouterButton";
 import SeoHead from "../components/SeoHead";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
 import { buildNotFoundSeo, buildPhotographyCatalogSeo, buildPhotographySeo } from "../utils/seo";
@@ -581,10 +582,10 @@ const CatalogIndex = memo(function CatalogIndex({ catalogs }: CatalogIndexProps)
   return (
     <section className="page-shell photography-page">
       <SeoHead meta={seoMeta} />
-      <Link to="/" className="back-link">
-        <span className="material-symbols-rounded">arrow_back</span>
+      <M3eRouterButton to="/" className="back-link" size="extra-small" variant="tonal">
+        <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
         Back Home
-      </Link>
+      </M3eRouterButton>
 
       <div className="page-heading photography-heading">
         <span className="page-kicker">Photography</span>
@@ -911,9 +912,16 @@ const PhotoLightbox = memo(function PhotoLightbox({
       onMouseDown={handleMouseDown}
     >
       <div className="photo-lightbox-panel">
-        <button className="photo-lightbox-close" type="button" onClick={onClose} aria-label="Close photo">
-          <span className="material-symbols-rounded">close</span>
-        </button>
+        <m3e-icon-button
+          aria-label="Close photo"
+          className="photo-lightbox-close"
+          onClick={onClose}
+          size="small"
+          type="button"
+          variant="filled"
+        >
+          <m3e-icon filled name="close" variant="rounded" />
+        </m3e-icon-button>
 
         <figure className={`photo-lightbox-stage${loaded ? " is-loaded" : ""}`} style={stageStyle}>
           <img
@@ -963,10 +971,10 @@ const GalleryPage = memo(function GalleryPage({ catalog }: GalleryPageProps) {
   return (
     <section className="page-shell photography-page gallery-page">
       <SeoHead meta={seoMeta} />
-      <Link to="/photography" className="back-link">
-        <span className="material-symbols-rounded">arrow_back</span>
+      <M3eRouterButton to="/photography" className="back-link" size="extra-small" variant="tonal">
+        <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
         All Catalogs
-      </Link>
+      </M3eRouterButton>
 
       <div className="gallery-hero">
         <div className="page-heading photography-heading">
@@ -995,10 +1003,10 @@ function CatalogNotFound() {
   return (
     <section className="page-shell photography-page">
       <SeoHead meta={seoMeta} />
-      <Link to="/photography" className="back-link">
-        <span className="material-symbols-rounded">arrow_back</span>
+      <M3eRouterButton to="/photography" className="back-link" size="extra-small" variant="tonal">
+        <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
         All Catalogs
-      </Link>
+      </M3eRouterButton>
 
       <div className="empty-state">
         <h2>Catalog not found</h2>

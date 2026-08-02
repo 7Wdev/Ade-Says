@@ -1,5 +1,6 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useState, type MouseEvent } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { lazy, memo, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import M3eRouterButton from './components/M3eRouterButton';
 import PageLoading from './components/PageLoading';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -11,38 +12,23 @@ const Portfolio = lazy(() => import('./pages/Portfolio'));
 type NavButtonProps = {
   children: string;
   selected?: boolean;
+  size?: 'small' | 'medium';
   to: string;
 };
 
-const NavButton = memo(function NavButton({ children, selected = false, to }: NavButtonProps) {
-  const navigate = useNavigate();
-
-  const handleClick = useCallback((event: MouseEvent<HTMLElement>) => {
-    if (selected) {
-      event.preventDefault();
-      return;
-    }
-
-    if (event.defaultPrevented || event.button !== 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    navigate(to);
-  }, [navigate, selected, to]);
-
+const NavButton = memo(function NavButton({ children, selected = false, size = 'small', to }: NavButtonProps) {
   return (
-    <m3e-button
+    <M3eRouterButton
       className="nav-button"
-      variant={selected ? 'filled' : 'tonal'}
+      current={selected}
+      variant="tonal"
       shape="rounded"
-      size="small"
-      aria-current={selected ? 'page' : undefined}
-      onClick={handleClick}
+      size={size}
+      to={to}
+      toggle
     >
       {children}
-    </m3e-button>
+    </M3eRouterButton>
   );
 });
 
@@ -82,22 +68,33 @@ function AppShell() {
             Ade Says
           </Link>
 
-          <button 
+          <m3e-icon-button
+            aria-controls="mobile-navigation"
+            aria-expanded={isMobileMenuOpen ? 'true' : 'false'}
             className="navbar-toggle"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle navigation menu"
+            size="small"
+            variant="tonal"
           >
-            <span className="material-symbols-rounded">
-              {isMobileMenuOpen ? 'close' : 'menu'}
-            </span>
-          </button>
+            <m3e-icon
+              filled
+              name={isMobileMenuOpen ? 'close' : 'menu'}
+              variant="rounded"
+            />
+          </m3e-icon-button>
 
-          <div className="navbar-links desktop-only">
+          <m3e-button-group
+            aria-label="Primary navigation"
+            className="navbar-links desktop-only"
+            size="small"
+            variant="standard"
+          >
             <NavButton to="/" selected={isHome}>Home</NavButton>
             <NavButton to="/blog" selected={isBlog}>Blog</NavButton>
             <NavButton to="/photography" selected={isPhotography}>Photography</NavButton>
             <NavButton to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
-          </div>
+          </m3e-button-group>
         </nav>
 
         <main>
@@ -114,19 +111,21 @@ function AppShell() {
         </main>
       </div>
 
-      <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'is-open' : ''}`}>
-        <button 
+      <div id="mobile-navigation" className={`mobile-menu-overlay ${isMobileMenuOpen ? 'is-open' : ''}`}>
+        <m3e-icon-button
           className="mobile-close-btn"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Close menu"
+          size="small"
+          variant="outlined"
         >
-          <span className="material-symbols-rounded">close</span>
-        </button>
+          <m3e-icon filled name="close" variant="rounded" />
+        </m3e-icon-button>
         <div className="mobile-links-container">
-          <NavButton to="/" selected={isHome}>Home</NavButton>
-          <NavButton to="/blog" selected={isBlog}>Blog</NavButton>
-          <NavButton to="/photography" selected={isPhotography}>Photography</NavButton>
-          <NavButton to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
+          <NavButton size="medium" to="/" selected={isHome}>Home</NavButton>
+          <NavButton size="medium" to="/blog" selected={isBlog}>Blog</NavButton>
+          <NavButton size="medium" to="/photography" selected={isPhotography}>Photography</NavButton>
+          <NavButton size="medium" to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
         </div>
       </div>
     </>

@@ -10,6 +10,7 @@ import {
   type FormEvent,
   type PointerEvent,
 } from 'react';
+import '@m3e/web/progress-indicator';
 
 import {
   createNarrationWordTimingsFromTranscript,
@@ -599,30 +600,37 @@ function FloatingAudioPlayer({
         />
 
         <div className="floating-audio-main">
-          <button
+          <m3e-icon-button
             aria-label={isPlaying ? 'Pause narration' : 'Play narration'}
             className="audio-play-button"
             onClick={togglePlayback}
+            size="small"
             type="button"
+            variant="filled"
           >
-            <span className="material-symbols-rounded" aria-hidden="true">
-              {isPlaying ? 'pause' : 'play_arrow'}
-            </span>
-          </button>
+            <m3e-icon
+              aria-hidden="true"
+              filled
+              name={isPlaying ? 'pause' : 'play_arrow'}
+              variant="rounded"
+            />
+          </m3e-icon-button>
 
           <div className="audio-copy">
             <span className="audio-kicker">Listen along</span>
             <strong>{activeTrack?.label ?? 'Narration'}</strong>
           </div>
 
-          <button
+          <m3e-icon-button
             aria-label="Collapse narration player"
             className="audio-close-button"
             onClick={collapsePlayer}
+            size="extra-small"
             type="button"
+            variant="tonal"
           >
-            <span className="material-symbols-rounded" aria-hidden="true">close</span>
-          </button>
+            <m3e-icon aria-hidden="true" filled name="close" variant="rounded" />
+          </m3e-icon-button>
         </div>
 
         <div className="audio-progress-row">
@@ -667,16 +675,21 @@ function FloatingAudioPlayer({
       </section>
 
       {showLauncher && (
-        <button
+        <m3e-fab
           aria-label="Open narration player"
           className={`audio-fab ${isExpanded ? 'is-hidden' : 'is-visible'} ${isPlaying ? 'is-playing' : ''}`}
           onClick={expandPlayer}
+          size="small"
           type="button"
+          variant="primary"
         >
-          <span className="material-symbols-rounded" aria-hidden="true">
-            {isPlaying ? 'graphic_eq' : 'headphones'}
-          </span>
-        </button>
+          <m3e-icon
+            aria-hidden="true"
+            filled
+            name={isPlaying ? 'graphic_eq' : 'headphones'}
+            variant="rounded"
+          />
+        </m3e-fab>
       )}
     </>
   );

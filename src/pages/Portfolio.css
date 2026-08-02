@@ -23,27 +23,20 @@
 }
 
 .status-badge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  font-family: var(--md-sys-typescale-body-font);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  color: #fff;
+  display: inline-block;
   margin-bottom: 48px;
   animation: fadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.status-badge-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .status-dot {
+  display: block;
+  flex: 0 0 auto;
   width: 6px;
   height: 6px;
   border-radius: 50%;

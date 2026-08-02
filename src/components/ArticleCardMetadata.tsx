@@ -1,4 +1,6 @@
 import { memo } from "react";
+import '@m3e/web/chips';
+import '@m3e/web/icon';
 
 type ArticleCardMetadataProps = {
   isListenable: boolean;
@@ -12,20 +14,22 @@ function ArticleCardMetadata({
   const normalizedPageCount = Math.max(1, pageCount);
 
   return (
-    <div className="article-card-meta" aria-label="Article metadata">
-      <span className="article-card-meta-pill">
-        <span className="material-symbols-rounded" aria-hidden="true">
-          {isListenable ? "headphones" : "description"}
-        </span>
+    <m3e-chip-set className="article-card-meta" aria-label="Article metadata">
+      <m3e-chip className="article-card-meta-pill" variant="elevated">
+        <m3e-icon
+          aria-hidden="true"
+          filled
+          name={isListenable ? "headphones" : "description"}
+          slot="icon"
+          variant="rounded"
+        />
         {isListenable ? "Listenable" : "Read only"}
-      </span>
-      <span className="article-card-meta-pill">
-        <span className="material-symbols-rounded" aria-hidden="true">
-          layers
-        </span>
+      </m3e-chip>
+      <m3e-chip className="article-card-meta-pill" variant="elevated">
+        <m3e-icon aria-hidden="true" filled name="layers" slot="icon" variant="rounded" />
         {normalizedPageCount} {normalizedPageCount === 1 ? "page" : "pages"}
-      </span>
-    </div>
+      </m3e-chip>
+    </m3e-chip-set>
   );
 }
 

@@ -32,7 +32,7 @@ function TikZRenderer({ content }: TikZRendererProps) {
     return (
       <div className="tikz-wrapper">
         <div className="tikz-error" role="alert">
-          <span className="material-symbols-rounded">error</span>
+          <m3e-icon aria-hidden="true" filled name="error" variant="rounded" />
           <span>Failed to load pre-rendered TikZ diagram.</span>
         </div>
       </div>

@@ -14,6 +14,11 @@ import {
   useState,
 } from 'react';
 import type { Components } from 'react-markdown';
+import '@m3e/web/card';
+import '@m3e/web/chips';
+import '@m3e/web/divider';
+import '@m3e/web/toolbar';
+import { M3eSnackbar } from '@m3e/web/snackbar';
 
 import { isNarrationWordToken, splitNarrationTextTokens } from '../utils/narration';
 
@@ -128,23 +133,32 @@ function SandboxFallback({ code }: { code: string }) {
 function CopyCodeButton({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      M3eSnackbar.open('Code copied', { duration: 2000 });
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      M3eSnackbar.open('Could not copy the code', true, { duration: 3600 });
+    }
   };
 
   return (
-    <button
+    <m3e-icon-button
       className={`article-code-copy-btn ${copied ? 'is-copied' : ''}`}
       onClick={handleCopy}
-      aria-label="Copy code"
-      title="Copy code"
+      aria-label={copied ? 'Code copied' : 'Copy code'}
+      size="extra-small"
+      variant="tonal"
     >
-      <span className="material-symbols-rounded">
-        {copied ? 'check' : 'content_copy'}
-      </span>
-    </button>
+      <m3e-icon
+        aria-hidden="true"
+        filled
+        name={copied ? 'check' : 'content_copy'}
+        variant="rounded"
+      />
+    </m3e-icon-button>
   );
 }
 
@@ -215,18 +229,6 @@ function getLanguageFromClassName(className: unknown) {
 
 export function getLanguageLabel(language: string) {
   return codeLanguageLabels[language] ?? language.toUpperCase();
-}
-
-export function getLanguageBadge(language: string) {
-  if (language === 'js' || language === 'javascript') {
-    return 'JS';
-  }
-
-  if (language === 'ts' || language === 'typescript') {
-    return 'TS';
-  }
-
-  return '</>';
 }
 
 function getJavaScriptTokenClass(token: string) {
@@ -333,6 +335,11 @@ function MarkdownImage({ alt = '', node, ...props }: MarkdownImageProps) {
 
 export const markdownComponents = {
   img: MarkdownImage,
+  hr({ node, ...props }) {
+    void node;
+
+    return <m3e-divider {...props} className="article-divider" />;
+  },
   code({ className, children, node, ...props }) {
     void node;
 
@@ -416,18 +423,26 @@ export const markdownComponents = {
           }
 
           return (
-            <div className="article-code-frame" data-language={language}>
-              <div className="article-code-header">
-                <div className="article-code-header-left">
-                  <span className="article-code-badge" aria-hidden="true">
-                    {getLanguageBadge(language)}
-                  </span>
-                  <span className="article-code-filename">{getLanguageLabel(language)}</span>
-                </div>
+            <m3e-card
+              className="article-code-frame"
+              data-language={language}
+              orientation="vertical"
+              variant="filled"
+            >
+              <m3e-toolbar
+                aria-label={`${getLanguageLabel(language)} code block tools`}
+                className="article-code-header"
+                shape="rounded"
+                variant="vibrant"
+              >
+                <m3e-chip className="article-code-language-chip" aria-hidden="true" variant="outlined">
+                  <m3e-icon filled name="data_object" slot="icon" variant="rounded" />
+                  {getLanguageLabel(language)}
+                </m3e-chip>
                 {rawCode && <CopyCodeButton code={rawCode} />}
-              </div>
+              </m3e-toolbar>
               <pre {...props}>{children}</pre>
-            </div>
+            </m3e-card>
           );
         }
       }

@@ -1,11 +1,15 @@
 import { memo, useCallback, useDeferredValue, useMemo, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import '@m3e/web/search';
+import '@m3e/web/toolbar';
 import SeoHead from '../components/SeoHead';
+import M3eRouterButton from '../components/M3eRouterButton';
 import { allPosts } from '../utils/markdown';
 import { buildBlogSeo, resolvePostSeoImage } from '../utils/seo';
 import { searchPosts, type SearchResult } from '../utils/search';
 import ViewportRender from '../components/ViewportRender';
 import ArticleCardMetadata from '../components/ArticleCardMetadata';
+import PinnedBadge from '../components/PinnedBadge';
 import SubscribeButton from '../components/SubscribeBanner';
 
 const editorialColors = ['mag-color-dark', 'mag-color-yellow', 'mag-color-green', 'mag-color-orange', 'mag-color-brown', 'mag-color-lilac', 'mag-color-red', 'mag-color-pink', 'mag-color-blue', 'mag-color-teal', 'mag-color-glass'];
@@ -47,7 +51,7 @@ const BlogResultCard = memo(function BlogResultCard({ originalIndex, post }: Blo
     <Link to={`/post/${post.meta.id}`} className={`blog-result-card ${colorClass}`}>
       {post.meta.thumbnail && <img src={post.meta.thumbnail} className="card-thumbnail" alt="" loading="lazy" decoding="async" />}
       <div className="post-card-content">
-        <span className="card-cat">{post.meta.pinned ? 'Pinned' : 'Blog'}</span>
+        {post.meta.pinned ? <PinnedBadge /> : <span className="card-cat">Blog</span>}
         <h2>{post.meta.title}</h2>
         <p>{post.meta.excerpt}</p>
         <ArticleCardMetadata isListenable={isListenable} pageCount={post.pages.length} />
@@ -99,13 +103,14 @@ function Blog() {
   return (
     <section className="page-shell blog-page">
       <SeoHead meta={seoMeta} />
-      <div className="blog-top-bar">
-        <Link to="/" className="back-link">
-          <span className="material-symbols-rounded">arrow_back</span>
+      <m3e-toolbar aria-label="Blog actions" className="blog-top-bar" shape="square" variant="standard">
+        <M3eRouterButton to="/" className="back-link" size="extra-small" variant="tonal">
+          <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
           Back Home
-        </Link>
+        </M3eRouterButton>
+        <span aria-hidden="true" className="blog-top-bar-spacer" />
         <SubscribeButton />
-      </div>
+      </m3e-toolbar>
 
       <div className="page-heading">
         <span className="page-kicker">Archive</span>
@@ -118,14 +123,18 @@ function Blog() {
       <label className="blog-search-label" htmlFor="blog-search">
         Search the archive
       </label>
-      <input
-        id="blog-search"
-        className="blog-search-input"
-        type="search"
-        value={query}
-        onChange={handleQueryChange}
-        placeholder="Search by idea, subject, title, tag..."
-      />
+      <m3e-search-bar className="blog-search-bar">
+        <m3e-icon filled name="search" slot="leading" variant="rounded" />
+        <input
+          id="blog-search"
+          className="blog-search-input"
+          type="search"
+          value={query}
+          onChange={handleQueryChange}
+          placeholder="Search by idea, subject, title, tag..."
+          slot="input"
+        />
+      </m3e-search-bar>
 
       <div className="blog-results-count blog-search-status" aria-live="polite" aria-atomic="true">
         {isSearchPending ? (
