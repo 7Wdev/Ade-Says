@@ -248,10 +248,11 @@ function SandboxFallback({ code }: { code: string }) {
     minHeight: `${resolvedHeight}px`,
   };
   const sandboxChromeNone = new RegExp(String.raw`<!--\s*sandbox-chrome:\s*none\s*-->`, 'i').test(code);
+  const sandboxDiagram = new RegExp(String.raw`<!--\s*sandbox-type:\s*diagram\s*-->`, 'i').test(code);
 
   return (
     <div
-      className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}`}
+      className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}${sandboxDiagram ? ' sandbox-wrapper-diagram' : ''}`}
       style={sandboxStyle}
     >
       <div

@@ -435,6 +435,7 @@ Let's see it as a diagram that shows **the three channels together**. The same t
 ```html-live
 <!-- sandbox-height: 560 -->
 <!-- sandbox-chrome: none -->
+<!-- sandbox-type: diagram -->
 <style>
   :root {
     color-scheme: dark;
@@ -1696,6 +1697,7 @@ $$
 ```html-live
 <!-- sandbox-height: 560 -->
 <!-- sandbox-chrome: none -->
+<!-- sandbox-type: diagram -->
 <style>
   :root {
     color-scheme: dark;

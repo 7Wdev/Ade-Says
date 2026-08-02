@@ -1,4 +1,5 @@
 import type { Attributes, HTMLAttributes, RefAttributes } from 'react';
+import type { ShapeName } from '@m3e/web/shape';
 
 type M3eElementAttributes = Attributes & HTMLAttributes<HTMLElement>;
 
@@ -171,6 +172,10 @@ type M3eSkeletonProps = M3eElementAttributes & {
   shape?: M3eSkeletonShape;
 };
 
+type M3eShapeProps = M3eElementAttributes & {
+  name?: ShapeName;
+};
+
 type M3eToolbarProps = M3eElementAttributes & {
   elevated?: boolean;
   shape?: M3eToolbarShape;
@@ -204,6 +209,7 @@ declare module 'react' {
       'm3e-loading-indicator': M3eLoadingIndicatorProps;
       'm3e-search-bar': M3eSearchBarProps;
       'm3e-segmented-button': M3eSegmentedButtonProps;
+      'm3e-shape': M3eShapeProps;
       'm3e-skeleton': M3eSkeletonProps;
       'm3e-toc': M3eTocProps;
       'm3e-toolbar': M3eToolbarProps;

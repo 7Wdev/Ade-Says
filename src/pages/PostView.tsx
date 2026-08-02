@@ -1,9 +1,11 @@
 import {
+  createElement,
   lazy,
   memo,
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,7 +20,9 @@ import '@m3e/web/fab';
 import '@m3e/web/fab-menu';
 import '@m3e/web/segmented-button';
 import '@m3e/web/toc';
+import { setCustomState } from '@m3e/web/core';
 import { M3eSnackbar } from '@m3e/web/snackbar';
+import type { M3eTocElement } from '@m3e/web/toc';
 
 import FloatingAudioPlayer, { type NarrationTrackMap } from '../components/FloatingAudioPlayer';
 import M3eRouterButton from '../components/M3eRouterButton';
@@ -55,6 +59,60 @@ type ArticleTocDragState = {
   startX: number;
   width: number;
 };
+
+type ArticleTocHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+type ArticleTocHeadingDescriptor = {
+  label: string;
+  level: ArticleTocHeadingLevel;
+};
+
+function normalizeMarkdownHeadingLabel(label: string) {
+  return label
+    .replace(/\s+#+\s*$/, '')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[`*_~]/g, '')
+    .replace(/\\([\\`*_[\]{}()#+.!~-])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractArticleTocHeadings(markdown: string): ArticleTocHeadingDescriptor[] {
+  const headings: ArticleTocHeadingDescriptor[] = [];
+  let fenceMarker = '';
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const fenceMatch = /^\s*(```|~~~)/.exec(line);
+
+    if (fenceMatch) {
+      fenceMarker = fenceMarker === fenceMatch[1] ? '' : (fenceMarker || fenceMatch[1]);
+      continue;
+    }
+
+    if (fenceMarker) {
+      continue;
+    }
+
+    const headingMatch = /^\s*(#{1,6})\s+(.+?)\s*$/.exec(line);
+
+    if (!headingMatch) {
+      continue;
+    }
+
+    const label = normalizeMarkdownHeadingLabel(headingMatch[2]);
+
+    if (label) {
+      headings.push({
+        label,
+        level: headingMatch[1].length as ArticleTocHeadingLevel,
+      });
+    }
+  }
+
+  return headings;
+}
 
 function readArticleBookmarks(): ArticleBookmarkStore {
   if (typeof window === 'undefined') {
@@ -157,7 +215,7 @@ function PostView() {
   const tocDragRef = useRef<ArticleTocDragState | null>(null);
   const tocDragCleanupFrameRef = useRef<number | null>(null);
   const tocToggleReleaseTimeoutRef = useRef<number | null>(null);
-  const tocRef = useRef<HTMLElement | null>(null);
+  const tocRef = useRef<M3eTocElement | null>(null);
   const tocToggleSuppressedRef = useRef(false);
 
   const selectedPageIndex = post && pageSelection.postId === post.meta.id
@@ -197,6 +255,10 @@ function PostView() {
 
   const activeNarrationTrack = narrationTracks[lang];
   const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
+  const tocSourceHeadings = useMemo(
+    () => extractArticleTocHeadings(activeContent),
+    [activeContent],
+  );
   const isTocReady = tocReadyKey === narrationKey;
   const bookmarkKey = narrationKey;
   const activeBookmarkWord = bookmarks[bookmarkKey]?.wordIndex ?? null;
@@ -227,7 +289,7 @@ function PostView() {
     scrollRequest: bookmarkScrollRequest,
   }), [activeBookmarkWord, bookmarkKey, bookmarkScrollRequest]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const toc = tocRef.current;
     const tocRoot = toc?.shadowRoot;
     const articleRoot = document.getElementById('article-page-content');
@@ -240,33 +302,130 @@ function PostView() {
     let cancelled = false;
     let lastActiveHeading: HTMLElement | null = null;
     let lockedHeading: HTMLElement | null = null;
+    let mappedTocContent: {
+      headings: HTMLElement[];
+      items: M3eTocItemWithNode[];
+    } | null = null;
+    let indicatorMotionTimer = 0;
+    let indicatorMotionEnabled = false;
     let scrollSettleTimer = 0;
 
-    const syncLabels = () => {
-      tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item').forEach((item) => {
-        const label = item.node?.element?.textContent?.replace(/\s+/g, ' ').trim();
+    // Keep the first calculated position invisible to motion, then hand the
+    // indicator back to M3E's native transitions. The stable proxy source is
+    // intentionally off-screen, so M3E's own intersection callback cannot
+    // clear this initial custom state for us.
+    setCustomState(toc, '--no-animate', true);
 
-        if (label && item.textContent !== label) {
-          item.textContent = label;
+    const getMappedTocContent = () => {
+      if (
+        mappedTocContent &&
+        mappedTocContent.headings.every((heading) => heading.isConnected) &&
+        mappedTocContent.items.every((item) => item.isConnected)
+      ) {
+        return mappedTocContent;
+      }
+
+      const items = Array.from(tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item'));
+      const allHeadings = Array.from(articleRoot.querySelectorAll<HTMLElement>(
+        'h1:not([m3e-toc-ignore]),h2:not([m3e-toc-ignore]),h3:not([m3e-toc-ignore]),h4:not([m3e-toc-ignore]),h5:not([m3e-toc-ignore]),h6:not([m3e-toc-ignore])'
+      ));
+
+      if (items.length === 0 || allHeadings.length === 0) {
+        return null;
+      }
+
+      const headingLevels = allHeadings.map((heading) => Number(heading.tagName.slice(1)));
+      const topLevel = Math.min(...headingLevels);
+      const headings = allHeadings.filter((_, index) => headingLevels[index] < topLevel + 3);
+
+      // M3E owns the stable item tree; the real article headings are mapped by
+      // document order so virtual article blocks can mount without rebuilding it.
+      if (items.length !== headings.length) {
+        return null;
+      }
+
+      mappedTocContent = { headings, items };
+      return mappedTocContent;
+    };
+
+    const applyActiveSection = (
+      items: M3eTocItemWithNode[],
+      headings: HTMLElement[],
+      activeHeading: HTMLElement,
+    ) => {
+      const activeIndex = headings.indexOf(activeHeading);
+      const activeItem = items[activeIndex];
+
+      if (!activeItem) {
+        return false;
+      }
+
+      const activeIndicator = tocRoot.querySelector<HTMLElement>('.active-indicator');
+
+      if (!activeIndicator || activeItem.clientHeight <= 0) {
+        return false;
+      }
+
+      let repairedSelection = false;
+
+      for (const item of items) {
+        const shouldSelect = item === activeItem;
+
+        if (item.hasAttribute('selected') !== shouldSelect) {
+          item.toggleAttribute('selected', shouldSelect);
+          repairedSelection = true;
         }
-      });
+      }
+
+      activeIndicator.style.top = `${activeItem.offsetTop}px`;
+      activeIndicator.style.height = `${activeItem.clientHeight}px`;
+      activeIndicator.style.visibility = 'visible';
+
+      if (!indicatorMotionEnabled && !indicatorMotionTimer) {
+        indicatorMotionTimer = window.setTimeout(() => {
+          indicatorMotionTimer = 0;
+
+          if (!cancelled) {
+            setCustomState(toc, '--no-animate', false);
+            indicatorMotionEnabled = true;
+          }
+        }, 40);
+      }
+
+      if (lastActiveHeading !== activeHeading || repairedSelection) {
+        const scrollContainer = tocRoot.querySelector<HTMLElement>('.scroll-container');
+
+        if (scrollContainer?.clientHeight) {
+          const itemTop = activeItem.offsetTop;
+          const itemBottom = itemTop + activeItem.offsetHeight;
+          const visibleTop = scrollContainer.scrollTop;
+          const visibleBottom = visibleTop + scrollContainer.clientHeight;
+
+          if (itemTop < visibleTop || itemBottom > visibleBottom) {
+            scrollContainer.scrollTo({
+              behavior: 'auto',
+              top: Math.max(0, itemTop - (scrollContainer.clientHeight - activeItem.offsetHeight) / 2),
+            });
+          }
+        }
+      }
+
+      lastActiveHeading = activeHeading;
+      setTocReadyKey((currentKey) => (
+        currentKey === narrationKey ? currentKey : narrationKey
+      ));
+
+      return true;
     };
 
     const syncActiveSection = () => {
-      const items = Array.from(tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item'));
-      const headings: HTMLElement[] = [];
+      const mappedContent = getMappedTocContent();
 
-      for (const item of items) {
-        const heading = item.node?.element;
-
-        if (heading && heading.getClientRects().length > 0 && !headings.includes(heading)) {
-          headings.push(heading);
-        }
-      }
-
-      if (headings.length === 0 || items.length === 0) {
+      if (!mappedContent) {
         return;
       }
+
+      const { headings, items } = mappedContent;
 
       const declaredScrollMargin = Number.parseFloat(
         window.getComputedStyle(headings[0]).scrollMarginTop
@@ -275,11 +434,7 @@ function PostView() {
         Math.max(1, window.innerHeight - 1),
         Math.max(1, (Number.isFinite(declaredScrollMargin) ? declaredScrollMargin : 120) + 1)
       );
-      const lockedItem = lockedHeading
-        ? items.find((item) => item.node?.element === lockedHeading)
-        : undefined;
-
-      if (lockedHeading && !lockedItem) {
+      if (lockedHeading && !headings.includes(lockedHeading)) {
         lockedHeading = null;
       }
 
@@ -305,52 +460,7 @@ function PostView() {
         activeHeading = headings[headings.length - 1];
       }
 
-      const activeItem = items.find((item) => item.node?.element === activeHeading);
-      if (!activeItem) {
-        return;
-      }
-
-      let repairedSelection = false;
-
-      for (const item of items) {
-        const shouldSelect = item === activeItem;
-
-        if (item.hasAttribute('selected') !== shouldSelect) {
-          item.toggleAttribute('selected', shouldSelect);
-          repairedSelection = true;
-        }
-      }
-
-      const activeIndicator = tocRoot.querySelector<HTMLElement>('.active-indicator');
-      if (activeIndicator) {
-        activeIndicator.style.top = `${activeItem.offsetTop}px`;
-        activeIndicator.style.height = `${activeItem.clientHeight}px`;
-        activeIndicator.style.visibility = activeItem.clientHeight === 0 ? 'hidden' : '';
-      }
-
-      setTocReadyKey((currentKey) => (
-        currentKey === narrationKey ? currentKey : narrationKey
-      ));
-
-      if (lastActiveHeading !== activeHeading || repairedSelection) {
-        const scrollContainer = tocRoot.querySelector<HTMLElement>('.scroll-container');
-
-        if (scrollContainer?.clientHeight) {
-          const itemTop = activeItem.offsetTop;
-          const itemBottom = itemTop + activeItem.offsetHeight;
-          const visibleTop = scrollContainer.scrollTop;
-          const visibleBottom = visibleTop + scrollContainer.clientHeight;
-
-          if (itemTop < visibleTop || itemBottom > visibleBottom) {
-            scrollContainer.scrollTo({
-              behavior: 'smooth',
-              top: Math.max(0, itemTop - (scrollContainer.clientHeight - activeItem.offsetHeight) / 2),
-            });
-          }
-        }
-      }
-
-      lastActiveHeading = activeHeading;
+      applyActiveSection(items, headings, activeHeading);
     };
 
     const syncToc = () => {
@@ -360,7 +470,6 @@ function PostView() {
         return;
       }
 
-      syncLabels();
       syncActiveSection();
     };
 
@@ -388,35 +497,87 @@ function PostView() {
       const clickedItem = event.composedPath().find((eventTarget) => (
         eventTarget instanceof HTMLElement && eventTarget.tagName === 'M3E-TOC-ITEM'
       )) as M3eTocItemWithNode | undefined;
-      const clickedHeading = clickedItem?.node?.element;
+      const mappedContent = getMappedTocContent();
+
+      if (!clickedItem || !mappedContent) {
+        return;
+      }
+
+      const clickedIndex = mappedContent.items.indexOf(clickedItem);
+      const clickedHeading = mappedContent.headings[clickedIndex];
 
       if (!clickedHeading) {
         return;
       }
 
+      // Stop M3E from scrolling the off-screen stable heading source. The
+      // visible article heading is the authoritative navigation target.
+      event.preventDefault();
+      event.stopImmediatePropagation();
       lockedHeading = clickedHeading;
       lastActiveHeading = null;
+      applyActiveSection(mappedContent.items, mappedContent.headings, clickedHeading);
+      clickedHeading.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+      setIsTocOpen(false);
+      setIsTocHandleArmed(false);
       scheduleClickedHeadingRelease(1800);
-      scheduleTocSync();
     };
 
     const handleWindowScroll = () => {
       scheduleTocSync();
 
       if (lockedHeading) {
-        scheduleClickedHeadingRelease(140);
+        scheduleClickedHeadingRelease(220);
       }
     };
 
-    const tocObserver = new MutationObserver(scheduleTocSync);
+    const handleUserScrollIntent = () => {
+      if (!lockedHeading) {
+        return;
+      }
+
+      if (scrollSettleTimer) {
+        window.clearTimeout(scrollSettleTimer);
+        scrollSettleTimer = 0;
+      }
+
+      lockedHeading = null;
+      scheduleTocSync();
+    };
+
+    const handleNavigationKey = (event: KeyboardEvent) => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+        handleUserScrollIntent();
+      }
+    };
+
+    const tocObserver = new MutationObserver(() => {
+      mappedTocContent = null;
+      scheduleTocSync();
+    });
     tocObserver.observe(tocRoot, {
-      attributeFilter: ['selected'],
-      attributes: true,
       childList: true,
       subtree: true,
     });
 
-    const articleObserver = new MutationObserver(scheduleTocSync);
+    const articleObserver = new MutationObserver((mutations) => {
+      const headingsChanged = mutations.some((mutation) => (
+        [...mutation.addedNodes, ...mutation.removedNodes].some((node) => (
+          node instanceof Element && (
+            node.matches('h1,h2,h3,h4,h5,h6') ||
+            node.querySelector('h1,h2,h3,h4,h5,h6') !== null
+          )
+        ))
+      ));
+
+      if (headingsChanged) {
+        mappedTocContent = null;
+        scheduleTocSync();
+      }
+    });
     articleObserver.observe(articleRoot, { childList: true, subtree: true });
 
     const resizeObserver = typeof ResizeObserver === 'undefined'
@@ -424,8 +585,16 @@ function PostView() {
       : new ResizeObserver(scheduleTocSync);
     resizeObserver?.observe(articleRoot);
 
+    const tocList = tocRoot.querySelector<HTMLElement>('.list');
+    if (tocList) {
+      resizeObserver?.observe(tocList);
+    }
+
     tocRoot.addEventListener('click', handleTocItemClick, true);
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    window.addEventListener('wheel', handleUserScrollIntent, { passive: true });
+    window.addEventListener('touchstart', handleUserScrollIntent, { passive: true });
+    window.addEventListener('keydown', handleNavigationKey);
     window.addEventListener('resize', scheduleTocSync);
     window.visualViewport?.addEventListener('resize', scheduleTocSync);
 
@@ -444,9 +613,16 @@ function PostView() {
       resizeObserver?.disconnect();
       tocRoot.removeEventListener('click', handleTocItemClick, true);
       window.removeEventListener('scroll', handleWindowScroll);
+      window.removeEventListener('wheel', handleUserScrollIntent);
+      window.removeEventListener('touchstart', handleUserScrollIntent);
+      window.removeEventListener('keydown', handleNavigationKey);
       window.removeEventListener('resize', scheduleTocSync);
       window.visualViewport?.removeEventListener('resize', scheduleTocSync);
       window.cancelAnimationFrame(syncFrame);
+
+      if (indicatorMotionTimer) {
+        window.clearTimeout(indicatorMotionTimer);
+      }
 
       if (scrollSettleTimer) {
         window.clearTimeout(scrollSettleTimer);
@@ -1034,6 +1210,18 @@ function PostView() {
         <>
           <div
             aria-hidden="true"
+            className="article-toc-source"
+            id="article-toc-source"
+            key={`toc-source:${narrationKey}`}
+          >
+            {tocSourceHeadings.map((heading, index) => createElement(
+              `h${heading.level}`,
+              { key: `${heading.level}:${index}:${heading.label}` },
+              heading.label,
+            ))}
+          </div>
+          <div
+            aria-hidden="true"
             className={`article-toc-scrim${isTocOpen ? ' is-open' : ''}`}
             onPointerDown={() => {
               setIsTocOpen(false);
@@ -1076,7 +1264,7 @@ function PostView() {
             <m3e-toc
               aria-label={lang === 'ar' ? 'جدول محتويات المقال' : 'Article table of contents'}
               className="article-toc"
-              for="article-page-content"
+              for="article-toc-source"
               id="article-toc-navigation"
               key={`toc:${narrationKey}`}
               max-depth={3}

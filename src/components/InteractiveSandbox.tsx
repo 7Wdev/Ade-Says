@@ -21,6 +21,9 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   const sandboxChromeNone = useMemo(() => (
     new RegExp(String.raw`<!--\s*sandbox-chrome:\s*none\s*-->`, 'i').test(code)
   ), [code]);
+  const sandboxDiagram = useMemo(() => (
+    new RegExp(String.raw`<!--\s*sandbox-type:\s*diagram\s*-->`, 'i').test(code)
+  ), [code]);
   const sandboxHeight = useMemo(() => {
     const match = /<!--\s*sandbox-height:\s*(\d+)\s*-->/i.exec(code);
     const parsedHeight = match ? Number(match[1]) : 0;
@@ -215,7 +218,7 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   return (
     <div
       ref={wrapperRef}
-      className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}`}
+      className={`sandbox-wrapper${sandboxChromeNone ? ' sandbox-wrapper-no-chrome' : ''}${sandboxDiagram ? ' sandbox-wrapper-diagram' : ''}`}
       style={sandboxStyle}
     >
       {!loaded && (
@@ -236,7 +239,7 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         sandbox="allow-scripts"
         scrolling="no"
         style={sandboxStyle}
-        aria-label="Interactive code sandbox"
+        aria-label={sandboxDiagram ? 'Article diagram' : 'Interactive code sandbox'}
         onLoad={handleLoad}
       />
     </div>

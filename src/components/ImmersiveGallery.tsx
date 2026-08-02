@@ -1,54 +1,115 @@
-import { memo, useMemo, type CSSProperties } from "react";
+import { memo, useMemo, useState, type CSSProperties } from "react";
+import '@m3e/web/shape';
+import type { ShapeName } from '@m3e/web/shape';
 import "./ImmersiveGallery.css";
 
 interface PanelStyle extends CSSProperties {
   "--panel-color": string;
 }
 
-const categories = [
+type GalleryCategory = {
+  color: string;
+  hoverShape: ShapeName;
+  id: string;
+  src: string;
+  title: string;
+};
+
+const categories: GalleryCategory[] = [
   {
     id: "photography",
     title: "Photography",
     src: "/uq/a.webp",
     color: "var(--mag-accent-blue)",
+    hoverShape: "12-sided-cookie",
   },
   {
     id: "software",
     title: "Computer Science",
     src: "/uq/b.webp",
     color: "var(--mag-accent-lilac)",
+    hoverShape: "arch",
   },
   {
     id: "physics",
     title: "Physics / Mathematics",
     src: "/uq/c.webp",
     color: "var(--mag-accent-teal)",
+    hoverShape: "flower",
   },
   {
     id: "art",
     title: "Art / Design",
     src: "/uq/d.webp",
     color: "var(--mag-accent-green)",
+    hoverShape: "pixel-circle",
   },
   {
     id: "society",
     title: "Society",
     src: "/uq/e.webp",
     color: "var(--mag-accent-pink)",
+    hoverShape: "4-leaf-clover",
   },
   {
     id: "economics",
     title: "Economics",
     src: "/uq/f.webp",
     color: "var(--mag-accent-yellow)",
+    hoverShape: "pixel-triangle",
   },
   {
     id: "philosophy",
     title: "Philosophy / Life",
     src: "/uq/g.webp",
     color: "var(--mag-accent-orange)",
+    hoverShape: "square",
   },
 ];
+
+type GalleryPanelProps = {
+  category: GalleryCategory;
+  index: number;
+};
+
+const GalleryPanel = memo(function GalleryPanel({
+  category,
+  index,
+}: GalleryPanelProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className="gallery-panel"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ "--panel-color": category.color } as PanelStyle}
+    >
+      <m3e-shape
+        className="gallery-panel-shape"
+        name={isHovered ? category.hoverShape : "square"}
+      >
+        <img
+          src={category.src}
+          alt={category.title}
+          loading="lazy"
+          decoding="async"
+          className="gallery-img"
+        />
+        <span aria-hidden="true" className="gallery-image-scrim" />
+      </m3e-shape>
+      <div className="gallery-panel-overlay">
+        <span className="gallery-panel-title-vertical">
+          {category.title}
+        </span>
+        <div className="gallery-panel-title-wrapper">
+          <span className="gallery-panel-number">0{index + 1}</span>
+          <h3 className="gallery-panel-title">{category.title}</h3>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export const ImmersiveGallery = memo(function ImmersiveGallery() {
   const galleryContent = useMemo(
@@ -63,29 +124,8 @@ export const ImmersiveGallery = memo(function ImmersiveGallery() {
           </div>
         </div>
         <div className="immersive-gallery">
-          {categories.map((cat, index) => (
-            <div
-              key={cat.id}
-              className="gallery-panel"
-              style={{ "--panel-color": cat.color } as PanelStyle}
-            >
-              <img
-                src={cat.src}
-                alt={cat.title}
-                loading="lazy"
-                decoding="async"
-                className="gallery-img"
-              />
-              <div className="gallery-panel-overlay">
-                <span className="gallery-panel-title-vertical">
-                  {cat.title}
-                </span>
-                <div className="gallery-panel-title-wrapper">
-                  <span className="gallery-panel-number">0{index + 1}</span>
-                  <h3 className="gallery-panel-title">{cat.title}</h3>
-                </div>
-              </div>
-            </div>
+          {categories.map((category, index) => (
+            <GalleryPanel category={category} index={index} key={category.id} />
           ))}
         </div>
       </section>

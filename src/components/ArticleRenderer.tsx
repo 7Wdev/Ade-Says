@@ -295,7 +295,7 @@ function splitMarkdownAtoms(content: string): MarkdownAtom[] {
     atoms.push({
       content: atomContent,
       estimatedHeight,
-      isHeading: /^#{1,3}\s+/.test(atomContent),
+      isHeading: /^#{1,6}\s+/.test(atomContent),
       isHeavy: estimatedHeight >= 420 || /^(```|~~~)/.test(atomContent),
     });
   };
@@ -324,7 +324,7 @@ function splitMarkdownAtoms(content: string): MarkdownAtom[] {
       continue;
     }
 
-    if (/^#{1,3}\s+/.test(line)) {
+    if (/^#{1,6}\s+/.test(line)) {
       pushAtom();
       currentLines.push(line);
       pushAtom();
