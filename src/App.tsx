@@ -118,7 +118,7 @@ function AppShell() {
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Close menu"
           shape="rounded"
-          size="medium"
+          size="small"
           variant="outlined"
         >
           <m3e-icon filled name="close" variant="rounded" />

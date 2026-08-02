@@ -1006,7 +1006,7 @@ function PostView() {
                 aria-expanded={isFabMenuVisible ? 'true' : 'false'}
                 aria-haspopup="menu"
                 aria-label={isFabMenuVisible ? closeFabAriaLabel : shareFabAriaLabel}
-                className={`article-share-fab ${shareStatus !== 'idle' ? `is-${shareStatus}` : ''}`}
+                className={`article-share-fab${isFabMenuVisible ? ' is-menu-open' : ''}${shareStatus !== 'idle' ? ` is-${shareStatus}` : ''}`}
                 lowered
                 onClick={handleFabMenuToggle}
                 size="small"
