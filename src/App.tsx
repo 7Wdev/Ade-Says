@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useState } from 'react';
+import { lazy, memo, Suspense, useLayoutEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import M3eRouterButton from './components/M3eRouterButton';
 import PageLoading from './components/PageLoading';
@@ -47,17 +47,18 @@ function AppShell() {
   const isPhotography = location.pathname.startsWith('/photography');
   const isPortfolio = location.pathname.startsWith('/portfolio');
 
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const animationFrame = window.requestAnimationFrame(() => {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-      });
-    });
+  useLayoutEffect(() => {
+    const previousScrollRestoration = window.history.scrollRestoration;
 
-    return () => window.cancelAnimationFrame(animationFrame);
+    window.history.scrollRestoration = 'manual';
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
 
   return (
@@ -104,7 +105,7 @@ function AppShell() {
               <Route path="/blog" element={<Blog />} />
               <Route path="/photography" element={<Photography />} />
               <Route path="/photography/:catalogSlug" element={<Photography />} />
-              <Route path="/post/:id" element={<PostView />} />
+              <Route path="/post/:id" element={<PostView key={location.pathname} />} />
               <Route path="/portfolio" element={<Portfolio />} />
             </Routes>
           </Suspense>
