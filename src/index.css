@@ -339,10 +339,10 @@ body.photo-viewer-open .app-container {
 
 .navbar-links,
 .mobile-links-container {
-  /* A neutral M3 color scheme: white selection, dark resting controls. */
+  /* White selection with a deep purple M3 tonal resting surface. */
   --md-sys-color-secondary: #ffffff;
   --md-sys-color-on-secondary: #100f13;
-  --md-sys-color-secondary-container: #242229;
+  --md-sys-color-secondary-container: var(--md-sys-color-primary-container);
   --md-sys-color-on-secondary-container: #f7f2fa;
 }
 
@@ -403,11 +403,24 @@ body.photo-viewer-open .app-container {
   }
   
   .mobile-close-btn {
+    --m3e-icon-button-shape-round: var(--md-sys-shape-corner-full);
+    --m3e-icon-button-medium-shape-round: var(--md-sys-shape-corner-full);
     position: absolute;
     top: 24px;
     right: 24px;
     display: inline-block;
     z-index: 10000;
+    opacity: 0;
+    transform: rotate(-35deg) scale(0.72);
+    transform-origin: center;
+    transition:
+      opacity var(--md-sys-motion-spring-default-effects),
+      transform var(--md-sys-motion-spring-default-spatial);
+  }
+
+  .mobile-menu-overlay.is-open .mobile-close-btn {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
   }
   
   .mobile-links-container {
@@ -2799,6 +2812,16 @@ body.photo-viewer-open .app-container {
 
 .article-toc-rail {
   display: none;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s cubic-bezier(0.2, 0, 0, 1) 0.1s;
+}
+
+.article-toc-rail.is-ready {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .article-toc-scrim,
@@ -2885,8 +2908,10 @@ body.photo-viewer-open .app-container {
     overflow: visible;
     touch-action: pan-y;
     transform: translate3d(-100%, 0, 0);
-    transition: transform var(--md-sys-motion-spring-default-spatial);
-    will-change: transform;
+    transition:
+      transform var(--md-sys-motion-spring-default-spatial),
+      opacity 0.6s cubic-bezier(0.2, 0, 0, 1) 0.1s;
+    will-change: transform, opacity;
   }
 
   .article-toc-rail.is-open {

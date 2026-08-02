@@ -31,6 +31,7 @@ import SubscribeButton from '../components/SubscribeBanner';
 
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
 const ARTICLE_BOOKMARK_STORAGE_KEY = 'ade-says:article-word-bookmarks:v1';
+const ARTICLE_TOC_DRAWER_MEDIA_QUERY = '(max-width: 1359px)';
 
 type ArticleBookmarkStore = Record<string, {
   updatedAt: number;
@@ -150,9 +151,12 @@ function PostView() {
   const [bookmarkGuideMode, setBookmarkGuideMode] = useState<'click' | 'tap'>('tap');
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isTocHandleArmed, setIsTocHandleArmed] = useState(false);
+  const [tocReadyKey, setTocReadyKey] = useState('');
   const shareResetTimeoutRef = useRef<number | null>(null);
   const shareStackRef = useRef<HTMLDivElement | null>(null);
   const tocDragRef = useRef<ArticleTocDragState | null>(null);
+  const tocDragCleanupFrameRef = useRef<number | null>(null);
+  const tocToggleReleaseTimeoutRef = useRef<number | null>(null);
   const tocRef = useRef<HTMLElement | null>(null);
   const tocToggleSuppressedRef = useRef(false);
 
@@ -193,6 +197,7 @@ function PostView() {
 
   const activeNarrationTrack = narrationTracks[lang];
   const narrationKey = `${post?.meta.id ?? 'missing'}:${activePage?.id ?? 'page'}:${lang}:${activeContent.length}`;
+  const isTocReady = tocReadyKey === narrationKey;
   const bookmarkKey = narrationKey;
   const activeBookmarkWord = bookmarks[bookmarkKey]?.wordIndex ?? null;
   const activeNarrationWord = narrationProgress.key === narrationKey ? narrationProgress.wordIndex : null;
@@ -322,6 +327,10 @@ function PostView() {
         activeIndicator.style.height = `${activeItem.clientHeight}px`;
         activeIndicator.style.visibility = activeItem.clientHeight === 0 ? 'hidden' : '';
       }
+
+      setTocReadyKey((currentKey) => (
+        currentKey === narrationKey ? currentKey : narrationKey
+      ));
 
       if (lastActiveHeading !== activeHeading || repairedSelection) {
         const scrollContainer = tocRoot.querySelector<HTMLElement>('.scroll-container');
@@ -470,7 +479,11 @@ function PostView() {
   }, []);
 
   const handleTocPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) {
+    if (
+      !window.matchMedia(ARTICLE_TOC_DRAWER_MEDIA_QUERY).matches ||
+      tocDragRef.current ||
+      (event.pointerType === 'mouse' && event.button !== 0)
+    ) {
       return;
     }
 
@@ -480,6 +493,20 @@ function PostView() {
     if (width <= 0) {
       return;
     }
+
+    if (tocDragCleanupFrameRef.current !== null) {
+      window.cancelAnimationFrame(tocDragCleanupFrameRef.current);
+      tocDragCleanupFrameRef.current = null;
+    }
+
+    if (tocToggleReleaseTimeoutRef.current !== null) {
+      window.clearTimeout(tocToggleReleaseTimeoutRef.current);
+      tocToggleReleaseTimeoutRef.current = null;
+    }
+
+    tocToggleSuppressedRef.current = false;
+    drawer.classList.remove('is-dragging');
+    drawer.style.removeProperty('transform');
 
     const startTranslate = isTocOpen ? 0 : (lang === 'ar' ? width : -width);
     tocDragRef.current = {
@@ -493,13 +520,19 @@ function PostView() {
       width,
     };
 
-    drawer.classList.add('is-dragging');
   }, [isTocOpen, lang]);
 
   const handleTocPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const drag = tocDragRef.current;
 
     if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (!window.matchMedia(ARTICLE_TOC_DRAWER_MEDIA_QUERY).matches) {
+      tocDragRef.current = null;
+      event.currentTarget.classList.remove('is-dragging');
+      event.currentTarget.style.removeProperty('transform');
       return;
     }
 
@@ -511,14 +544,18 @@ function PostView() {
       Math.max(minTranslate, drag.startTranslate + deltaX)
     );
 
-    drag.currentTranslate = nextTranslate;
+    if (!drag.moved) {
+      if (Math.abs(deltaX) <= 4) {
+        return;
+      }
 
-    if (!drag.moved && Math.abs(deltaX) > 4) {
       drag.moved = true;
       setIsTocHandleArmed(true);
+      event.currentTarget.classList.add('is-dragging');
       event.currentTarget.setPointerCapture(event.pointerId);
     }
 
+    drag.currentTranslate = nextTranslate;
     event.currentTarget.style.transform = `translate3d(${nextTranslate}px, 0, 0)`;
   }, [lang]);
 
@@ -547,18 +584,50 @@ function PostView() {
     }
 
     tocDragRef.current = null;
+
+    if (!window.matchMedia(ARTICLE_TOC_DRAWER_MEDIA_QUERY).matches) {
+      tocToggleSuppressedRef.current = false;
+      drawer.classList.remove('is-dragging');
+      drawer.style.removeProperty('transform');
+      return;
+    }
+
     tocToggleSuppressedRef.current = drag.moved;
     setIsTocHandleArmed(false);
     setIsTocOpen(nextOpen);
     drawer.classList.remove('is-dragging');
 
-    window.requestAnimationFrame(() => {
+    if (tocDragCleanupFrameRef.current !== null) {
+      window.cancelAnimationFrame(tocDragCleanupFrameRef.current);
+    }
+
+    tocDragCleanupFrameRef.current = window.requestAnimationFrame(() => {
+      tocDragCleanupFrameRef.current = null;
       drawer.style.removeProperty('transform');
-      window.setTimeout(() => {
+
+      if (tocToggleReleaseTimeoutRef.current !== null) {
+        window.clearTimeout(tocToggleReleaseTimeoutRef.current);
+      }
+
+      tocToggleReleaseTimeoutRef.current = window.setTimeout(() => {
+        tocToggleReleaseTimeoutRef.current = null;
         tocToggleSuppressedRef.current = false;
       }, 0);
     });
   }, [lang]);
+
+  useEffect(() => () => {
+    if (tocDragCleanupFrameRef.current !== null) {
+      window.cancelAnimationFrame(tocDragCleanupFrameRef.current);
+    }
+
+    if (tocToggleReleaseTimeoutRef.current !== null) {
+      window.clearTimeout(tocToggleReleaseTimeoutRef.current);
+    }
+
+    tocDragRef.current = null;
+    tocToggleSuppressedRef.current = false;
+  }, []);
   const shareMenuId = `post-share-menu-${post?.meta.id ?? 'missing'}`;
   const canUseNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
   const hasNarration = Boolean(activeNarrationTrack?.src);
@@ -973,7 +1042,7 @@ function PostView() {
           />
           <aside
             aria-label={lang === 'ar' ? 'جدول محتويات المقال' : 'Article table of contents'}
-            className={`article-toc-rail${isTocOpen ? ' is-open' : ''}`}
+            className={`article-toc-rail${isTocOpen ? ' is-open' : ''}${isTocReady ? ' is-ready' : ''}`}
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
             onPointerCancel={(event) => finishTocDrag(event, true)}
             onPointerDown={handleTocPointerDown}
