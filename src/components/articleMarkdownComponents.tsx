@@ -26,46 +26,183 @@ const TikZRenderer = lazy(() => import('./TikZRenderer'));
 const InteractiveSandbox = lazy(() => import('./InteractiveSandbox'));
 const AnimatedCodeBlock = lazy(() => import('./AnimatedCodeBlock'));
 const hexColorPattern = /^#(?:[\da-f]{3}|[\da-f]{6})$/i;
-const javascriptKeywords = new Set([
-  'break',
-  'case',
-  'catch',
-  'class',
-  'const',
-  'continue',
-  'default',
-  'do',
-  'else',
-  'export',
-  'extends',
-  'finally',
-  'for',
-  'from',
-  'function',
-  'if',
-  'import',
-  'in',
-  'let',
-  'new',
-  'of',
-  'return',
-  'switch',
-  'throw',
-  'try',
-  'typeof',
-  'var',
-  'void',
-  'while',
-]);
-
-const codeLanguageLabels: Record<string, string> = {
-  js: 'JavaScript',
-  javascript: 'JavaScript',
-  ts: 'TypeScript',
-  typescript: 'TypeScript',
+const languageAliases: Record<string, string> = {
+  c: 'c',
+  cc: 'cpp',
+  'c++': 'cpp',
+  cpp: 'cpp',
+  cxx: 'cpp',
+  cs: 'csharp',
+  'c#': 'csharp',
+  csharp: 'csharp',
+  dart: 'dart',
+  golang: 'go',
+  html: 'markup',
+  java: 'java',
+  js: 'javascript',
+  jsx: 'javascript',
+  javascript: 'javascript',
+  kt: 'kotlin',
+  kotlin: 'kotlin',
+  py: 'python',
+  python: 'python',
+  rb: 'ruby',
+  ruby: 'ruby',
+  rs: 'rust',
+  rust: 'rust',
+  sh: 'shell',
+  shell: 'shell',
+  bash: 'shell',
+  zsh: 'shell',
+  swift: 'swift',
+  ts: 'typescript',
+  tsx: 'typescript',
+  typescript: 'typescript',
+  xml: 'markup',
+  yaml: 'yaml',
+  yml: 'yaml',
 };
 
-const jsTokenPattern = /(\/\/.*|\/\*[\s\S]*?\*\/|`(?:\\[\s\S]|[^\\`])*`|'(?:\\.|[^\\'])*'|"(?:\\.|[^\\"])*"|\b(?:true|false|null|undefined|NaN|Infinity)\b|\b[A-Za-z_$][\w$]*\b|\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|[&|^~!?=<>+\-*/%]+|[{}()[\].,;:])/g;
+const codeLanguageLabels: Record<string, string> = {
+  c: 'C',
+  cpp: 'C++',
+  csharp: 'C#',
+  css: 'CSS',
+  dart: 'Dart',
+  go: 'Go',
+  java: 'Java',
+  javascript: 'JavaScript',
+  json: 'JSON',
+  kotlin: 'Kotlin',
+  markup: 'HTML',
+  php: 'PHP',
+  python: 'Python',
+  ruby: 'Ruby',
+  rust: 'Rust',
+  scss: 'SCSS',
+  shell: 'Shell',
+  sql: 'SQL',
+  swift: 'Swift',
+  typescript: 'TypeScript',
+  yaml: 'YAML',
+};
+
+const commonKeywords = [
+  'break', 'case', 'catch', 'class', 'continue', 'default', 'do', 'else', 'finally',
+  'for', 'if', 'import', 'in', 'new', 'return', 'switch', 'throw', 'try', 'while',
+];
+
+const languageKeywords: Record<string, Set<string>> = {
+  javascript: new Set([
+    ...commonKeywords, 'async', 'await', 'const', 'debugger', 'delete', 'export', 'extends',
+    'from', 'function', 'get', 'instanceof', 'let', 'of', 'set', 'static', 'super',
+    'this', 'typeof', 'var', 'void', 'with', 'yield',
+  ]),
+  typescript: new Set([
+    ...commonKeywords, 'abstract', 'any', 'as', 'asserts', 'async', 'await', 'boolean',
+    'const', 'declare', 'enum', 'export', 'extends', 'from', 'function', 'implements',
+    'infer', 'interface', 'keyof', 'let', 'namespace', 'never', 'number', 'of', 'override',
+    'private', 'protected', 'public', 'readonly', 'satisfies', 'static', 'string', 'symbol',
+    'this', 'type', 'typeof', 'undefined', 'unique', 'unknown', 'var', 'void', 'yield',
+  ]),
+  c: new Set([
+    ...commonKeywords, 'auto', 'char', 'const', 'double', 'enum', 'extern', 'float',
+    'goto', 'inline', 'int', 'long', 'register', 'restrict', 'short', 'signed', 'sizeof',
+    'static', 'struct', 'typedef', 'union', 'unsigned', 'void', 'volatile',
+  ]),
+  cpp: new Set([
+    ...commonKeywords, 'alignas', 'alignof', 'auto', 'bool', 'char', 'concept', 'const',
+    'constexpr', 'consteval', 'constinit', 'decltype', 'delete', 'double', 'enum', 'explicit',
+    'export', 'extern', 'float', 'friend', 'inline', 'int', 'long', 'mutable', 'namespace',
+    'noexcept', 'nullptr', 'operator', 'private', 'protected', 'public', 'requires', 'short',
+    'signed', 'sizeof', 'static', 'struct', 'template', 'this', 'thread_local', 'typedef',
+    'typename', 'union', 'unsigned', 'using', 'virtual', 'void', 'volatile',
+  ]),
+  csharp: new Set([
+    ...commonKeywords, 'abstract', 'as', 'async', 'await', 'base', 'bool', 'byte', 'const',
+    'decimal', 'delegate', 'double', 'dynamic', 'event', 'explicit', 'extern', 'float', 'implicit',
+    'int', 'interface', 'internal', 'is', 'lock', 'long', 'namespace', 'object', 'operator',
+    'out', 'override', 'params', 'private', 'protected', 'public', 'readonly', 'record', 'ref',
+    'sbyte', 'sealed', 'short', 'sizeof', 'stackalloc', 'static', 'string', 'struct', 'this',
+    'uint', 'ulong', 'unchecked', 'unsafe', 'ushort', 'using', 'virtual', 'void', 'volatile',
+  ]),
+  ruby: new Set([
+    'alias', 'and', 'begin', 'break', 'case', 'class', 'def', 'defined', 'do', 'else',
+    'elsif', 'end', 'ensure', 'for', 'if', 'in', 'module', 'next', 'not', 'or', 'redo',
+    'rescue', 'retry', 'return', 'self', 'super', 'then', 'undef', 'unless', 'until',
+    'when', 'while', 'yield',
+  ]),
+  dart: new Set([
+    ...commonKeywords, 'abstract', 'as', 'assert', 'async', 'await', 'base', 'const',
+    'covariant', 'deferred', 'dynamic', 'export', 'extends', 'extension', 'external', 'factory',
+    'final', 'get', 'implements', 'interface', 'late', 'library', 'mixin', 'of', 'on',
+    'operator', 'part', 'required', 'sealed', 'set', 'show', 'static', 'super', 'sync',
+    'this', 'typedef', 'var', 'void', 'when', 'with', 'yield',
+  ]),
+  rust: new Set([
+    'as', 'async', 'await', 'break', 'const', 'continue', 'crate', 'dyn', 'else', 'enum',
+    'extern', 'false', 'fn', 'for', 'if', 'impl', 'in', 'let', 'loop', 'match', 'mod',
+    'move', 'mut', 'pub', 'ref', 'return', 'self', 'Self', 'static', 'struct', 'super',
+    'trait', 'true', 'type', 'unsafe', 'use', 'where', 'while',
+  ]),
+  python: new Set([
+    'and', 'as', 'assert', 'async', 'await', 'break', 'case', 'class', 'continue', 'def',
+    'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import',
+    'in', 'is', 'lambda', 'match', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return',
+    'try', 'while', 'with', 'yield',
+  ]),
+  java: new Set([
+    ...commonKeywords, 'abstract', 'assert', 'boolean', 'byte', 'char', 'const', 'double',
+    'enum', 'extends', 'final', 'float', 'goto', 'implements', 'instanceof', 'int', 'interface',
+    'long', 'native', 'package', 'private', 'protected', 'public', 'short', 'static', 'strictfp',
+    'super', 'synchronized', 'this', 'throws', 'transient', 'void', 'volatile',
+  ]),
+  kotlin: new Set([
+    'as', 'break', 'by', 'catch', 'class', 'constructor', 'continue', 'data', 'do', 'else',
+    'enum', 'false', 'finally', 'for', 'fun', 'get', 'if', 'import', 'in', 'interface',
+    'internal', 'is', 'lateinit', 'object', 'open', 'operator', 'out', 'override', 'package',
+    'private', 'protected', 'public', 'return', 'sealed', 'set', 'super', 'this', 'throw',
+    'true', 'try', 'typealias', 'val', 'var', 'when', 'while',
+  ]),
+  go: new Set([
+    'break', 'case', 'chan', 'const', 'continue', 'default', 'defer', 'else', 'fallthrough',
+    'for', 'func', 'go', 'goto', 'if', 'import', 'interface', 'map', 'package', 'range',
+    'return', 'select', 'struct', 'switch', 'type', 'var',
+  ]),
+  swift: new Set([
+    'as', 'associatedtype', 'break', 'case', 'catch', 'class', 'continue', 'convenience',
+    'defer', 'deinit', 'do', 'else', 'enum', 'extension', 'fallthrough', 'fileprivate', 'final',
+    'for', 'func', 'get', 'guard', 'if', 'import', 'in', 'init', 'inout', 'internal', 'is',
+    'lazy', 'let', 'mutating', 'open', 'operator', 'override', 'private', 'protocol', 'public',
+    'repeat', 'required', 'return', 'self', 'set', 'static', 'struct', 'subscript', 'super',
+    'switch', 'throw', 'throws', 'try', 'typealias', 'var', 'where', 'while',
+  ]),
+  php: new Set([
+    ...commonKeywords, 'abstract', 'and', 'array', 'as', 'callable', 'clone', 'const',
+    'declare', 'echo', 'empty', 'endfor', 'endforeach', 'endif', 'endswitch', 'endwhile',
+    'extends', 'final', 'fn', 'foreach', 'function', 'global', 'implements', 'include',
+    'instanceof', 'interface', 'isset', 'list', 'match', 'namespace', 'or', 'private',
+    'protected', 'public', 'readonly', 'require', 'static', 'trait', 'unset', 'use', 'var',
+    'xor', 'yield',
+  ]),
+  shell: new Set([
+    'case', 'do', 'done', 'elif', 'else', 'esac', 'export', 'fi', 'for', 'function', 'if',
+    'in', 'local', 'readonly', 'return', 'select', 'then', 'time', 'until', 'while',
+  ]),
+  sql: new Set([
+    'ADD', 'ALTER', 'AND', 'AS', 'ASC', 'BEGIN', 'BETWEEN', 'BY', 'CASE', 'CREATE',
+    'DATABASE', 'DELETE', 'DESC', 'DISTINCT', 'DROP', 'ELSE', 'END', 'EXISTS', 'FROM',
+    'FULL', 'GROUP', 'HAVING', 'IN', 'INDEX', 'INNER', 'INSERT', 'INTO', 'IS', 'JOIN',
+    'LEFT', 'LIKE', 'LIMIT', 'NOT', 'NULL', 'ON', 'OR', 'ORDER', 'OUTER', 'PRIMARY',
+    'PROCEDURE', 'RIGHT', 'SELECT', 'SET', 'TABLE', 'THEN', 'TRUNCATE', 'UNION',
+    'UNIQUE', 'UPDATE', 'VALUES', 'VIEW', 'WHEN', 'WHERE', 'WITH',
+  ]),
+};
+
+const constantTokens = new Set([
+  'true', 'false', 'null', 'undefined', 'NaN', 'Infinity', 'True', 'False', 'None',
+  'nil', 'NULL', 'nullptr',
+]);
 
 export type NarrationRenderState = {
   enabled: boolean;
@@ -222,17 +359,43 @@ function createNarratedElement(tagName: NarratedTagName, narration: NarrationRen
 
 function getLanguageFromClassName(className: unknown) {
   const value = Array.isArray(className) ? className.join(' ') : String(className ?? '');
-  const match = /language-(\w[\w-]*)/.exec(value);
+  const match = /(?:^|\s)language-([^\s]+)/.exec(value);
 
   return match ? match[1] : '';
 }
 
-export function getLanguageLabel(language: string) {
-  return codeLanguageLabels[language] ?? language.toUpperCase();
+export function normalizeCodeLanguage(language: string) {
+  const normalized = language.trim().toLowerCase();
+
+  return languageAliases[normalized] ?? normalized;
 }
 
-function getJavaScriptTokenClass(token: string) {
-  if (token.startsWith('//') || token.startsWith('/*')) {
+export function getLanguageLabel(language: string) {
+  const normalized = normalizeCodeLanguage(language);
+
+  return codeLanguageLabels[normalized] ?? language.toUpperCase();
+}
+
+function getTokenPattern(language: string) {
+  const commentPattern = language === 'sql'
+    ? String.raw`--[^\n\r]*|\/\*[\s\S]*?\*\/`
+    : ['python', 'ruby', 'shell', 'yaml'].includes(language)
+      ? String.raw`\#[^\n\r]*`
+      : String.raw`\/\/[^\n\r]*|\/\*[\s\S]*?\*\/`;
+
+  return new RegExp(
+    `${commentPattern}|\`(?:\\[\\s\\S]|[^\\\`])*\`|'(?:\\\\.|[^\\\\'])*'|"(?:\\\\.|[^\\\\"])*"|\\b[A-Za-z_$][\\w$]*\\b|\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b|[&|^~!?=<>+\\-*/%]+|[{}()[\\].,;:]`,
+    'g',
+  );
+}
+
+function getTokenClass(token: string, language: string) {
+  if (
+    token.startsWith('//') ||
+    token.startsWith('/*') ||
+    token.startsWith('#') ||
+    (language === 'sql' && token.startsWith('--'))
+  ) {
     return 'comment';
   }
 
@@ -240,7 +403,7 @@ function getJavaScriptTokenClass(token: string) {
     return 'string';
   }
 
-  if (/^(?:true|false|null|undefined|NaN|Infinity)$/.test(token)) {
+  if (constantTokens.has(token)) {
     return 'constant';
   }
 
@@ -248,7 +411,8 @@ function getJavaScriptTokenClass(token: string) {
     return 'number';
   }
 
-  if (javascriptKeywords.has(token)) {
+  const keywordSet = languageKeywords[language];
+  if (keywordSet?.has(language === 'sql' ? token.toUpperCase() : token)) {
     return 'keyword';
   }
 
@@ -263,12 +427,12 @@ function getJavaScriptTokenClass(token: string) {
   return '';
 }
 
-function highlightJavaScript(code: string): ReactNode[] {
+function highlightLanguage(code: string, language: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
   let tokenIndex = 0;
 
-  for (const match of code.matchAll(jsTokenPattern)) {
+  for (const match of code.matchAll(getTokenPattern(language))) {
     const token = match[0];
     const index = match.index ?? 0;
 
@@ -276,7 +440,7 @@ function highlightJavaScript(code: string): ReactNode[] {
       nodes.push(code.slice(lastIndex, index));
     }
 
-    let tokenClass = getJavaScriptTokenClass(token);
+    let tokenClass = getTokenClass(token, language);
     
     // Improve identifier highlighting
     if (tokenClass === '' && /^[A-Za-z_$][\w$]*$/.test(token)) {
@@ -285,7 +449,7 @@ function highlightJavaScript(code: string): ReactNode[] {
         tokenClass = 'function';
       } else {
         const prevChars = code.slice(0, index).trimEnd();
-        if (prevChars.endsWith('.')) {
+        if (prevChars.endsWith('.') || prevChars.endsWith('::') || prevChars.endsWith('->')) {
           tokenClass = 'property';
         } else {
           tokenClass = 'variable';
@@ -313,11 +477,7 @@ function highlightJavaScript(code: string): ReactNode[] {
 }
 
 export function highlightCode(language: string, code: string) {
-  if (language === 'js' || language === 'javascript') {
-    return highlightJavaScript(code);
-  }
-
-  return code;
+  return highlightLanguage(code, normalizeCodeLanguage(language));
 }
 
 function MarkdownImage({ alt = '', node, ...props }: MarkdownImageProps) {
@@ -412,6 +572,7 @@ export const markdownComponents = {
         }
 
         if (language) {
+          const normalizedLanguage = normalizeCodeLanguage(language);
           // Extract the raw code string to pass to the copy button
           // children is the <code> element. children.props.children is the text.
           let rawCode = '';
@@ -426,6 +587,7 @@ export const markdownComponents = {
             <m3e-card
               className="article-code-frame"
               data-language={language}
+              data-code-language={normalizedLanguage}
               orientation="vertical"
               variant="filled"
             >

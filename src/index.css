@@ -2912,6 +2912,8 @@ body.photo-viewer-open .app-container {
     height: 1.55rem;
     border-radius: 999px 0 0 999px;
     background: var(--article-toc-handle-color);
+    box-shadow: none;
+    filter: none;
     opacity: 0;
     pointer-events: none;
     transform: translateY(-50%) scaleX(0.1) scaleY(0.7);
@@ -2934,9 +2936,15 @@ body.photo-viewer-open .app-container {
   .article-toc-toggle {
     --md-sys-color-secondary-container: var(--md-sys-color-primary-container);
     --md-sys-color-on-secondary-container: var(--md-sys-color-on-primary-container);
+    --m3e-icon-button-container-color: var(--article-toc-handle-color);
+    --m3e-icon-button-container-elevation: 0;
+    --m3e-tonal-icon-button-container-color: var(--article-toc-handle-color);
+    --m3e-tonal-icon-button-unselected-container-color: var(--article-toc-handle-color);
     position: relative;
     z-index: 1;
     display: inline-block;
+    box-shadow: none;
+    filter: none;
   }
 
   .article-toc-toggle m3e-icon {
@@ -3735,11 +3743,11 @@ body.photo-viewer-open .app-container {
 /* --- Code Blocks --- */
 .article-content .article-code-frame,
 .article-content pre {
-  /* Scoped dark M3E palette based on the app's lavender primary. */
-  --md-sys-color-primary: #d0bcff;
-  --md-sys-color-on-primary: #381e72;
-  --md-sys-color-primary-container: #4f378b;
-  --md-sys-color-on-primary-container: #eaddff;
+  /* Language themes supply the hue; these keep one consistent M3E tonal scale. */
+  --md-sys-color-primary: var(--code-frame-color, #d0bcff);
+  --md-sys-color-on-primary: var(--code-on-frame-color, #381e72);
+  --md-sys-color-primary-container: var(--code-header-color, #6750a4);
+  --md-sys-color-on-primary-container: var(--code-on-header-color, #ffffff);
   --md-sys-color-secondary: #ccc2dc;
   --md-sys-color-on-secondary: #332d41;
   --md-sys-color-secondary-container: #4a4458;
@@ -3750,21 +3758,19 @@ body.photo-viewer-open .app-container {
   --md-sys-color-on-tertiary-container: #ffd8e4;
   --md-sys-color-surface: #17131f;
   --md-sys-color-on-surface: #f7f2fa;
-  --md-sys-color-surface-container-lowest: #241a3a;
-  --md-sys-color-surface-container-low: #2b2142;
-  --md-sys-color-surface-container: #322849;
-  --md-sys-color-surface-container-high: #3b3153;
-  --md-sys-color-surface-container-highest: #493e61;
-  --md-sys-color-on-surface-variant: #d6cfdf;
-  --md-sys-color-outline: #a99eb8;
-  --md-sys-color-outline-variant: #655a76;
-  --mag-accent-yellow: #ffd36e;
-  --mag-accent-lilac: #9eeef0;
+  --md-sys-color-surface-container-lowest: var(--code-surface-end, #241a3a);
+  --md-sys-color-surface-container-low: var(--code-surface-start, #30244b);
+  --md-sys-color-surface-container: var(--code-surface-raised, #322849);
+  --md-sys-color-surface-container-high: var(--code-surface-high, #3b3153);
+  --md-sys-color-surface-container-highest: var(--code-scroll-thumb, #493e61);
+  --md-sys-color-on-surface-variant: var(--code-muted-text, #d6cfdf);
+  --md-sys-color-outline: var(--code-outline, #a99eb8);
+  --md-sys-color-outline-variant: var(--code-outline-variant, #655a76);
 }
 
 .article-content .article-code-frame {
   --m3e-card-shape: var(--md-sys-shape-corner-extra-large);
-  --m3e-filled-card-container-color: #d0bcff;
+  --m3e-filled-card-container-color: var(--code-frame-color, #d0bcff);
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -3775,10 +3781,200 @@ body.photo-viewer-open .app-container {
   border-radius: var(--md-sys-shape-corner-extra-large);
 }
 
+/* Each language keeps the same light frame / rich bar / dark surface hierarchy. */
+.article-content .article-code-frame:is([data-code-language="c"], [data-code-language="cpp"], [data-code-language="csharp"]) {
+  --code-frame-color: #d0bcff;
+  --code-on-frame-color: #381e72;
+  --code-header-color: #6750a4;
+  --code-on-header-color: #ffffff;
+  --code-header-icon-color: #d0bcff;
+  --code-surface-start: #30244b;
+  --code-surface-end: #241a3a;
+  --code-surface-raised: #322849;
+  --code-surface-high: #3b3153;
+  --code-scroll-thumb: #493e61;
+  --code-outline: #a99eb8;
+  --code-outline-variant: #655a76;
+  --code-glow: rgba(103, 80, 164, 0.32);
+  --syntax-keyword: #d0bcff;
+  --syntax-string: #ffb4c8;
+  --syntax-number: #ffd36e;
+  --syntax-function: #9eeef0;
+  --syntax-property: #e8def8;
+}
+
+.article-content .article-code-frame[data-code-language="javascript"] {
+  --code-frame-color: #ffe39a;
+  --code-on-frame-color: #3b2f00;
+  --code-header-color: #806200;
+  --code-on-header-color: #fff9e7;
+  --code-header-icon-color: #ffe39a;
+  --code-surface-start: #352d16;
+  --code-surface-end: #211c0f;
+  --code-surface-raised: #3c331a;
+  --code-surface-high: #493f21;
+  --code-scroll-thumb: #5c4f29;
+  --code-outline: #b7a05c;
+  --code-outline-variant: #756638;
+  --code-glow: rgba(255, 205, 62, 0.22);
+  --syntax-keyword: #ffe082;
+  --syntax-string: #ffbd7a;
+  --syntax-number: #fff0a8;
+  --syntax-function: #9ee6d7;
+  --syntax-property: #fff3c4;
+}
+
+.article-content .article-code-frame[data-code-language="typescript"] {
+  --code-frame-color: #b9d8ff;
+  --code-on-frame-color: #00315e;
+  --code-header-color: #28639a;
+  --code-on-header-color: #f5f9ff;
+  --code-header-icon-color: #c8e0ff;
+  --code-surface-start: #1c3046;
+  --code-surface-end: #111f2e;
+  --code-surface-raised: #22384f;
+  --code-surface-high: #2c455f;
+  --code-scroll-thumb: #365570;
+  --code-outline: #83a6ca;
+  --code-outline-variant: #496b8d;
+  --code-glow: rgba(74, 144, 214, 0.26);
+  --syntax-keyword: #a9d2ff;
+  --syntax-string: #a6e3cd;
+  --syntax-number: #ffd985;
+  --syntax-function: #c6b9ff;
+  --syntax-property: #d9e9ff;
+}
+
+.article-content .article-code-frame[data-code-language="ruby"] {
+  --code-frame-color: #ffc1cc;
+  --code-on-frame-color: #5a1023;
+  --code-header-color: #8d2941;
+  --code-on-header-color: #fff5f6;
+  --code-header-icon-color: #ffc1cc;
+  --code-surface-start: #3a1c25;
+  --code-surface-end: #251218;
+  --code-surface-raised: #42202a;
+  --code-surface-high: #522936;
+  --code-scroll-thumb: #673444;
+  --code-outline: #bc8390;
+  --code-outline-variant: #7d4b57;
+  --code-glow: rgba(210, 69, 100, 0.24);
+  --syntax-keyword: #ff9eb1;
+  --syntax-string: #ffd09d;
+  --syntax-number: #ffdb70;
+  --syntax-function: #efb8ff;
+  --syntax-property: #ffdce2;
+}
+
+.article-content .article-code-frame[data-code-language="dart"] {
+  --code-frame-color: #b9ddff;
+  --code-on-frame-color: #00345c;
+  --code-header-color: #176aa6;
+  --code-on-header-color: #f5faff;
+  --code-header-icon-color: #b9ddff;
+  --code-surface-start: #17334a;
+  --code-surface-end: #0d2232;
+  --code-surface-raised: #1c3b55;
+  --code-surface-high: #254a68;
+  --code-scroll-thumb: #2e5a7d;
+  --code-outline: #79a9cf;
+  --code-outline-variant: #426f92;
+  --code-glow: rgba(45, 151, 219, 0.25);
+  --syntax-keyword: #8fd0ff;
+  --syntax-string: #94e3cf;
+  --syntax-number: #ffd47c;
+  --syntax-function: #c8bdff;
+  --syntax-property: #d6edff;
+}
+
+.article-content .article-code-frame[data-code-language="rust"] {
+  --code-frame-color: #ffc99f;
+  --code-on-frame-color: #562000;
+  --code-header-color: #98501f;
+  --code-on-header-color: #fff7f1;
+  --code-header-icon-color: #ffd0ad;
+  --code-surface-start: #3b2618;
+  --code-surface-end: #25170f;
+  --code-surface-raised: #442c1c;
+  --code-surface-high: #553824;
+  --code-scroll-thumb: #69462d;
+  --code-outline: #bd906f;
+  --code-outline-variant: #7f5b40;
+  --code-glow: rgba(224, 112, 48, 0.25);
+  --syntax-keyword: #ffad72;
+  --syntax-string: #ffd28e;
+  --syntax-number: #ffe09c;
+  --syntax-function: #9fe0d4;
+  --syntax-property: #ffe1ca;
+}
+
+.article-content .article-code-frame:is([data-code-language="python"], [data-code-language="go"], [data-code-language="markup"], [data-code-language="css"], [data-code-language="scss"]) {
+  --code-frame-color: #b9e5e7;
+  --code-on-frame-color: #003738;
+  --code-header-color: #286d70;
+  --code-on-header-color: #f2ffff;
+  --code-header-icon-color: #b9e5e7;
+  --code-surface-start: #183536;
+  --code-surface-end: #102324;
+  --code-surface-raised: #1d3d3e;
+  --code-surface-high: #274b4c;
+  --code-scroll-thumb: #315d5f;
+  --code-outline: #7faeb0;
+  --code-outline-variant: #496f71;
+  --code-glow: rgba(63, 160, 164, 0.23);
+  --syntax-keyword: #8fdddd;
+  --syntax-string: #b8e89a;
+  --syntax-number: #ffda80;
+  --syntax-function: #bfb4ff;
+  --syntax-property: #d0f2f3;
+}
+
+.article-content .article-code-frame:is([data-code-language="java"], [data-code-language="kotlin"], [data-code-language="swift"], [data-code-language="php"]) {
+  --code-frame-color: #ffd0b4;
+  --code-on-frame-color: #4c2509;
+  --code-header-color: #8a5431;
+  --code-on-header-color: #fff8f4;
+  --code-header-icon-color: #ffd0b4;
+  --code-surface-start: #39291f;
+  --code-surface-end: #241a14;
+  --code-surface-raised: #423025;
+  --code-surface-high: #523d30;
+  --code-scroll-thumb: #654c3b;
+  --code-outline: #b89780;
+  --code-outline-variant: #79604f;
+  --code-glow: rgba(193, 113, 62, 0.22);
+  --syntax-keyword: #ffb783;
+  --syntax-string: #e4d58d;
+  --syntax-number: #ffd478;
+  --syntax-function: #a9ded2;
+  --syntax-property: #ffe2cf;
+}
+
+.article-content .article-code-frame:is([data-code-language="shell"], [data-code-language="sql"], [data-code-language="json"], [data-code-language="yaml"]) {
+  --code-frame-color: #bfe4c8;
+  --code-on-frame-color: #123a1e;
+  --code-header-color: #3f704c;
+  --code-on-header-color: #f4fff5;
+  --code-header-icon-color: #c8eccf;
+  --code-surface-start: #203527;
+  --code-surface-end: #152219;
+  --code-surface-raised: #273d2d;
+  --code-surface-high: #324c39;
+  --code-scroll-thumb: #3f5e47;
+  --code-outline: #89ae91;
+  --code-outline-variant: #536f59;
+  --code-glow: rgba(87, 159, 104, 0.22);
+  --syntax-keyword: #9cdda9;
+  --syntax-string: #ffd38a;
+  --syntax-number: #ffdd7b;
+  --syntax-function: #a8d9ff;
+  --syntax-property: #d7efdc;
+}
+
 .article-content .article-code-header {
   --m3e-toolbar-rounded-shape: var(--md-sys-shape-corner-large);
-  --m3e-toolbar-vibrant-container-color: #6750a4;
-  --m3e-toolbar-vibrant-color: #ffffff;
+  --m3e-toolbar-vibrant-container-color: var(--code-header-color, #6750a4);
+  --m3e-toolbar-vibrant-color: var(--code-on-header-color, #ffffff);
   --md-sys-color-secondary-container: #e8def8;
   --md-sys-color-on-secondary-container: #2f2450;
   display: block;
@@ -3788,8 +3984,8 @@ body.photo-viewer-open .app-container {
 }
 
 .article-content .article-code-language-chip {
-  --m3e-chip-label-text-color: #ffffff;
-  --m3e-chip-icon-color: #d0bcff;
+  --m3e-chip-label-text-color: var(--code-on-header-color, #ffffff);
+  --m3e-chip-icon-color: var(--code-header-icon-color, #d0bcff);
   --m3e-outlined-chip-outline-color: rgba(255, 255, 255, 0.52);
   margin-inline-end: auto;
 }
@@ -3801,9 +3997,7 @@ body.photo-viewer-open .app-container {
   box-sizing: border-box;
   margin: 32px 0;
   padding: 24px 28px;
-  background:
-    radial-gradient(circle at 94% 0%, rgba(103, 80, 164, 0.32), transparent 38%),
-    linear-gradient(145deg, #30244b 0%, var(--md-sys-color-surface-container-lowest) 72%);
+  background: var(--code-surface-end, #241a3a);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-large);
   overflow-x: auto;
@@ -3853,25 +4047,25 @@ body.photo-viewer-open .app-container {
 }
 
 .article-content pre code .syntax-keyword {
-  color: var(--md-sys-color-primary);
+  color: var(--syntax-keyword, var(--md-sys-color-primary));
   font-weight: 900;
 }
 
 .article-content pre code .syntax-string {
-  color: #ffb4c8;
+  color: var(--syntax-string, #ffb4c8);
 }
 
 .article-content pre code .syntax-number,
 .article-content pre code .syntax-constant {
-  color: var(--mag-accent-yellow);
+  color: var(--syntax-number, #ffd36e);
 }
 
 .article-content pre code .syntax-function {
-  color: var(--mag-accent-lilac);
+  color: var(--syntax-function, #9eeef0);
 }
 
 .article-content pre code .syntax-property {
-  color: #e8def8;
+  color: var(--syntax-property, #e8def8);
 }
 
 .article-content pre code .syntax-variable {
@@ -5023,6 +5217,11 @@ body.photo-viewer-open .app-container {
     padding: 18px 16px;
     margin: 24px 0;
     border-radius: var(--md-sys-shape-corner-large);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: none;
+    touch-action: pan-x pan-y;
   }
 
   .article-content .article-code-frame {
@@ -5039,13 +5238,16 @@ body.photo-viewer-open .app-container {
     margin: 0 8px 8px;
   }
 
-  .article-content pre code {
-    font-size: 14px;
+  .article-content .article-code-frame pre code {
+    width: max-content;
+    min-width: 100%;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
-  .article-content .article-code-frame pre code {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+  .article-content pre::-webkit-scrollbar {
+    height: 7px;
   }
 
   .article-content .katex-display {
