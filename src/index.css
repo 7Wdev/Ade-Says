@@ -4491,13 +4491,22 @@ body.photo-viewer-open .app-container {
    =================================================================== */
 
 .sandbox-wrapper {
+  --article-interactive-inner-radius: max(
+    0px,
+    calc(var(--article-media-frame-radius) - var(--article-media-frame-width))
+  );
   position: relative;
   box-sizing: border-box;
   margin: 36px 0;
-  border: var(--article-media-frame-width) solid var(--mag-accent-orange);
+  border: var(--article-media-frame-width) solid #c86420;
   border-radius: var(--article-media-frame-radius);
   overflow: hidden;
   min-height: 320px;
+}
+
+.sandbox-wrapper:not(.sandbox-wrapper-diagram) {
+  --md-sys-color-primary: #ffad68;
+  --md-sys-color-on-primary: #4b2405;
 }
 
 .sandbox-wrapper.sandbox-wrapper-no-chrome {
@@ -4519,7 +4528,7 @@ body.photo-viewer-open .app-container {
   justify-content: center;
   gap: 14px;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: inherit;
+  border-radius: var(--article-interactive-inner-radius);
   border: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 2;
   color: rgba(230, 224, 233, 0.6);
@@ -4544,7 +4553,7 @@ body.photo-viewer-open .app-container {
   width: 100%;
   min-height: 320px;
   border: none;
-  border-radius: var(--md-sys-shape-corner-extra-large);
+  border-radius: var(--article-interactive-inner-radius);
   background: transparent;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   transition:
@@ -4578,6 +4587,12 @@ body.photo-viewer-open .app-container {
 
 .back-link {
   margin-bottom: 32px;
+}
+
+.sandbox-wrapper:not(.sandbox-wrapper-diagram) .sandbox-loading {
+  background: #24140b;
+  border-color: #69452e;
+  color: #dca77d;
 }
 
 .floating-audio-player {

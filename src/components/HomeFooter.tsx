@@ -22,6 +22,7 @@ export const HomeFooter = memo(function HomeFooter() {
             <M3eRouterButton to="/" size="small" variant="text">Home</M3eRouterButton>
             <M3eRouterButton to="/blog" size="small" variant="text">Blog</M3eRouterButton>
             <M3eRouterButton to="/photography" size="small" variant="text">Photography</M3eRouterButton>
+            <M3eRouterButton to="/portfolio" size="small" variant="text">Portfolio</M3eRouterButton>
           </div>
 
           <div className="footer-nav-group">

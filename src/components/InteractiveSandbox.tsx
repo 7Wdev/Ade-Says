@@ -9,6 +9,106 @@ interface InteractiveSandboxProps {
   code: string;
 }
 
+const interactiveOrangeThemeStyleText = `
+  :root {
+    --interactive-orange-surface-lowest: #170c07;
+    --interactive-orange-surface: #24140b;
+    --interactive-orange-surface-high: #3a2011;
+    --interactive-orange-primary: #ffad68;
+    --interactive-orange-on-primary: #4b2405;
+    --interactive-orange-on-surface: #ffe1c7;
+    --interactive-orange-on-surface-variant: #dca77d;
+    --interactive-orange-outline: #b9794d;
+    --interactive-orange-outline-variant: #69452e;
+  }
+
+  body {
+    background: var(--interactive-orange-surface);
+    color: var(--interactive-orange-on-surface);
+  }
+
+  .lab canvas {
+    background-color: var(--interactive-orange-surface-lowest);
+    border-color: var(--interactive-orange-outline-variant);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 225, 199, 0.08),
+      0 18px 48px rgba(42, 18, 4, 0.48);
+  }
+
+  .hex-title,
+  .sleek-lab h2,
+  .timeline .label {
+    color: var(--interactive-orange-on-surface);
+  }
+
+  .ch-val,
+  .sleek-lab .b-label,
+  .timeline .desc {
+    color: var(--interactive-orange-on-surface-variant);
+  }
+
+  .bit,
+  .sleek-lab .byte {
+    color: var(--interactive-orange-outline-variant);
+  }
+
+  .sleek-lab .subtitle {
+    color: var(--interactive-orange-primary);
+  }
+
+  .sleek-lab button {
+    border-color: var(--interactive-orange-outline);
+    color: var(--interactive-orange-on-surface);
+  }
+
+  .sleek-lab button:hover,
+  .sleek-lab button:focus-visible {
+    border-color: var(--interactive-orange-primary);
+    background: var(--interactive-orange-primary);
+    color: var(--interactive-orange-on-primary);
+  }
+
+  .sleek-lab .channel-row {
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--interactive-orange-outline-variant) 58%,
+      transparent
+    );
+  }
+
+  .timeline .track {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--interactive-orange-primary) 18%, transparent),
+      color-mix(in srgb, var(--interactive-orange-primary) 72%, transparent),
+      color-mix(in srgb, var(--interactive-orange-primary) 18%, transparent)
+    );
+    box-shadow: 0 0 0 1px rgba(255, 173, 104, 0.08);
+  }
+
+  .timeline .circle {
+    background: var(--interactive-orange-surface);
+    border-color: var(--interactive-orange-primary);
+    box-shadow: 0 0 0 6px rgba(36, 20, 11, 0.94);
+  }
+
+  .timeline .node.is-active .circle {
+    background: var(--interactive-orange-primary);
+    box-shadow:
+      0 0 0 6px rgba(36, 20, 11, 0.94),
+      0 0 20px rgba(255, 173, 104, 0.52);
+  }
+
+  .timeline .packet {
+    background: #ffbd7d;
+    box-shadow: 0 0 12px rgba(255, 173, 104, 0.84);
+  }
+
+  .timeline .packet::before {
+    background: rgba(255, 173, 104, 0.28);
+  }
+`;
+
 function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -98,8 +198,9 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   </head>
   <body>
     ${code}
+    ${sandboxDiagram ? '' : `<style data-interactive-orange-theme>${interactiveOrangeThemeStyleText}</style>`}
   </body>
-</html>`, [code]);
+</html>`, [code, sandboxDiagram]);
   const handleLoad = useCallback(() => setLoaded(true), []);
 
   const clearHeightTimers = useCallback(() => {
