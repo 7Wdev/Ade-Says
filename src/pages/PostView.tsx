@@ -41,6 +41,7 @@ type M3eTocItemWithNode = HTMLElement & {
   node?: {
     element?: HTMLElement;
   };
+  selected?: boolean;
 };
 
 type ArticleTocDragState = {
@@ -224,16 +225,19 @@ function PostView() {
   useEffect(() => {
     const toc = tocRef.current;
     const tocRoot = toc?.shadowRoot;
+    const articleRoot = document.getElementById('article-page-content');
 
-    if (!tocRoot) {
+    if (!tocRoot || !articleRoot) {
       return undefined;
     }
 
     let syncFrame = 0;
+    let cancelled = false;
+    let lastActiveHeading: HTMLElement | null = null;
+    let lockedHeading: HTMLElement | null = null;
+    let scrollSettleTimer = 0;
 
     const syncLabels = () => {
-      syncFrame = 0;
-
       tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item').forEach((item) => {
         const label = item.node?.element?.textContent?.replace(/\s+/g, ' ').trim();
 
@@ -243,19 +247,201 @@ function PostView() {
       });
     };
 
-    const scheduleLabelSync = () => {
+    const syncActiveSection = () => {
+      const items = Array.from(tocRoot.querySelectorAll<M3eTocItemWithNode>('m3e-toc-item'));
+      const headings: HTMLElement[] = [];
+
+      for (const item of items) {
+        const heading = item.node?.element;
+
+        if (heading && heading.getClientRects().length > 0 && !headings.includes(heading)) {
+          headings.push(heading);
+        }
+      }
+
+      if (headings.length === 0 || items.length === 0) {
+        return;
+      }
+
+      const declaredScrollMargin = Number.parseFloat(
+        window.getComputedStyle(headings[0]).scrollMarginTop
+      );
+      const activationLine = Math.min(
+        Math.max(1, window.innerHeight - 1),
+        Math.max(1, (Number.isFinite(declaredScrollMargin) ? declaredScrollMargin : 120) + 1)
+      );
+      const lockedItem = lockedHeading
+        ? items.find((item) => item.node?.element === lockedHeading)
+        : undefined;
+
+      if (lockedHeading && !lockedItem) {
+        lockedHeading = null;
+      }
+
+      let activeHeading = lockedHeading ?? headings[0];
+
+      if (!lockedHeading) {
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top > activationLine) {
+            break;
+          }
+
+          activeHeading = heading;
+        }
+      }
+
+      const scrollingElement = document.scrollingElement;
+      if (
+        !lockedHeading &&
+        scrollingElement &&
+        Math.ceil(scrollingElement.scrollTop + scrollingElement.clientHeight) >=
+          scrollingElement.scrollHeight - 2
+      ) {
+        activeHeading = headings[headings.length - 1];
+      }
+
+      const activeItem = items.find((item) => item.node?.element === activeHeading);
+      if (!activeItem) {
+        return;
+      }
+
+      let repairedSelection = false;
+
+      for (const item of items) {
+        const shouldSelect = item === activeItem;
+
+        if (item.hasAttribute('selected') !== shouldSelect) {
+          item.toggleAttribute('selected', shouldSelect);
+          repairedSelection = true;
+        }
+      }
+
+      const activeIndicator = tocRoot.querySelector<HTMLElement>('.active-indicator');
+      if (activeIndicator) {
+        activeIndicator.style.top = `${activeItem.offsetTop}px`;
+        activeIndicator.style.height = `${activeItem.clientHeight}px`;
+        activeIndicator.style.visibility = activeItem.clientHeight === 0 ? 'hidden' : '';
+      }
+
+      if (lastActiveHeading !== activeHeading || repairedSelection) {
+        const scrollContainer = tocRoot.querySelector<HTMLElement>('.scroll-container');
+
+        if (scrollContainer?.clientHeight) {
+          const itemTop = activeItem.offsetTop;
+          const itemBottom = itemTop + activeItem.offsetHeight;
+          const visibleTop = scrollContainer.scrollTop;
+          const visibleBottom = visibleTop + scrollContainer.clientHeight;
+
+          if (itemTop < visibleTop || itemBottom > visibleBottom) {
+            scrollContainer.scrollTo({
+              behavior: 'smooth',
+              top: Math.max(0, itemTop - (scrollContainer.clientHeight - activeItem.offsetHeight) / 2),
+            });
+          }
+        }
+      }
+
+      lastActiveHeading = activeHeading;
+    };
+
+    const syncToc = () => {
+      syncFrame = 0;
+
+      if (cancelled) {
+        return;
+      }
+
+      syncLabels();
+      syncActiveSection();
+    };
+
+    const scheduleTocSync = () => {
       if (!syncFrame) {
-        syncFrame = window.requestAnimationFrame(syncLabels);
+        syncFrame = window.requestAnimationFrame(syncToc);
       }
     };
 
-    const observer = new MutationObserver(scheduleLabelSync);
-    observer.observe(tocRoot, { childList: true, subtree: true });
-    scheduleLabelSync();
+    const releaseClickedHeading = () => {
+      scrollSettleTimer = 0;
+      lockedHeading = null;
+      scheduleTocSync();
+    };
+
+    const scheduleClickedHeadingRelease = (delay: number) => {
+      if (scrollSettleTimer) {
+        window.clearTimeout(scrollSettleTimer);
+      }
+
+      scrollSettleTimer = window.setTimeout(releaseClickedHeading, delay);
+    };
+
+    const handleTocItemClick = (event: Event) => {
+      const clickedItem = event.composedPath().find((eventTarget) => (
+        eventTarget instanceof HTMLElement && eventTarget.tagName === 'M3E-TOC-ITEM'
+      )) as M3eTocItemWithNode | undefined;
+      const clickedHeading = clickedItem?.node?.element;
+
+      if (!clickedHeading) {
+        return;
+      }
+
+      lockedHeading = clickedHeading;
+      lastActiveHeading = null;
+      scheduleClickedHeadingRelease(1800);
+      scheduleTocSync();
+    };
+
+    const handleWindowScroll = () => {
+      scheduleTocSync();
+
+      if (lockedHeading) {
+        scheduleClickedHeadingRelease(140);
+      }
+    };
+
+    const tocObserver = new MutationObserver(scheduleTocSync);
+    tocObserver.observe(tocRoot, {
+      attributeFilter: ['selected'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
+
+    const articleObserver = new MutationObserver(scheduleTocSync);
+    articleObserver.observe(articleRoot, { childList: true, subtree: true });
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(scheduleTocSync);
+    resizeObserver?.observe(articleRoot);
+
+    tocRoot.addEventListener('click', handleTocItemClick, true);
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    window.addEventListener('resize', scheduleTocSync);
+    window.visualViewport?.addEventListener('resize', scheduleTocSync);
+
+    document.fonts?.ready.then(() => {
+      if (!cancelled) {
+        scheduleTocSync();
+      }
+    });
+
+    scheduleTocSync();
 
     return () => {
-      observer.disconnect();
+      cancelled = true;
+      tocObserver.disconnect();
+      articleObserver.disconnect();
+      resizeObserver?.disconnect();
+      tocRoot.removeEventListener('click', handleTocItemClick, true);
+      window.removeEventListener('scroll', handleWindowScroll);
+      window.removeEventListener('resize', scheduleTocSync);
+      window.visualViewport?.removeEventListener('resize', scheduleTocSync);
       window.cancelAnimationFrame(syncFrame);
+
+      if (scrollSettleTimer) {
+        window.clearTimeout(scrollSettleTimer);
+      }
     };
   }, [narrationKey]);
 

@@ -755,6 +755,9 @@ body.photo-viewer-open .app-container {
 .profile-block {
   grid-column: span 4;
   align-self: start;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: fit-content;
   border-radius: var(--md-sys-shape-corner-extra-large);
   padding: 40px;
@@ -851,6 +854,11 @@ body.photo-viewer-open .app-container {
 .developer-links {
   display: flex;
   margin-bottom: 24px;
+}
+
+.profile-info {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .profile-socials {
@@ -1127,12 +1135,18 @@ body.photo-viewer-open .app-container {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 32px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Editorial Post Cards */
@@ -1145,6 +1159,9 @@ body.photo-viewer-open .app-container {
   text-decoration: none;
   overflow: hidden;
   position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 400px;
   transition:
     transform var(--md-sys-motion-spring-default-spatial),
@@ -1428,6 +1445,14 @@ body.photo-viewer-open .app-container {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.section-heading-row > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .section-heading-row h2,
@@ -2794,6 +2819,7 @@ body.photo-viewer-open .app-container {
   --m3e-toc-item-line-height: 1.45;
   --m3e-toc-item-selected-line-height: 1.45;
   --m3e-toc-active-indicator-color: var(--md-sys-color-primary);
+  --m3e-toc-active-indicator-animation-duration: 180ms;
   --m3e-toc-overline-color: var(--mag-accent-yellow);
   --m3e-toc-title-color: var(--md-sys-color-on-surface);
   --m3e-toc-item-color: var(--md-sys-color-on-surface-variant);
@@ -4719,6 +4745,23 @@ body.photo-viewer-open .app-container {
     overflow: hidden;
   }
 
+  .home-editorial-section {
+    left: auto;
+    right: auto;
+    width: calc(
+      100% + var(--app-container-inline-padding) +
+        var(--app-container-inline-padding)
+    );
+    margin-right: calc(0px - var(--app-container-inline-padding));
+    margin-left: calc(0px - var(--app-container-inline-padding));
+  }
+
+  .home-editorial-section .editorial-grid {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .editorial-grid,
   .bento-grid {
     gap: 24px;
@@ -4971,6 +5014,26 @@ body.photo-viewer-open .app-container {
   .blog-result-card,
   .empty-state {
     padding: 26px;
+  }
+
+  .profile-block,
+  .articles-wrapper,
+  .bento-grid,
+  .editorial-card {
+    margin-inline: auto;
+  }
+
+  .section-heading-row {
+    gap: 16px;
+  }
+
+  .section-heading-row > div {
+    width: 100%;
+    text-align: center;
+  }
+
+  .section-heading-row .section-link {
+    margin-inline: auto;
   }
 
   .profile-image-container {
