@@ -348,6 +348,45 @@ body.photo-viewer-open .app-container {
   --md-sys-color-on-secondary-container: var(--app-nav-on-tonal-container);
 }
 
+/* Individual photo galleries use a light editorial canvas. The catalog index
+   and every other route keep the global dark theme. */
+html.gallery-view-active {
+  color-scheme: light;
+  scrollbar-color: rgba(16, 15, 19, 0.38) transparent;
+}
+
+html.gallery-view-active,
+html.gallery-view-active body {
+  background-color: #fff;
+  color: #100f13;
+}
+
+html.gallery-view-active .navbar {
+  border-bottom-color: rgba(16, 15, 19, 0.1);
+  background: rgba(255, 225, 53, 0.96);
+  box-shadow: 0 12px 40px rgba(16, 15, 19, 0.12);
+}
+
+html.gallery-view-active .navbar-brand {
+  color: #100f13;
+}
+
+html.gallery-view-active .navbar-links,
+html.gallery-view-active .mobile-links-container {
+  --md-sys-color-secondary: #fff;
+  --md-sys-color-on-secondary: #100f13;
+  --md-sys-color-secondary-container: #100f13;
+  --md-sys-color-on-secondary-container: #fff;
+}
+
+html.gallery-view-active .mobile-menu-overlay {
+  background: rgba(255, 225, 53, 0.98);
+}
+
+html.gallery-view-active ::-webkit-scrollbar-thumb {
+  background-color: rgba(16, 15, 19, 0.38);
+}
+
 .navbar-toggle {
   display: none;
   z-index: 201;
@@ -1973,6 +2012,14 @@ body.photo-viewer-open .app-container {
 .gallery-page {
   max-width: 1320px;
   margin-bottom: 0;
+}
+
+.gallery-page .photography-heading h1 {
+  color: #100f13;
+}
+
+.gallery-page .photography-heading p {
+  color: #49454f;
 }
 
 .gallery-hero {

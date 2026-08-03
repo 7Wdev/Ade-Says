@@ -45,6 +45,7 @@ function AppShell() {
   const isHome = location.pathname === '/';
   const isBlog = location.pathname === '/blog' || location.pathname.startsWith('/post/');
   const isPhotography = location.pathname.startsWith('/photography');
+  const isGalleryView = location.pathname.startsWith('/photography/');
   const isPortfolio = location.pathname.startsWith('/portfolio');
 
   useLayoutEffect(() => {
@@ -60,6 +61,14 @@ function AppShell() {
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle('gallery-view-active', isGalleryView);
+
+    return () => {
+      document.documentElement.classList.remove('gallery-view-active');
+    };
+  }, [isGalleryView]);
 
   return (
     <>
