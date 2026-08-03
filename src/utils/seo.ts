@@ -3,7 +3,9 @@ import type { Post } from "./markdown";
 
 export const SITE_ORIGIN = "https://ade-says.vercel.app";
 export const SITE_NAME = "Ade Says";
+export const SITE_ALTERNATE_NAME = "Ade Says Blog";
 export const SITE_AUTHOR_NAME = "Ade Issawe";
+export const SITE_LOGO_PATH = "/assets/dev.webp";
 export const DEFAULT_ROBOTS =
   "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1";
 
@@ -146,11 +148,12 @@ function createWebSiteStructuredData(description: string) {
     description,
     inLanguage: "en",
     name: SITE_NAME,
+    alternateName: SITE_ALTERNATE_NAME,
     publisher: {
       "@type": "Organization",
       logo: {
         "@type": "ImageObject",
-        url: buildAbsoluteUrl("/favicon.svg"),
+        url: buildAbsoluteUrl(SITE_LOGO_PATH),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,
@@ -238,7 +241,7 @@ function createPostStructuredData(
       "@type": "Organization",
       logo: {
         "@type": "ImageObject",
-        url: buildAbsoluteUrl("/favicon.svg"),
+        url: buildAbsoluteUrl(SITE_LOGO_PATH),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,

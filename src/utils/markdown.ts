@@ -15,6 +15,7 @@ export interface PostMeta {
   pinned?: boolean;
   pinnedRank?: number;
   thumbnail?: string;
+  thumbnailThemeColor?: string;
   tags?: string[];
 }
 
@@ -50,6 +51,7 @@ type ArticleAssetResolution = {
     height: number;
     width: number;
   };
+  themeColor?: string;
   url?: string;
 };
 
@@ -137,9 +139,11 @@ function resolveArticleAssetInfo(value: string | undefined, markdownPath: string
   const normalizedMarkdownPath = markdownPath.replace(/\\/g, '/');
   const articleDirectory = normalizedMarkdownPath.slice(0, normalizedMarkdownPath.lastIndexOf('/') + 1);
   const assetPath = normalizeVirtualPath(`${articleDirectory}${value}`);
+  const metadata = articleImageMetadata[assetPath];
 
   return {
-    dimensions: articleImageMetadata[assetPath],
+    dimensions: metadata,
+    themeColor: metadata?.themeColor,
     url: postAssetUrls[assetPath] ?? value,
   };
 }
@@ -334,6 +338,11 @@ function createPostMeta(fields: Record<string, string>, articleId: string, markd
   assetMetaKeys.forEach((key) => {
     meta[key] = resolveArticleAsset(meta[key], markdownPath);
   });
+
+  const thumbnailAsset = resolveArticleAssetInfo(fields.thumbnail, markdownPath);
+  if (thumbnailAsset.themeColor) {
+    meta.thumbnailThemeColor = thumbnailAsset.themeColor;
+  }
 
   if (fields.pinned) {
     meta.pinned = ['true', 'yes', '1'].includes(fields.pinned.toLowerCase());

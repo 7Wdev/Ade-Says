@@ -71,6 +71,7 @@ function SeoHead({ meta }: { meta: SeoMetadata }) {
     document.documentElement.removeAttribute('dir');
 
     upsertMetaTag('author', 'name', 'author', meta.author ?? undefined);
+    upsertMetaTag('application-name', 'name', 'application-name', SITE_NAME);
     upsertMetaTag('description', 'name', 'description', meta.description);
     upsertMetaTag('keywords', 'name', 'keywords', keywordContent);
     upsertMetaTag('robots', 'name', 'robots', robotsContent);

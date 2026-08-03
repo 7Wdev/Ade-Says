@@ -8,9 +8,9 @@
   "description": "Personal notebook by Ade Issawe about software, experiments, physics, mathematics, design, photography, and curious ideas.",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/assets/dev.webp",
+      "sizes": "1493x1867",
+      "type": "image/webp"
     }
   ]
 }

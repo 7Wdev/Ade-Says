@@ -19,6 +19,7 @@ import '@m3e/web/divider';
 import '@m3e/web/fab';
 import '@m3e/web/fab-menu';
 import '@m3e/web/segmented-button';
+import { getColorFromImage, type M3eThemeElement } from '@m3e/web/theme';
 import '@m3e/web/toc';
 import { setCustomState } from '@m3e/web/core';
 import { M3eSnackbar } from '@m3e/web/snackbar';
@@ -36,6 +37,95 @@ import SubscribeButton from '../components/SubscribeBanner';
 const ArticleRenderer = lazy(() => import('../components/ArticleRenderer'));
 const ARTICLE_BOOKMARK_STORAGE_KEY = 'ade-says:article-word-bookmarks:v1';
 const ARTICLE_TOC_DRAWER_MEDIA_QUERY = '(max-width: 1359px)';
+const ARTICLE_THEME_FALLBACK_COLOR = '#6750a4';
+const articleThemeColorCache = new Map<string, string>();
+
+function useArticleThemeColor(thumbnail?: string, generatedColor?: string) {
+  const [resolvedTheme, setResolvedTheme] = useState({
+    color: ARTICLE_THEME_FALLBACK_COLOR,
+    thumbnail: '',
+  });
+  const precomputedColor = generatedColor && /^#[0-9a-f]{6}$/i.test(generatedColor)
+    ? generatedColor
+    : undefined;
+  const cachedColor = precomputedColor ?? (
+    thumbnail ? articleThemeColorCache.get(thumbnail) : undefined
+  );
+  const color = !thumbnail
+    ? ARTICLE_THEME_FALLBACK_COLOR
+    : cachedColor ?? (
+      resolvedTheme.thumbnail === thumbnail
+        ? resolvedTheme.color
+        : ARTICLE_THEME_FALLBACK_COLOR
+    );
+
+  useEffect(() => {
+    if (!thumbnail) {
+      return undefined;
+    }
+
+    if (precomputedColor) {
+      articleThemeColorCache.set(thumbnail, precomputedColor);
+      return undefined;
+    }
+
+    if (articleThemeColorCache.has(thumbnail)) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let extractionStarted = false;
+    const image = new Image();
+    image.decoding = 'async';
+
+    try {
+      const imageUrl = new URL(thumbnail, window.location.href);
+
+      if (imageUrl.origin !== window.location.origin) {
+        image.crossOrigin = 'anonymous';
+      }
+    } catch {
+      // Let the image element resolve unusual but valid browser URLs itself.
+    }
+
+    const extractThemeColor = () => {
+      if (extractionStarted || cancelled || image.naturalWidth === 0) {
+        return;
+      }
+
+      extractionStarted = true;
+      void getColorFromImage(image)
+        .then((nextColor) => {
+          if (!/^#[0-9a-f]{6}$/i.test(nextColor)) {
+            return;
+          }
+
+          articleThemeColorCache.set(thumbnail, nextColor);
+
+          if (!cancelled) {
+            setResolvedTheme({ color: nextColor, thumbnail });
+          }
+        })
+        .catch(() => {
+          // A blocked or malformed thumbnail keeps the accessible fallback theme.
+        });
+    };
+
+    image.addEventListener('load', extractThemeColor, { once: true });
+    image.src = thumbnail;
+
+    if (image.complete) {
+      extractThemeColor();
+    }
+
+    return () => {
+      cancelled = true;
+      image.removeEventListener('load', extractThemeColor);
+    };
+  }, [precomputedColor, thumbnail]);
+
+  return color;
+}
 
 type ArticleBookmarkStore = Record<string, {
   updatedAt: number;
@@ -191,6 +281,10 @@ async function copyTextToClipboard(text: string) {
 function PostView() {
   const { id } = useParams<{ id: string }>();
   const post = useMemo(() => allPosts.find((p) => p.meta.id === id), [id]);
+  const articleThemeColor = useArticleThemeColor(
+    post?.meta.thumbnail,
+    post?.meta.thumbnailThemeColor,
+  );
   const [lang, setLang] = useState<'en' | 'ar'>('en');
   const [isAudioExpanded, setIsAudioExpanded] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -210,6 +304,7 @@ function PostView() {
   const [isTocOpen, setIsTocOpen] = useState(false);
   const [isTocHandleArmed, setIsTocHandleArmed] = useState(false);
   const [tocReadyKey, setTocReadyKey] = useState('');
+  const articleThemeRef = useRef<M3eThemeElement | null>(null);
   const shareResetTimeoutRef = useRef<number | null>(null);
   const shareStackRef = useRef<HTMLDivElement | null>(null);
   const tocDragRef = useRef<ArticleTocDragState | null>(null);
@@ -217,6 +312,49 @@ function PostView() {
   const tocToggleReleaseTimeoutRef = useRef<number | null>(null);
   const tocRef = useRef<M3eTocElement | null>(null);
   const tocToggleSuppressedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    const theme = articleThemeRef.current;
+
+    if (!theme) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let syncFrame = 0;
+    const rootStyle = document.documentElement.style;
+    const syncNavbarPalette = () => {
+      syncFrame = 0;
+      const themeStyle = window.getComputedStyle(theme);
+      const container = themeStyle.getPropertyValue('--md-sys-color-primary-container').trim();
+      const onContainer = themeStyle.getPropertyValue('--md-sys-color-on-primary-container').trim();
+
+      if (container && onContainer) {
+        rootStyle.setProperty('--app-nav-tonal-container', container);
+        rootStyle.setProperty('--app-nav-on-tonal-container', onContainer);
+      }
+    };
+    const scheduleNavbarPaletteSync = () => {
+      if (!cancelled && !syncFrame) {
+        syncFrame = window.requestAnimationFrame(syncNavbarPalette);
+      }
+    };
+
+    theme.addEventListener('change', scheduleNavbarPaletteSync);
+    void theme.updateComplete.then(scheduleNavbarPaletteSync);
+
+    return () => {
+      cancelled = true;
+      theme.removeEventListener('change', scheduleNavbarPaletteSync);
+
+      if (syncFrame) {
+        window.cancelAnimationFrame(syncFrame);
+      }
+
+      rootStyle.removeProperty('--app-nav-tonal-container');
+      rootStyle.removeProperty('--app-nav-on-tonal-container');
+    };
+  }, []);
 
   const selectedPageIndex = post && pageSelection.postId === post.meta.id
     ? Math.min(pageSelection.pageIndex, post.pages.length - 1)
@@ -1207,7 +1345,15 @@ function PostView() {
         document.body
       )}
       {createPortal(
-        <>
+        <div className="article-toc-theme-portal">
+          <m3e-theme
+            color={articleThemeColor}
+            contrast="standard"
+            motion="expressive"
+            scheme="dark"
+            strong-focus
+            variant="content"
+          >
           <div
             aria-hidden="true"
             className="article-toc-source"
@@ -1278,10 +1424,22 @@ function PostView() {
               <span slot="title">{lang === 'ar' ? 'المحتويات' : 'Contents'}</span>
             </m3e-toc>
           </aside>
-        </>,
+          </m3e-theme>
+        </div>,
         document.body
       )}
-      <article className="post-view">
+      <m3e-theme
+        className="article-dynamic-theme"
+        color={articleThemeColor}
+        contrast="standard"
+        motion="expressive"
+        scheme="dark"
+        strong-focus
+        ref={articleThemeRef}
+        variant="content"
+      >
+        <div aria-hidden="true" className="article-theme-backdrop" />
+        <article className="post-view">
         <div className="article-toolbar">
           <M3eRouterButton to="/blog" className="back-link post-back-link" size="extra-small" variant="filled">
             <m3e-icon filled name="arrow_back" slot="icon" variant="rounded" />
@@ -1355,7 +1513,8 @@ function PostView() {
           lang={lang}
           postId={post.meta.id}
         />
-      </article>
+        </article>
+      </m3e-theme>
       <FloatingAudioPlayer
         expanded={isAudioExpandedVisible}
         key={narrationKey}

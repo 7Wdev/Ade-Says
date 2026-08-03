@@ -1,5 +1,12 @@
 import type { Attributes, HTMLAttributes, RefAttributes } from 'react';
 import type { ShapeName } from '@m3e/web/shape';
+import type {
+  ColorScheme,
+  ContrastLevel,
+  M3eThemeElement,
+  MotionScheme,
+  ThemeVariant,
+} from '@m3e/web/theme';
 
 type M3eElementAttributes = Attributes & HTMLAttributes<HTMLElement>;
 
@@ -188,6 +195,16 @@ type M3eTocProps = M3eElementAttributes & RefAttributes<HTMLElement> & {
   'max-depth'?: number;
 };
 
+type M3eThemeProps = M3eElementAttributes & RefAttributes<M3eThemeElement> & {
+  color?: string;
+  contrast?: ContrastLevel;
+  density?: number;
+  motion?: MotionScheme;
+  scheme?: ColorScheme;
+  'strong-focus'?: boolean;
+  variant?: ThemeVariant;
+};
+
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
@@ -211,6 +228,7 @@ declare module 'react' {
       'm3e-segmented-button': M3eSegmentedButtonProps;
       'm3e-shape': M3eShapeProps;
       'm3e-skeleton': M3eSkeletonProps;
+      'm3e-theme': M3eThemeProps;
       'm3e-toc': M3eTocProps;
       'm3e-toolbar': M3eToolbarProps;
     }

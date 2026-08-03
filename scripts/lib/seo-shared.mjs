@@ -3,7 +3,9 @@ import { promises as fs } from 'node:fs';
 
 export const SITE_ORIGIN = 'https://ade-says.vercel.app';
 export const SITE_NAME = 'Ade Says';
+export const SITE_ALTERNATE_NAME = 'Ade Says Blog';
 export const SITE_AUTHOR_NAME = 'Ade Issawe';
+export const SITE_LOGO_PATH = '/assets/dev.webp';
 export const DEFAULT_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
 const POST_CARD_COLOR_SEQUENCE = [
   'mag-color-dark',
@@ -145,11 +147,12 @@ function createWebSiteStructuredData(description) {
     description,
     inLanguage: 'en',
     name: SITE_NAME,
+    alternateName: SITE_ALTERNATE_NAME,
     publisher: {
       '@type': 'Organization',
       logo: {
         '@type': 'ImageObject',
-        url: buildAbsoluteUrl('/favicon.svg'),
+        url: buildAbsoluteUrl(SITE_LOGO_PATH),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,
@@ -224,7 +227,7 @@ function createPostStructuredData(post) {
       '@type': 'Organization',
       logo: {
         '@type': 'ImageObject',
-        url: buildAbsoluteUrl('/favicon.svg'),
+        url: buildAbsoluteUrl(SITE_LOGO_PATH),
       },
       name: SITE_NAME,
       url: SITE_ORIGIN,
@@ -558,6 +561,7 @@ export function renderSeoHeadMarkup(meta) {
   const headLines = [
     `<title>${escapeHtml(meta.title)}</title>`,
     renderManagedMetaTag({ key: 'author', attributeName: 'name', attributeValue: 'author', content: meta.author }),
+    renderManagedMetaTag({ key: 'application-name', attributeName: 'name', attributeValue: 'application-name', content: SITE_NAME }),
     renderManagedMetaTag({ key: 'description', attributeName: 'name', attributeValue: 'description', content: meta.description }),
     renderManagedMetaTag({ key: 'keywords', attributeName: 'name', attributeValue: 'keywords', content: keywordContent }),
     renderManagedMetaTag({ key: 'robots', attributeName: 'name', attributeValue: 'robots', content: robotsContent }),
