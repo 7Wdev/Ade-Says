@@ -89,6 +89,21 @@
   font-weight: 400;
 }
 
+.footer-shape-gallery {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  width: min(342px, 100%);
+  margin-top: 28px;
+}
+
+.footer-shape {
+  --m3e-shape-container-color: #100f13;
+  --m3e-shape-size: 100%;
+  display: block;
+  width: 100%;
+}
+
 .footer-nav-group {
   display: flex;
   flex-direction: column;

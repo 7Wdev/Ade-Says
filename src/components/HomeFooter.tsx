@@ -1,7 +1,47 @@
 import { memo, useMemo } from "react";
 import '@m3e/web/divider';
+import '@m3e/web/shape';
+import type { ShapeName } from '@m3e/web/shape';
 import M3eRouterButton from './M3eRouterButton';
 import "./HomeFooter.css";
+
+const footerShapes: readonly ShapeName[] = [
+  '4-leaf-clover',
+  '4-sided-cookie',
+  '6-sided-cookie',
+  '7-sided-cookie',
+  '8-leaf-clover',
+  '9-sided-cookie',
+  '12-sided-cookie',
+  'arch',
+  'arrow',
+  'boom',
+  'bun',
+  'burst',
+  'circle',
+  'diamond',
+  'fan',
+  'flower',
+  'gem',
+  'ghost-ish',
+  'heart',
+  'hexagon',
+  'oval',
+  'pentagon',
+  'pill',
+  'pixel-circle',
+  'pixel-triangle',
+  'puffy',
+  'puffy-diamond',
+  'semicircle',
+  'slanted',
+  'soft-boom',
+  'soft-burst',
+  'square',
+  'sunny',
+  'triangle',
+  'very-sunny',
+];
 
 export const HomeFooter = memo(function HomeFooter() {
   const year = useMemo(() => new Date().getFullYear(), []);
@@ -15,6 +55,11 @@ export const HomeFooter = memo(function HomeFooter() {
             <p className="footer-tagline">
               A chaotic, beautiful mix of code, physics, math, art &amp; life.
             </p>
+            <div className="footer-shape-gallery" aria-hidden="true">
+              {footerShapes.map((shape) => (
+                <m3e-shape className="footer-shape" key={shape} name={shape} />
+              ))}
+            </div>
           </div>
 
           <div className="footer-nav-group">

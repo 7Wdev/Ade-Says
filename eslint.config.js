@@ -1,8 +1,8 @@
 import js from '@eslint/js'
+import babelParser from '@babel/eslint-parser'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -11,13 +11,31 @@ export default defineConfig([
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      ecmaVersion: 2020,
+      parser: babelParser,
+      ecmaVersion: 'latest',
       globals: globals.browser,
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          babelrc: false,
+          configFile: false,
+          presets: [
+            ['@babel/preset-react', { runtime: 'automatic' }],
+            ['@babel/preset-typescript', { allExtensions: true, isTSX: true }],
+          ],
+        },
+      },
+      sourceType: 'module',
+    },
+    rules: {
+      // TypeScript 7 is the source of truth for symbols and type-only usage.
+      // Babel intentionally erases those nodes before ESLint analyzes the file.
+      'no-undef': 'off',
+      'no-unused-vars': 'off',
     },
   },
 ])

@@ -109,7 +109,7 @@ const interactiveOrangeThemeStyleText = `
   }
 `;
 
-function InteractiveSandbox({ code }: InteractiveSandboxProps) {
+function InteractiveSandboxFrame({ code }: InteractiveSandboxProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const heightSettleTimerRef = useRef<number | null>(null);
@@ -235,21 +235,6 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
   }, [clearHeightTimers]);
 
   useEffect(() => {
-    setLoaded(false);
-    measuredHeightRef.current = null;
-    pendingHeightRef.current = null;
-    clearHeightTimers();
-    setMeasuredHeight(null);
-  }, [clearHeightTimers, html]);
-
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    iframe.srcdoc = html;
-  }, [html]);
-
-  useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const iframeWindow = iframeRef.current?.contentWindow;
       if (!iframeWindow || event.source !== iframeWindow) {
@@ -339,12 +324,17 @@ function InteractiveSandbox({ code }: InteractiveSandboxProps) {
         loading="lazy"
         sandbox="allow-scripts"
         scrolling="no"
+        srcDoc={html}
         style={sandboxStyle}
         aria-label={sandboxDiagram ? 'Article diagram' : 'Interactive code sandbox'}
         onLoad={handleLoad}
       />
     </div>
   );
+}
+
+function InteractiveSandbox({ code }: InteractiveSandboxProps) {
+  return <InteractiveSandboxFrame code={code} key={code} />;
 }
 
 export default memo(InteractiveSandbox);
