@@ -5,59 +5,27 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import {
+  clockDigitPatterns,
+  clockHands,
+  clockPlaceholderPattern,
+  getAlignedTimerDelay,
+  getClockDigits,
+  normalizeClockAngle,
+  resolveClockHandAngles,
+  type ClockDigit,
+  type HandPair,
+} from "./analogueClockModel";
 import "./AnalogueGridClock.css";
-
-type ClockDigit = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-type HandAngle = 0 | 90 | 180 | 225 | 270;
-type HandPair = readonly [HandAngle, HandAngle];
-type DigitPattern = readonly [
-  HandPair,
-  HandPair,
-  HandPair,
-  HandPair,
-  HandPair,
-  HandPair,
-];
 
 interface DigitStyle extends CSSProperties {
   "--clock-accent": string;
   "--clock-hand-color": string;
 }
 
-const hands = {
-  east: [90, 90],
-  eastNorth: [90, 0],
-  eastSouth: [90, 180],
-  idle: [225, 225],
-  north: [0, 0],
-  northSouth: [0, 180],
-  south: [180, 180],
-  west: [270, 270],
-  westNorth: [270, 0],
-  westSouth: [270, 180],
-} as const satisfies Record<string, HandPair>;
-
-const digitPatterns = {
-  0: [hands.eastSouth, hands.westSouth, hands.northSouth, hands.northSouth, hands.eastNorth, hands.westNorth],
-  1: [hands.idle, hands.south, hands.idle, hands.northSouth, hands.idle, hands.north],
-  2: [hands.east, hands.westSouth, hands.eastSouth, hands.westNorth, hands.eastNorth, hands.west],
-  3: [hands.east, hands.westSouth, hands.east, hands.northSouth, hands.east, hands.westNorth],
-  4: [hands.south, hands.south, hands.eastNorth, hands.northSouth, hands.idle, hands.north],
-  5: [hands.eastSouth, hands.west, hands.eastNorth, hands.westSouth, hands.east, hands.westNorth],
-  6: [hands.eastSouth, hands.west, hands.northSouth, hands.westSouth, hands.eastNorth, hands.westNorth],
-  7: [hands.east, hands.westSouth, hands.idle, hands.northSouth, hands.idle, hands.north],
-  8: [hands.eastSouth, hands.westSouth, hands.eastNorth, hands.westNorth, hands.eastNorth, hands.westNorth],
-  9: [hands.eastSouth, hands.westSouth, hands.eastNorth, hands.northSouth, hands.idle, hands.north],
-} as const satisfies Record<ClockDigit, DigitPattern>;
-
-const placeholderPattern: DigitPattern = [
-  hands.idle,
-  hands.idle,
-  hands.idle,
-  hands.idle,
-  hands.idle,
-  hands.idle,
-];
+interface ClockFaceStyle extends CSSProperties {
+  "--clock-hand-duration": string;
+}
 
 const digitPalettes = [
   { fill: "var(--google-blue)", hands: "#174EA6" },
@@ -66,12 +34,30 @@ const digitPalettes = [
   { fill: "var(--google-green)", hands: "#0D652D" },
 ] as const;
 
+const SECOND_MS = 1_000;
 const MINUTE_MS = 60_000;
+const TIMER_SLOP_MS = 16;
+const HAND_TRANSITION_MS = 760;
+const HAND_REBASE_BUFFER_MS = 40;
+const clockFaceMotionStyle: ClockFaceStyle = {
+  "--clock-hand-duration": `${HAND_TRANSITION_MS}ms`,
+};
 
 type VisitorClockState = {
-  readonly now: Date;
+  readonly hours: number;
+  readonly minutes: number;
+  readonly motionEpoch: number;
+  readonly timestamp: number;
   readonly timeZone: string | null;
 };
+
+function resolveVisitorTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
 
 function useVisitorTime() {
   const [clock, setClock] = useState<VisitorClockState | null>(null);
@@ -79,6 +65,14 @@ function useVisitorTime() {
   useEffect(() => {
     let timeoutId: number | undefined;
     let disposed = false;
+    let lastLocalMinuteKey: string | null = null;
+    let lastEpochMinute: number | null = null;
+    let lastHours: number | null = null;
+    let lastMinutes: number | null = null;
+    let lastMotionStartedAt: number | null = null;
+    let lastOffsetMinutes: number | null = null;
+    let lastTimeZone: string | null = null;
+    let motionEpoch = 0;
 
     const clearTimer = () => {
       if (timeoutId !== undefined) {
@@ -87,62 +81,76 @@ function useVisitorTime() {
       }
     };
 
-    const sync = () => {
+    // A one-second, boundary-aligned watchdog catches wall-clock and time-zone
+    // changes promptly. React is only updated when the displayed minute changes.
+    const sync = (forceTimeZoneCheck = false, snapMotion = false) => {
       clearTimer();
       if (disposed || document.hidden) return;
 
       const timestamp = Date.now();
-      setClock({
-        now: new Date(timestamp),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
-      });
+      const localDate = new Date(timestamp);
+      const hours = localDate.getHours();
+      const minutes = localDate.getMinutes();
+      const epochMinute = Math.floor(timestamp / MINUTE_MS);
+      const offsetMinutes = localDate.getTimezoneOffset();
+      const localMinuteKey = `${epochMinute}:${hours}:${minutes}:${offsetMinutes}`;
+      const timeZone = forceTimeZoneCheck || localMinuteKey !== lastLocalMinuteKey
+        ? resolveVisitorTimeZone()
+        : lastTimeZone;
+      const monotonicTimestamp = performance.now();
+      const digitsChanged = hours !== lastHours || minutes !== lastMinutes;
+      const clockDiscontinuity = lastEpochMinute !== null && Math.abs(epochMinute - lastEpochMinute) > 1;
+      const timeZoneDiscontinuity = lastOffsetMinutes !== null && offsetMinutes !== lastOffsetMinutes;
+      const rapidRetarget = digitsChanged
+        && lastMotionStartedAt !== null
+        && monotonicTimestamp - lastMotionStartedAt < HAND_TRANSITION_MS + HAND_REBASE_BUFFER_MS;
+
+      if (localMinuteKey !== lastLocalMinuteKey || timeZone !== lastTimeZone || snapMotion) {
+        const shouldSnapMotion = snapMotion
+          || clockDiscontinuity
+          || timeZoneDiscontinuity
+          || rapidRetarget;
+        if (shouldSnapMotion) motionEpoch += 1;
+        lastLocalMinuteKey = localMinuteKey;
+        lastEpochMinute = epochMinute;
+        lastHours = hours;
+        lastMinutes = minutes;
+        if (shouldSnapMotion) lastMotionStartedAt = null;
+        else if (digitsChanged) lastMotionStartedAt = monotonicTimestamp;
+        lastOffsetMinutes = offsetMinutes;
+        lastTimeZone = timeZone;
+        setClock({ hours, minutes, motionEpoch, timestamp, timeZone });
+      }
+
       timeoutId = window.setTimeout(
         sync,
-        Math.max(16, MINUTE_MS - (timestamp % MINUTE_MS) + 16),
+        getAlignedTimerDelay(timestamp, SECOND_MS, TIMER_SLOP_MS),
       );
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden) clearTimer();
-      else sync();
+      else sync(true, true);
     };
 
-    sync();
+    const handlePageShow = (event: PageTransitionEvent) => sync(true, event.persisted);
+    const handleFocus = () => sync(true);
+
+    sync(true);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("pageshow", sync);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
       disposed = true;
       clearTimer();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("pageshow", sync);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 
   return clock;
-}
-
-function nearestAngle(current: number, target: HandAngle) {
-  const delta = ((target - current + 540) % 360) - 180;
-  return current + delta;
-}
-
-function resolveHandAngles(
-  current: readonly [number, number],
-  target: HandPair,
-): readonly [number, number] {
-  const direct = [
-    nearestAngle(current[0], target[0]),
-    nearestAngle(current[1], target[1]),
-  ] as const;
-  const swapped = [
-    nearestAngle(current[0], target[1]),
-    nearestAngle(current[1], target[0]),
-  ] as const;
-  const directTravel = Math.abs(direct[0] - current[0]) + Math.abs(direct[1] - current[1]);
-  const swappedTravel = Math.abs(swapped[0] - current[0]) + Math.abs(swapped[1] - current[1]);
-
-  return swappedTravel < directTravel ? swapped : direct;
 }
 
 type AnalogueFaceProps = {
@@ -151,32 +159,58 @@ type AnalogueFaceProps = {
 
 const AnalogueFace = memo(function AnalogueFace({ target }: AnalogueFaceProps) {
   const [angles, setAngles] = useState<readonly [number, number]>(target);
+  const [isRebasing, setIsRebasing] = useState(false);
 
   useEffect(() => {
+    let settleTimer: number | undefined;
+    let releaseFrame: number | undefined;
+
     const animationFrame = window.requestAnimationFrame(() => {
+      setIsRebasing(false);
       setAngles((current) => {
-        const next = resolveHandAngles(current, target);
+        const next = resolveClockHandAngles(current, target);
         return next[0] === current[0] && next[1] === current[1] ? current : next;
       });
+
+      settleTimer = window.setTimeout(() => {
+        // Shortest-path animation needs unwrapped angles. Rebase only after it
+        // settles, with transitions disabled, so long-running tabs stay bounded.
+        setIsRebasing(true);
+        setAngles((current) => {
+          const normalized = [
+            normalizeClockAngle(current[0]),
+            normalizeClockAngle(current[1]),
+          ] as const;
+          return normalized[0] === current[0] && normalized[1] === current[1]
+            ? current
+            : normalized;
+        });
+        releaseFrame = window.requestAnimationFrame(() => setIsRebasing(false));
+      }, HAND_TRANSITION_MS + HAND_REBASE_BUFFER_MS);
     });
 
-    return () => window.cancelAnimationFrame(animationFrame);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+      if (releaseFrame !== undefined) window.cancelAnimationFrame(releaseFrame);
+    };
   }, [target]);
 
-  const isIdle = target === hands.idle;
+  const isIdle = target === clockHands.idle;
 
   return (
-    <span className={`analogue-clock-face${isIdle ? " is-idle" : ""}`}>
+    <span
+      className={`analogue-clock-face${isIdle ? " is-idle" : ""}${isRebasing ? " is-rebasing" : ""}`}
+      style={clockFaceMotionStyle}
+    >
       <span
         className="analogue-clock-hand analogue-clock-hand-a"
         style={{ transform: `translateX(-50%) rotate(${angles[0]}deg)` }}
       />
-      {target[0] !== target[1] ? (
-        <span
-          className="analogue-clock-hand analogue-clock-hand-b"
-          style={{ transform: `translateX(-50%) rotate(${angles[1]}deg)` }}
-        />
-      ) : null}
+      <span
+        className="analogue-clock-hand analogue-clock-hand-b"
+        style={{ transform: `translateX(-50%) rotate(${angles[1]}deg)` }}
+      />
       <span className="analogue-clock-pin" />
     </span>
   );
@@ -189,7 +223,7 @@ type AnalogueDigitProps = {
 };
 
 const AnalogueDigit = memo(function AnalogueDigit({ accent, digit, handColor }: AnalogueDigitProps) {
-  const pattern = digit === null ? placeholderPattern : digitPatterns[digit];
+  const pattern = digit === null ? clockPlaceholderPattern : clockDigitPatterns[digit];
 
   return (
     <span
@@ -206,17 +240,12 @@ const AnalogueDigit = memo(function AnalogueDigit({ accent, digit, handColor }: 
   );
 });
 
-function toClockDigit(value: number): ClockDigit {
-  return value as ClockDigit;
-}
-
 export const AnalogueGridClock = memo(function AnalogueGridClock() {
   const clock = useVisitorTime();
-  const now = clock?.now ?? null;
   const timeZone = clock?.timeZone ?? null;
   const accessibleFormatter = useMemo(
     () => new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
+      hour: "2-digit",
       hourCycle: "h23",
       minute: "2-digit",
       timeZoneName: "short",
@@ -226,20 +255,12 @@ export const AnalogueGridClock = memo(function AnalogueGridClock() {
   );
 
   const digits = useMemo<readonly (ClockDigit | null)[]>(() => {
-    if (!now) return [null, null, null, null];
+    if (!clock) return [null, null, null, null];
+    return getClockDigits(clock.hours, clock.minutes);
+  }, [clock]);
 
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    return [
-      toClockDigit(Math.floor(hours / 10)),
-      toClockDigit(hours % 10),
-      toClockDigit(Math.floor(minutes / 10)),
-      toClockDigit(minutes % 10),
-    ];
-  }, [now]);
-
-  const accessibleTime = now
-    ? `Your local time is ${accessibleFormatter.format(now)}`
+  const accessibleTime = clock
+    ? `Your local time is ${accessibleFormatter.format(clock.timestamp)}`
     : "Loading your local time";
 
   return (
@@ -254,10 +275,14 @@ export const AnalogueGridClock = memo(function AnalogueGridClock() {
 
         <time
           className="analogue-grid-clock-time"
-          dateTime={now?.toISOString()}
+          dateTime={clock ? new Date(clock.timestamp).toISOString() : undefined}
           aria-label={accessibleTime}
         >
-          <span className="analogue-grid-clock-display" aria-hidden="true">
+          <span
+            key={`motion-${clock?.motionEpoch ?? 0}`}
+            className="analogue-grid-clock-display"
+            aria-hidden="true"
+          >
             <span className="analogue-clock-pair">
               <AnalogueDigit
                 accent={digitPalettes[0].fill}

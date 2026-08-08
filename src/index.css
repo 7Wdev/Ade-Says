@@ -451,6 +451,21 @@ html.gallery-view-active .mobile-links-container {
   --md-sys-color-on-secondary-container: #fff;
 }
 
+html.gallery-view-active .navbar-toggle {
+  --md-sys-color-secondary-container: #000000;
+  --md-sys-color-on-secondary-container: #ffffff;
+  --m3e-tonal-icon-button-container-color: #000000;
+  --m3e-tonal-icon-button-unselected-container-color: #000000;
+  --m3e-tonal-icon-button-selected-container-color: #000000;
+  --m3e-tonal-icon-button-icon-color: #ffffff;
+  --m3e-tonal-icon-button-hover-icon-color: #ffffff;
+  --m3e-tonal-icon-button-focus-icon-color: #ffffff;
+  --m3e-tonal-icon-button-pressed-icon-color: #ffffff;
+  --m3e-tonal-icon-button-hover-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-focus-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-pressed-state-layer-color: #ffffff;
+}
+
 html.gallery-view-active .mobile-menu-overlay {
   background: rgba(255, 225, 53, 0.98);
 }
