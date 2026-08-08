@@ -1,6 +1,7 @@
 import { memo, useMemo, useState, type CSSProperties } from "react";
 import '@m3e/web/shape';
 import type { ShapeName } from '@m3e/web/shape';
+import { EDITORIAL_PALETTE } from "../editorialPalette";
 import "./ImmersiveGallery.css";
 
 interface PanelStyle extends CSSProperties {
@@ -20,49 +21,49 @@ const categories: GalleryCategory[] = [
     id: "photography",
     title: "Photography",
     src: "/uq/a.webp",
-    color: "var(--mag-accent-blue)",
+    color: EDITORIAL_PALETTE[0].accent,
     hoverShape: "12-sided-cookie",
   },
   {
     id: "software",
     title: "Computer Science",
     src: "/uq/b.webp",
-    color: "var(--mag-accent-lilac)",
+    color: EDITORIAL_PALETTE[1].accent,
     hoverShape: "arch",
   },
   {
     id: "physics",
     title: "Physics / Mathematics",
     src: "/uq/c.webp",
-    color: "var(--mag-accent-teal)",
+    color: EDITORIAL_PALETTE[2].accent,
     hoverShape: "flower",
   },
   {
     id: "art",
     title: "Art / Design",
     src: "/uq/d.webp",
-    color: "var(--mag-accent-green)",
+    color: EDITORIAL_PALETTE[3].accent,
     hoverShape: "pixel-circle",
   },
   {
     id: "society",
     title: "Society",
     src: "/uq/e.webp",
-    color: "var(--mag-accent-pink)",
+    color: EDITORIAL_PALETTE[4].accent,
     hoverShape: "4-leaf-clover",
   },
   {
     id: "economics",
     title: "Economics",
     src: "/uq/f.webp",
-    color: "var(--mag-accent-yellow)",
+    color: EDITORIAL_PALETTE[5].accent,
     hoverShape: "pixel-triangle",
   },
   {
     id: "philosophy",
     title: "Philosophy / Life",
     src: "/uq/g.webp",
-    color: "var(--mag-accent-orange)",
+    color: EDITORIAL_PALETTE[6].accent,
     hoverShape: "square",
   },
 ];

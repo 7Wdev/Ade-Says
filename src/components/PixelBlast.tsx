@@ -8,6 +8,7 @@ type PixelBlastProps = {
   autoPauseOffscreen?: boolean;
   className?: string;
   color?: string;
+  colors?: readonly string[];
   edgeFade?: number;
   enableRipples?: boolean;
   liquid?: boolean;
@@ -29,6 +30,7 @@ type PixelBlastProps = {
 };
 
 const MAX_CLICKS = 10;
+const MAX_PALETTE_COLORS = 4;
 const TARGET_FRAME_MS = 1000 / 30;
 const quadVertices = new Float32Array([
   -1, -1,
@@ -67,7 +69,11 @@ precision highp float;
 precision mediump float;
 #endif
 
-uniform vec3 uColor;
+uniform vec3 uColor0;
+uniform vec3 uColor1;
+uniform vec3 uColor2;
+uniform vec3 uColor3;
+uniform int uColorCount;
 uniform vec2 uResolution;
 uniform float uTime;
 uniform float uPixelSize;
@@ -208,7 +214,18 @@ void main() {
     maskValue *= smoothstep(0.0, uEdgeFade, edge);
   }
 
-  gl_FragColor = vec4(uColor, maskValue);
+  float colorIndex = floor(jitter * float(uColorCount));
+  vec3 pixelColor = uColor0;
+
+  if (colorIndex >= 3.0) {
+    pixelColor = uColor3;
+  } else if (colorIndex >= 2.0) {
+    pixelColor = uColor2;
+  } else if (colorIndex >= 1.0) {
+    pixelColor = uColor1;
+  }
+
+  gl_FragColor = vec4(pixelColor, maskValue);
 }
 `;
 
@@ -277,7 +294,8 @@ function PixelBlast({
   antialias = false,
   autoPauseOffscreen = true,
   className,
-  color = '#B497CF',
+  color = '#4285F4',
+  colors,
   edgeFade = 0.25,
   enableRipples = true,
   patternDensity = 1,
@@ -293,7 +311,13 @@ function PixelBlast({
   variant = 'square',
 }: PixelBlastProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const normalizedColor = useMemo(() => hexToNormalizedRGB(color), [color]);
+  const normalizedColors = useMemo<NormalizedRGB[]>(() => {
+    const palette = colors?.length
+      ? colors.slice(0, MAX_PALETTE_COLORS)
+      : [color];
+
+    return palette.map(hexToNormalizedRGB);
+  }, [color, colors]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -317,7 +341,11 @@ function PixelBlast({
       return;
     }
 
-    const uColor = gl.getUniformLocation(program, 'uColor');
+    const uColor0 = gl.getUniformLocation(program, 'uColor0');
+    const uColor1 = gl.getUniformLocation(program, 'uColor1');
+    const uColor2 = gl.getUniformLocation(program, 'uColor2');
+    const uColor3 = gl.getUniformLocation(program, 'uColor3');
+    const uColorCount = gl.getUniformLocation(program, 'uColorCount');
     const uResolution = gl.getUniformLocation(program, 'uResolution');
     const uTime = gl.getUniformLocation(program, 'uTime');
     const uPixelSize = gl.getUniformLocation(program, 'uPixelSize');
@@ -335,6 +363,11 @@ function PixelBlast({
 
     const clickPositions = new Float32Array(MAX_CLICKS * 2);
     const clickTimes = new Float32Array(MAX_CLICKS);
+    const baseColor = normalizedColors[0] ?? hexToNormalizedRGB(color);
+    const paletteColors = Array.from(
+      { length: MAX_PALETTE_COLORS },
+      (_, index) => normalizedColors[index] ?? baseColor,
+    );
     clickPositions.fill(-1);
 
     let clickIndex = 0;
@@ -376,7 +409,12 @@ function PixelBlast({
     };
 
     const setStaticUniforms = (dpr: number) => {
-      gl.uniform3f(uColor, normalizedColor[0], normalizedColor[1], normalizedColor[2]);
+      const [color0, color1, color2, color3] = paletteColors;
+      gl.uniform3f(uColor0, color0[0], color0[1], color0[2]);
+      gl.uniform3f(uColor1, color1[0], color1[1], color1[2]);
+      gl.uniform3f(uColor2, color2[0], color2[1], color2[2]);
+      gl.uniform3f(uColor3, color3[0], color3[1], color3[2]);
+      gl.uniform1i(uColorCount, normalizedColors.length);
       gl.uniform1f(uPixelSize, pixelSize * dpr);
       gl.uniform1f(uScale, patternScale);
       gl.uniform1f(uDensity, patternDensity);
@@ -502,9 +540,10 @@ function PixelBlast({
   }, [
     antialias,
     autoPauseOffscreen,
+    color,
     edgeFade,
     enableRipples,
-    normalizedColor,
+    normalizedColors,
     patternDensity,
     patternScale,
     pixelSize,

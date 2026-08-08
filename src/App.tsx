@@ -10,16 +10,17 @@ const PostView = lazy(() => import('./pages/PostView'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 
 type NavButtonProps = {
+  accent: 'blue' | 'red' | 'yellow' | 'green';
   children: string;
   selected?: boolean;
   size?: 'small' | 'medium';
   to: string;
 };
 
-const NavButton = memo(function NavButton({ children, selected = false, size = 'small', to }: NavButtonProps) {
+const NavButton = memo(function NavButton({ accent, children, selected = false, size = 'small', to }: NavButtonProps) {
   return (
     <M3eRouterButton
-      className="nav-button"
+      className={`nav-button nav-accent-${accent}`}
       current={selected}
       variant="tonal"
       shape="rounded"
@@ -44,6 +45,7 @@ function AppShell() {
   
   const isHome = location.pathname === '/';
   const isBlog = location.pathname === '/blog' || location.pathname.startsWith('/post/');
+  const isArticle = location.pathname.startsWith('/post/');
   const isPhotography = location.pathname.startsWith('/photography');
   const isGalleryView = location.pathname.startsWith('/photography/');
   const isPortfolio = location.pathname.startsWith('/portfolio');
@@ -73,7 +75,7 @@ function AppShell() {
   return (
     <>
       <div className="app-container">
-        <nav className="navbar">
+        <nav className={`navbar${isArticle ? ' navbar-article' : ''}`}>
           <Link to="/" className="navbar-brand">
             Ade Says
           </Link>
@@ -100,10 +102,10 @@ function AppShell() {
             size="small"
             variant="standard"
           >
-            <NavButton to="/" selected={isHome}>Home</NavButton>
-            <NavButton to="/blog" selected={isBlog}>Blog</NavButton>
-            <NavButton to="/photography" selected={isPhotography}>Photography</NavButton>
-            <NavButton to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
+            <NavButton accent="blue" to="/" selected={isHome}>Home</NavButton>
+            <NavButton accent="red" to="/blog" selected={isBlog}>Blog</NavButton>
+            <NavButton accent="yellow" to="/photography" selected={isPhotography}>Photography</NavButton>
+            <NavButton accent="green" to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
           </m3e-button-group>
         </nav>
 
@@ -121,7 +123,7 @@ function AppShell() {
         </main>
       </div>
 
-      <div id="mobile-navigation" className={`mobile-menu-overlay ${isMobileMenuOpen ? 'is-open' : ''}`}>
+      <div id="mobile-navigation" className={`mobile-menu-overlay${isArticle ? ' is-article' : ''}${isMobileMenuOpen ? ' is-open' : ''}`}>
         <m3e-icon-button
           className="mobile-close-btn"
           onClick={() => setIsMobileMenuOpen(false)}
@@ -133,10 +135,10 @@ function AppShell() {
           <m3e-icon filled name="close" variant="rounded" />
         </m3e-icon-button>
         <div className="mobile-links-container">
-          <NavButton size="medium" to="/" selected={isHome}>Home</NavButton>
-          <NavButton size="medium" to="/blog" selected={isBlog}>Blog</NavButton>
-          <NavButton size="medium" to="/photography" selected={isPhotography}>Photography</NavButton>
-          <NavButton size="medium" to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
+          <NavButton accent="blue" size="medium" to="/" selected={isHome}>Home</NavButton>
+          <NavButton accent="red" size="medium" to="/blog" selected={isBlog}>Blog</NavButton>
+          <NavButton accent="yellow" size="medium" to="/photography" selected={isPhotography}>Photography</NavButton>
+          <NavButton accent="green" size="medium" to="/portfolio" selected={isPortfolio}>Portfolio</NavButton>
         </div>
       </div>
     </>

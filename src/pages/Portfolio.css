@@ -8,7 +8,7 @@
   overflow: hidden;
   border-radius: var(--md-sys-shape-corner-extra-large);
   border: 1px solid rgba(255, 255, 255, 0.03);
-  background: var(--md-sys-color-surface);
+  background: #000;
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.3);
 }
 

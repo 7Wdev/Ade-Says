@@ -13,6 +13,7 @@ import { createPortal, preload } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import M3eRouterButton from "../components/M3eRouterButton";
 import SeoHead from "../components/SeoHead";
+import { EDITORIAL_PALETTE } from "../editorialPalette";
 import { photoCatalogs, type PhotoAsset, type PhotoCatalog } from "../generated/photo-catalogs";
 import { buildNotFoundSeo, buildPhotographyCatalogSeo, buildPhotographySeo } from "../utils/seo";
 
@@ -541,7 +542,11 @@ const VirtualCatalogGrid = memo(function VirtualCatalogGrid({ catalogs }: Virtua
       style={gridStyle}
     >
       {virtualItems.map((item) => {
+        const catalogPalette = EDITORIAL_PALETTE[item.index % EDITORIAL_PALETTE.length]
+          ?? EDITORIAL_PALETTE[0];
         const slotStyle: CatalogSlotStyle = {
+          "--catalog-chip-background": catalogPalette.chip,
+          "--catalog-chip-color": catalogPalette.chipInk,
           "--catalog-card-size": `${layout.cardWidth}px`,
           height: layout.cardWidth,
           transform: `translate3d(${item.left}px, ${item.top}px, 0)`,

@@ -18,7 +18,7 @@ function SubscribeButton({
     if (typeof window === "undefined" || !("Notification" in window))
       return "idle";
     if (Notification.permission === "denied") return "denied";
-    if (Notification.permission === "granted") return "granted";
+    if (window.OneSignal?.User?.PushSubscription?.optedIn) return "granted";
     return "idle";
   });
 
@@ -28,9 +28,13 @@ function SubscribeButton({
 
     window.OneSignalDeferred.push((OneSignal) => {
       // Check initial opt-in status
-      if (OneSignal.User?.PushSubscription?.optedIn) {
-        setStatus("granted");
-      }
+      setStatus(
+        Notification.permission === "denied"
+          ? "denied"
+          : OneSignal.User?.PushSubscription?.optedIn
+            ? "granted"
+            : "idle",
+      );
 
       // Listen for subscription changes
       OneSignal.User?.PushSubscription?.addEventListener(

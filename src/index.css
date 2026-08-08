@@ -1,4 +1,10 @@
 :root {
+  --google-blue: #4285F4;
+  --google-red: #EA4335;
+  --google-yellow: #FBBC05;
+  --google-green: #34A853;
+  --google-on-color: #000000;
+
   /* Material 3 Expressive Dark Theme Variables */
   --md-sys-color-primary: #d0bcff;
   --md-sys-color-on-primary: #381e72;
@@ -45,7 +51,7 @@
   --mag-accent-pink: #f48fb1;
   --mag-accent-lilac: #ccb9ff;
 
-  --md-sys-color-background: #100f13;
+  --md-sys-color-background: #000000;
   --md-sys-color-on-background: #e6e0e9;
   --md-sys-color-surface: #141218;
   --md-sys-color-on-surface: #e6e0e9;
@@ -312,13 +318,13 @@ body.photo-viewer-open .app-container {
   align-items: center;
   justify-content: space-between;
   padding: 16px 40px;
-  background: rgba(16, 15, 19, 0.7);
+  background: #ffffff;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 60px;
   margin-bottom: 40px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
   position: sticky;
   top: 24px;
   z-index: 100;
@@ -330,7 +336,7 @@ body.photo-viewer-open .app-container {
   font-size: 32px;
   font-style: italic;
   font-weight: 800;
-  color: #fff;
+  color: #000000;
   text-decoration: none;
   letter-spacing: -1px;
 }
@@ -339,13 +345,79 @@ body.photo-viewer-open .app-container {
   display: flex;
 }
 
-.navbar-links,
+.navbar-links {
+  /* Invert the selected pill against the white navbar. */
+  --md-sys-color-secondary: #000000;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: var(--app-nav-tonal-container);
+  --md-sys-color-on-secondary-container: var(--app-nav-on-tonal-container);
+}
+
 .mobile-links-container {
-  /* White selection with the same tonal resting surface as Back Home. */
   --md-sys-color-secondary: #ffffff;
   --md-sys-color-on-secondary: #100f13;
   --md-sys-color-secondary-container: var(--app-nav-tonal-container);
   --md-sys-color-on-secondary-container: var(--app-nav-on-tonal-container);
+}
+
+.navbar-links .nav-button,
+.mobile-links-container .nav-button {
+  --m3e-tonal-button-hover-container-elevation: none;
+}
+
+.navbar.navbar-article {
+  background: rgba(16, 15, 19, 0.7);
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.navbar.navbar-article .navbar-brand {
+  color: #ffffff;
+}
+
+.navbar.navbar-article .navbar-links {
+  --md-sys-color-secondary: #ffffff;
+  --md-sys-color-on-secondary: #100f13;
+}
+
+.navbar.navbar-article .navbar-toggle {
+  --md-sys-color-secondary-container: var(--app-nav-tonal-container);
+  --md-sys-color-on-secondary-container: var(--app-nav-on-tonal-container);
+  --m3e-tonal-icon-button-hover-state-layer-color: var(--app-nav-on-tonal-container);
+  --m3e-tonal-icon-button-focus-state-layer-color: var(--app-nav-on-tonal-container);
+  --m3e-tonal-icon-button-pressed-state-layer-color: var(--app-nav-on-tonal-container);
+}
+
+/* Keep selected routes monochrome; give each resting nav pill one Google color. */
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .nav-button.nav-accent-blue,
+html:not(.gallery-view-active) .mobile-menu-overlay:not(.is-article) .nav-button.nav-accent-blue {
+  --md-sys-color-secondary-container: var(--google-blue);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+}
+
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .nav-button.nav-accent-red,
+html:not(.gallery-view-active) .mobile-menu-overlay:not(.is-article) .nav-button.nav-accent-red {
+  --md-sys-color-secondary-container: var(--google-red);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+}
+
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .nav-button.nav-accent-yellow,
+html:not(.gallery-view-active) .mobile-menu-overlay:not(.is-article) .nav-button.nav-accent-yellow {
+  --md-sys-color-secondary-container: var(--google-yellow);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+}
+
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .nav-button.nav-accent-green,
+html:not(.gallery-view-active) .mobile-menu-overlay:not(.is-article) .nav-button.nav-accent-green {
+  --md-sys-color-secondary-container: var(--google-green);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+}
+
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .nav-button[class*="nav-accent-"],
+html:not(.gallery-view-active) .mobile-menu-overlay:not(.is-article) .nav-button[class*="nav-accent-"] {
+  --m3e-tonal-button-hover-unselected-state-layer-color: #ffffff;
+  --m3e-tonal-button-focus-unselected-state-layer-color: #ffffff;
+  --m3e-tonal-button-pressed-unselected-state-layer-color: #ffffff;
 }
 
 /* Individual photo galleries use a light editorial canvas. The catalog index
@@ -385,6 +457,14 @@ html.gallery-view-active .mobile-menu-overlay {
 
 html.gallery-view-active ::-webkit-scrollbar-thumb {
   background-color: rgba(16, 15, 19, 0.38);
+}
+
+html:not(.gallery-view-active) .navbar:not(.navbar-article) .navbar-toggle {
+  --md-sys-color-secondary-container: var(--google-green);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+  --m3e-tonal-icon-button-hover-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-focus-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-pressed-state-layer-color: #ffffff;
 }
 
 .navbar-toggle {
@@ -622,15 +702,9 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
   inset: 0;
   z-index: -10;
   pointer-events: none;
-  opacity: 0.72;
+  opacity: 1;
   contain: strict;
-  background:
-    radial-gradient(
-      circle at 78% 18%,
-      rgba(180, 151, 207, 0.18),
-      transparent 34%
-    ),
-    radial-gradient(circle at 12% 72%, rgba(52, 168, 83, 0.1), transparent 30%);
+  background: transparent;
 }
 
 /* Glass Panel Utility */
@@ -806,7 +880,7 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
   flex-direction: column;
   position: sticky;
   top: 140px;
-  background: var(--md-sys-color-surface);
+  background: #181818;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -895,6 +969,25 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
 .developer-links {
   display: flex;
   margin-bottom: 24px;
+}
+
+.developer-link {
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+  --m3e-tonal-icon-button-hover-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-focus-state-layer-color: #ffffff;
+  --m3e-tonal-icon-button-pressed-state-layer-color: #ffffff;
+}
+
+.developer-link-instagram {
+  --md-sys-color-secondary-container: var(--google-red);
+}
+
+.developer-link-github {
+  --md-sys-color-secondary-container: var(--google-blue);
+}
+
+.developer-link-youtube {
+  --md-sys-color-secondary-container: var(--google-yellow);
 }
 
 .profile-info {
@@ -1480,6 +1573,32 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
   text-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
 }
 
+.home-editorial-section .bento-grid > .editorial-card {
+  --home-post-frame-color: var(--google-blue);
+  border: 3px solid var(--home-post-frame-color);
+}
+
+.home-editorial-section .bento-grid > .editorial-card:nth-child(4n + 1) {
+  --home-post-frame-color: var(--google-blue);
+}
+
+.home-editorial-section .bento-grid > .editorial-card:nth-child(4n + 2) {
+  --home-post-frame-color: var(--google-yellow);
+}
+
+.home-editorial-section .bento-grid > .editorial-card:nth-child(4n + 3) {
+  --home-post-frame-color: var(--google-green);
+}
+
+.home-editorial-section .bento-grid > .editorial-card:nth-child(4n) {
+  --home-post-frame-color: var(--google-red);
+}
+
+.home-editorial-section .bento-grid > .editorial-card:focus-visible {
+  outline: 3px solid var(--home-post-frame-color);
+  outline-offset: 4px;
+}
+
 /* Section Headers */
 .section-heading-row {
   display: flex;
@@ -1541,6 +1660,30 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
   text-transform: uppercase;
 }
 
+.page-loading m3e-loading-indicator,
+.photo-lightbox-loader m3e-loading-indicator {
+  --m3e-loading-indicator-contained-active-indicator-color: var(--google-on-color);
+  animation: googleLoadingPaletteCycle 4s steps(1, end) infinite;
+}
+
+@keyframes googleLoadingPaletteCycle {
+  0%, 100% {
+    --m3e-loading-indicator-contained-container-color: var(--google-blue);
+  }
+
+  25% {
+    --m3e-loading-indicator-contained-container-color: var(--google-red);
+  }
+
+  50% {
+    --m3e-loading-indicator-contained-container-color: var(--google-yellow);
+  }
+
+  75% {
+    --m3e-loading-indicator-contained-container-color: var(--google-green);
+  }
+}
+
 .page-heading {
   max-width: 820px;
   margin-bottom: 36px;
@@ -1566,6 +1709,11 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
 
 .blog-search-bar {
   --m3e-search-bar-container-height: 4rem;
+  --m3e-search-bar-container-color: #202124;
+  --m3e-search-bar-input-color: #f1f3f4;
+  --m3e-search-bar-leading-icon-color: var(--google-blue);
+  --m3e-search-bar-supporting-text-color: #bdc1c6;
+  --m3e-search-bar-trailing-icon-color: #bdc1c6;
   display: block;
   width: 100%;
 }
@@ -1960,8 +2108,8 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
 }
 
 .photo-catalog-kicker {
-  color: var(--md-sys-color-on-primary);
-  background: var(--md-sys-color-primary);
+  color: var(--catalog-chip-color, #4c1d75);
+  background: var(--catalog-chip-background, #cab4ff);
   width: fit-content;
   padding: 6px 12px;
   border-radius: 8px;
@@ -4645,6 +4793,11 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
    =================================================================== */
 
 .back-link {
+  --md-sys-color-secondary-container: var(--google-blue);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+  --m3e-tonal-button-hover-state-layer-color: #ffffff;
+  --m3e-tonal-button-focus-state-layer-color: #ffffff;
+  --m3e-tonal-button-pressed-state-layer-color: #ffffff;
   margin-bottom: 32px;
 }
 
@@ -5634,12 +5787,33 @@ html.gallery-view-active ::-webkit-scrollbar-thumb {
     animation: none !important;
   }
 
+  .page-loading m3e-loading-indicator,
+  .photo-lightbox-loader m3e-loading-indicator {
+    animation: googleLoadingPaletteCycle 4s steps(1, end) infinite !important;
+  }
+
   .article-share-menu {
     transition: none !important;
   }
 }
 
 /* ── Subscribe Button ── */
+.subscribe-btn {
+  --md-sys-color-secondary-container: var(--google-red);
+  --md-sys-color-on-secondary-container: var(--google-on-color);
+  --m3e-tonal-button-hover-state-layer-color: #ffffff;
+  --m3e-tonal-button-focus-state-layer-color: #ffffff;
+  --m3e-tonal-button-pressed-state-layer-color: #ffffff;
+}
+
+.subscribe-btn.is-subscribed {
+  --md-sys-color-secondary-container: var(--google-green);
+}
+
+.subscribe-btn.is-denied {
+  --md-sys-color-secondary-container: var(--google-red);
+}
+
 /* Blog page top bar */
 .blog-top-bar {
   --m3e-toolbar-square-padding: 0;

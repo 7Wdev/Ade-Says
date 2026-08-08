@@ -29,7 +29,7 @@ function DeveloperBioImage() {
         <foreignObject x="-339" y="-338" width="960" height="955">
           <div className="developer-silk-stage">
             <SilkBackground
-              color="#9b5cff"
+              color="#34A853"
               scale={2}
               noiseIntensity={0.7}
               speed={4}
